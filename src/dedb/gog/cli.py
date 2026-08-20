@@ -11,7 +11,7 @@ from ..settings import SETTINGS_PATH
 from .classify import classify_owned_games
 from .client import owned_games
 from .downloader import download_and_extract
-from .importer import import_gog_game
+from .importer import build_gog_game, import_gog_game
 from .layout import GameLayout
 from .profiles import get_conf_files
 from .runner import ensure_downloaded, run_dosbox, run_dosemu
@@ -190,7 +190,27 @@ def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: boo
         "so this is safe to loop over every game in your download directory."
     ),
 )
-def importgog(game_id: str, output_dir: Path | None, profile: str | None, force: bool, refreshconf: bool) -> None:
+@click.option(
+    "--dumpconf",
+    is_flag=True,
+    default=False,
+    help="Print the dosemu.conf(s) it would create instead of writing any files.",
+)
+@click.option(
+    "--dumpuserhook",
+    is_flag=True,
+    default=False,
+    help="Print the userhook.bat(s) it would create instead of writing any files.",
+)
+def importgog(
+    game_id: str,
+    output_dir: Path | None,
+    profile: str | None,
+    force: bool,
+    refreshconf: bool,
+    dumpconf: bool,
+    dumpuserhook: bool,
+) -> None:
     """Import an already-downloaded GOG game's dosbox launch profile(s) into DOSEMU2 config(s).
 
     Reuses the same conversion as `importdosbox`. By default, converts
@@ -199,6 +219,18 @@ def importgog(game_id: str, output_dir: Path | None, profile: str | None, force:
     dosemu_<profile>.conf/userhook_<profile>.bat in the same directory.
     """
     layout = GameLayout(_require_download_dir(), game_id)
+
+    if dumpconf or dumpuserhook:
+        results = build_gog_game(layout, profile=profile)
+        for i, (label, (_conf_files, target, userhook_lines)) in enumerate(results.items()):
+            if i:
+                click.echo()
+            click.echo(f"[{label}]")
+            if dumpconf:
+                click.echo(target.model_dump_dosemurc(), nl=False)
+            if dumpuserhook:
+                click.echo("\n".join(userhook_lines))
+        return
 
     if refreshconf:
         if not layout.is_downloaded():
