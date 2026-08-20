@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dedb"
+version = "0.1.0"
+description = "DOSEMU2 configuration tooling"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1",
+    "pydantic>=2.0",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.scripts]
+dedb = "dedb.cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dedb"]

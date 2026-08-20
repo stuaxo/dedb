@@ -57,8 +57,32 @@ class DosboxConfigToDosemu(BaseModel):
 
 
 class DosemuConfig(BaseModel):
-    """Flat model representing the final DOSEMU2 hardware settings."""
+    """Flat model representing the final DOSEMU2 hardware settings.
+    dpmi_memory is stored in megabytes, matching its DOSBox source
+    (memsize) - model_dump_dosemurc converts to DOSEMU2's own units."""
 
     video_fullscreen: bool
     cpu_speed: int
     dpmi_memory: int
+
+    def model_dump_dosemurc(self) -> str:
+        """Render as a DOSEMU2 config file (dosemu.conf / .dosemurc):
+        `$_var = (n)` for numeric/boolean values, `$_var = "s"` for
+        strings - see /etc/dosemu/dosemu.conf and dosemu2's
+        src/base/init/lexer.l, where bare `on`/`off` are boolean
+        keywords and plain decimal integers are valid numbers.
+
+        $_X_fullscreen: start DOSEMU2 in fullscreen.
+        $_cpuspeed: CPU speed in MHz for TSC calibration; 0 = auto -
+          the same convention DosboxConfigToDosemu already uses for
+          DOSBox's "auto"/"max" cycles, though the underlying meaning
+          differs (a cycle-count throttle vs. a reported clock speed).
+        $_dpmi: DPMI memory pool size in Kb - dpmi_memory is in Mb.
+        """
+        fullscreen = "on" if self.video_fullscreen else "off"
+        lines = [
+            f"$_X_fullscreen = ({fullscreen})",
+            f"$_cpuspeed = ({self.cpu_speed})",
+            f"$_dpmi = ({self.dpmi_memory * 1024})",
+        ]
+        return "\n".join(lines) + "\n"

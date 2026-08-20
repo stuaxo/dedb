@@ -1,21 +1,15 @@
 """Main entry point for the dedb CLI.
 
-Commands are contributed by "apps" (e.g. dedb.dosbox) and registered here
-flat on the root command group — `dedb importdosbox`, not
-`dedb dosbox importdosbox` — but --help still groups them by contributing
-app, the way a Django project's manage.py groups per-app commands.
+Commands are contributed by "apps" (listed in Settings.apps, e.g.
+dedb.dosbox) and registered here flat on the root command group —
+`dedb importdosbox`, not `dedb dosbox importdosbox` — but --help still
+groups them by contributing app, the way a Django project's manage.py
+groups per-app commands.
 """
-
-from collections import OrderedDict
 
 import click
 
-from .dosbox.cli import commands as dosbox_commands
-
-# app name -> commands it contributes, in display order
-APPS: "OrderedDict[str, list[click.Command]]" = OrderedDict(
-    dosbox=dosbox_commands,
-)
+from .core import get_apps
 
 
 class AppGroupedGroup(click.Group):
@@ -23,7 +17,7 @@ class AppGroupedGroup(click.Group):
     grouped under an "[app]" heading per contributing app."""
 
     def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        for app_name, commands in APPS.items():
+        for app_name, commands in get_apps().items():
             rows = []
             for command in commands:
                 if command.name is None or command.hidden:
@@ -40,7 +34,7 @@ def cli() -> None:
     """dedb: DOSEMU2 configuration tooling."""
 
 
-for _commands in APPS.values():
+for _commands in get_apps().values():
     for _command in _commands:
         cli.add_command(_command)
 

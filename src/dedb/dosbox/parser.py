@@ -20,7 +20,9 @@ def parse_dosbox_conf(path: Path) -> tuple[dict, list[str]]:
     # Preserve case: DOS commands and option values are case sensitive,
     # and configparser lowercases option names by default.
     parser.optionxform = str
-    parser.read(path)
+    # DOSBox writes/reads confs in CP437 (its autoexec sections sometimes
+    # contain CP437 box-drawing characters for ASCII-art menus), not UTF-8.
+    parser.read(path, encoding="cp437")
 
     autoexec_commands: list[str] = []
     if parser.has_section("autoexec"):
