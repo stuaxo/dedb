@@ -8,22 +8,33 @@ from pydantic import AliasPath, BaseModel, Field, field_validator
 
 class DosboxConfigToDosemu(BaseModel):
     """Reads a raw nested dosbox.conf dict and re-shapes it into DOSEMU2
-    field names, ready to be dumped and fed into DosemuConfig."""
+    field names and units, ready to be dumped and fed into DosemuConfig.
+    Field names match DOSEMU2's own config vars (X_fullscreen, cpuspeed,
+    dpmi - see dosemu2's etc/dosemu.conf and src/include/emu.h) with the
+    "$_" sigil dropped, since that's just dosemu.conf's
+    variable-reference syntax, not part of the name. Unit/range
+    conversion (DOSBox memsize -> DOSEMU2 dpmi) also happens here, so
+    DosemuConfig only ever holds values already in DOSEMU2's own terms."""
+
+    # DOSEMU2's documented default for $_dpmi (0x20000 Kb,
+    # /etc/dosemu/dosemu.conf). Used as a floor under DOSBox's memsize,
+    # not a ceiling - see coerce_dpmi.
+    MIN_DPMI_MEMORY_MB: ClassVar[int] = 128
 
     fullscreen: bool = Field(
         default=False,
         validation_alias=AliasPath("sdl", "fullscreen"),
-        serialization_alias="video_fullscreen",
+        serialization_alias="X_fullscreen",
     )
     cpu_speed: int = Field(
         default=0,
         validation_alias=AliasPath("cpu", "cycles"),
-        serialization_alias="cpu_speed",
+        serialization_alias="cpuspeed",
     )
-    memory: int = Field(
-        default=32,
+    dpmi: int = Field(
+        default=MIN_DPMI_MEMORY_MB * 1024,
         validation_alias=AliasPath("dosbox", "memsize"),
-        serialization_alias="dpmi_memory",
+        serialization_alias="dpmi",
     )
 
     @field_validator("fullscreen", mode="before")
@@ -47,30 +58,41 @@ class DosboxConfigToDosemu(BaseModel):
                 return 0
         return value
 
-    @field_validator("memory", mode="before")
+    @field_validator("dpmi", mode="before")
     @classmethod
-    def coerce_memory(cls, value: object) -> object:
+    def coerce_dpmi(cls, value: object) -> object:
+        """Convert DOSBox memsize (MB) to DOSEMU2 $_dpmi (KB).
+
+        DOSBOX has one pool of memory: `memsize`, while
+        DOSEMU2 has seperate `XMS`, `EMS`, and `DPMI`.
+
+        We can't know the right sizes at this point so choose to over-provision
+        so that the DOS application doesn't run out of memory.
+        """
+        memsize_mb = cls.MIN_DPMI_MEMORY_MB
         if isinstance(value, str):
             try:
-                return int(value.strip())
+                memsize_mb = int(value.strip())
             except ValueError:
-                return 32
-        return value
+                memsize_mb = cls.MIN_DPMI_MEMORY_MB
+        elif isinstance(value, int):
+            memsize_mb = value
+        return max(memsize_mb, cls.MIN_DPMI_MEMORY_MB) * 1024
 
 
 class DosemuConfig(BaseModel):
-    """Flat model of the DOSEMU2 hardware settings this app sets.
-    dpmi_memory is in megabytes, matching its DOSBox source (memsize).
-    model_dump_dosemurc converts to DOSEMU2's own units."""
+    """
+    Model of DOSEMU2 conf settings.
 
-    video_fullscreen: bool
-    cpu_speed: int
-    dpmi_memory: int
+    IN general settings here should have names and units based off
+    those in dosemu.conf.
 
-    # DOSEMU2's documented default for $_dpmi (0x20000 Kb,
-    # /etc/dosemu/dosemu.conf). Used as a floor, not a ceiling - see
-    # model_dump_dosemurc.
-    MIN_DPMI_MEMORY_MB: ClassVar[int] = 128
+    Names here don't have prefixes such as `$_` these are added
+    when settings are written."""
+
+    X_fullscreen: bool
+    cpuspeed: int
+    dpmi: int
 
     def model_dump_dosemurc(self) -> str:
         """Render as a DOSEMU2 config file: `$_var = (n)` for
@@ -83,18 +105,13 @@ class DosemuConfig(BaseModel):
           matching the convention DosboxConfigToDosemu uses for DOSBox's
           auto/max cycles, though the two settings measure different
           things.
-        $_dpmi: DPMI pool size in Kb. DOSBox's memsize is one combined
-          figure it splits across XMS/EMS/DPMI; DOSEMU2 sizes each pool
-          separately (dosemu2 src/doc/README/config). Copying memsize
-          straight into $_dpmi under-provisions it when memsize is low
-          (16Mb is common), so it's used as a floor under DOSEMU2's own
-          default rather than an exact copy.
+        $_dpmi: DPMI pool size in Kb - already converted/floored by
+          DosboxConfigToDosemu.coerce_dpmi.
         """
-        fullscreen = "on" if self.video_fullscreen else "off"
-        dpmi_kb = max(self.dpmi_memory, self.MIN_DPMI_MEMORY_MB) * 1024
+        fullscreen = "on" if self.X_fullscreen else "off"
         lines = [
             f"$_X_fullscreen = ({fullscreen})",
-            f"$_cpuspeed = ({self.cpu_speed})",
-            f"$_dpmi = ({dpmi_kb})",
+            f"$_cpuspeed = ({self.cpuspeed})",
+            f"$_dpmi = ({self.dpmi})",
         ]
         return "\n".join(lines) + "\n"
