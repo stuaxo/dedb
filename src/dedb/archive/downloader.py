@@ -1,0 +1,82 @@
+"""Per-item download/extract orchestration for archive.org items. See
+GameLayout for the on-disk directory structure each item gets."""
+
+import shutil
+import urllib.request
+import zipfile
+from pathlib import Path
+
+import click
+
+from .client import FETCH_ERRORS, NotDosItemError
+from .layout import GameLayout
+from .metadata import get_metadata
+from .models import ArchiveMetadata, GameMetadataFile
+
+
+def _safe_extract(zip_path: Path, dest: Path) -> None:
+    """Extract zip_path into dest, refusing any member whose resolved
+    path would land outside dest ("zip slip") rather than silently
+    writing there."""
+    dest = dest.resolve()
+    with zipfile.ZipFile(zip_path) as zf:
+        for member in zf.infolist():
+            target = (dest / member.filename).resolve()
+            if not target.is_relative_to(dest):
+                raise click.ClickException(f"Refusing to extract '{member.filename}' outside {dest}")
+        zf.extractall(dest)
+
+
+def _download(url: str, dest: Path) -> None:
+    with urllib.request.urlopen(url, timeout=60) as resp, dest.open("wb") as f:
+        shutil.copyfileobj(resp, f)
+
+
+def _write_metadata_file(layout: GameLayout, metadata: ArchiveMetadata) -> None:
+    metadata_file = GameMetadataFile(archive=metadata)
+    layout.metadata_json.write_text(metadata_file.model_dump_json(indent=2))
+
+
+def _get_metadata_or_die(identifier: str, *, refresh: bool) -> ArchiveMetadata:
+    try:
+        return get_metadata(identifier, refresh=refresh)
+    except NotDosItemError as exc:
+        raise click.ClickException(str(exc))
+    except (LookupError, *FETCH_ERRORS) as exc:
+        raise click.ClickException(f"Could not fetch archive.org metadata for '{identifier}': {exc}")
+
+
+def download_and_extract(identifier: str, download_dir: Path, *, keep: bool = False, refresh: bool = False) -> None:
+    layout = GameLayout(download_dir, identifier)
+
+    if layout.is_downloaded():
+        print(f"Skipping: {identifier} (already downloaded)")
+        if refresh or not layout.metadata_json.is_file():
+            _write_metadata_file(layout, _get_metadata_or_die(identifier, refresh=refresh))
+        return
+
+    metadata = _get_metadata_or_die(identifier, refresh=refresh)
+    if metadata.emulator.lower() != "dosbox":
+        raise click.ClickException(
+            f"'{identifier}' is an archive.org '{metadata.emulator}' item, not DOSBox - not supported."
+        )
+    if metadata.emulator_ext != "zip":
+        raise click.ClickException(
+            f"'{identifier}' ships a .{metadata.emulator_ext} archive - only .zip items are supported so far."
+        )
+
+    layout.dir.mkdir(parents=True, exist_ok=True)
+    layout.download.mkdir(parents=True, exist_ok=True)
+    archive_path = layout.download / metadata.download_filename
+
+    print(f"Downloading: {identifier}")
+    _download(metadata.download_url, archive_path)
+
+    print(f"Extracting: {identifier}")
+    layout.game.mkdir(parents=True, exist_ok=True)
+    _safe_extract(archive_path, layout.game)
+
+    _write_metadata_file(layout, metadata)
+
+    if not keep:
+        shutil.rmtree(layout.download, ignore_errors=True)

@@ -1,6 +1,7 @@
-"""Filesystem layout for one game under [gog] download_dir:
+"""Filesystem layout for one game under <download_dir>/gog/ (see
+dedb.core.require_download_dir):
 
-    <download_dir>/<gamename>/
+    <download_dir>/gog/<gamename>/
         installer/       setup_*.exe etc. - kept only with --keep
         metadata.json     cached GOG dependency metadata, under a "gog" key
         game/             innoextract output

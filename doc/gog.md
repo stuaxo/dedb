@@ -7,7 +7,7 @@ and conversion of these games to DOSEMU2.
 See `dosbox_to_dosemu.md` for general notes on mapping DOSBOX idioms to DOSEMU2
 
 
-Each game lives at `<gog.download_dir>/<game_id>/`:
+Each game lives at `<download_dir>/gog/<game_id>/`:
 
 - `installer/` — deleted after conversion unless `--keep`
 - `game/` — extracted install
@@ -17,10 +17,11 @@ Each game lives at `<gog.download_dir>/<game_id>/`:
 
 ## Configuration
 
-Set the download directory by editing `~/.config/dedb/dedbconf.toml` and setting `download_dir` under `[gog]`:
+`download_dir` is shared across every source dedb can pull games from (GOG, archive.org, ...)
+- each gets its own namespaced subdirectory under it (`<download_dir>/gog/`, `<download_dir>/archive/`).
+Set it by editing `~/.config/dedb/dedbconf.toml`:
 
 ```toml
-[gog]
 download_dir = "/path/to/downloads"
 ```
 

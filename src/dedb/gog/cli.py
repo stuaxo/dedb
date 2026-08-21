@@ -5,9 +5,8 @@ from pathlib import Path
 
 import click
 
-from ..core import get_settings
+from ..core import get_download_dir, get_settings, require_download_dir
 from ..dosbox.inspector import inspect as inspect_conf
-from ..settings import SETTINGS_PATH
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
 from .downloader import download_and_extract
@@ -15,16 +14,6 @@ from .importer import build_gog_game, import_gog_game
 from .layout import GameLayout
 from .profiles import get_conf_files
 from .runner import ensure_downloaded, run_dosbox, run_dosemu
-
-
-def _require_download_dir() -> Path:
-    settings = get_settings()
-    if settings.gog.download_dir is None:
-        raise click.ClickException(
-            f"gog.download_dir is not set. Add it to {SETTINGS_PATH}, e.g.:\n"
-            '  [gog]\n  download_dir = "/path/to/downloads"'
-        )
-    return settings.gog.download_dir
 
 
 @click.command("downloadgog")
@@ -55,7 +44,7 @@ def downloadgog(keep: bool, game_id: str | None, refresh: bool, merge_save: bool
     `listgog`). Set [gog] curated_games in the dedb settings file to
     restrict this to specific games, or pass --game for just one.
     """
-    download_dir = _require_download_dir()
+    download_dir = require_download_dir("gog")
     download_dir.mkdir(parents=True, exist_ok=True)
 
     games = owned_games()
@@ -142,9 +131,7 @@ def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: boo
     # either to filter down to dos_only or to display it in the table.
     status = None
     if dos_only or output_format == "table":
-        status = classify_owned_games(
-            games, settings.gog.download_dir, refresh=refresh, verbose=verbose, offline=offline
-        )
+        status = classify_owned_games(games, get_download_dir("gog"), refresh=refresh, verbose=verbose, offline=offline)
         if dos_only:
             games = [g for g in games if status[g.gamename].classification == "dosbox"]
 
@@ -232,7 +219,7 @@ def importgog(
     pair is written as dosemu.conf/userhook.bat, others as
     dosemu_<profile>.conf/userhook_<profile>.bat in the same directory.
     """
-    layout = GameLayout(_require_download_dir(), game_id)
+    layout = GameLayout(require_download_dir("gog"), game_id)
 
     if dumpconf or dumpuserhook:
         results = build_gog_game(layout, profile=profile)
@@ -303,7 +290,7 @@ def rungog(
     if use_dosbox == use_dosemu:
         raise click.UsageError("Specify exactly one of --dosbox or --dosemu.")
 
-    download_dir = _require_download_dir()
+    download_dir = require_download_dir("gog")
     layout = ensure_downloaded(game_id, download_dir, keep=keep)
 
     exit_code = (
@@ -338,7 +325,7 @@ def dosboxconfgog(game_id: str, profile: str | None, autoexec: bool, sblaster: b
     --profile (default: the primary profile). With none of -a/-s/-g given,
     all aspects are shown.
     """
-    layout = GameLayout(_require_download_dir(), game_id)
+    layout = GameLayout(require_download_dir("gog"), game_id)
     conf_files = get_conf_files(layout.game, profile)
     click.echo(inspect_conf(conf_files, autoexec=autoexec, sblaster=sblaster, gus=gus))
 
