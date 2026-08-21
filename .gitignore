@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+.ipynb_checkpoints/
 
 # During development it can be handy to set the downloads directory here.
 downloads/

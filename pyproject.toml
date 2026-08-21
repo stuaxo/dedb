@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "dedb"
 version = "0.1.0"
-description = "DOSEMU2 configuration tooling"
+description = "DOSEMU2 / DOSBOX compatibility shims"
 requires-python = ">=3.10"
 dependencies = [
     "click>=8.1",
@@ -18,3 +18,13 @@ dedb = "dedb.cli:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dedb"]
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.1.1",
+    "pytest>=9.1.1",
+    "tomli-w>=1.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

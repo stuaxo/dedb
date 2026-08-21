@@ -6,7 +6,7 @@ from typing import Sequence
 import click
 
 from ..shims.autoexec import autoexec_shims
-from .models import DosboxConfigToDosemu, DosemuConfig
+from .models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
 from .parser import parse_dosbox_confs
 
 
@@ -20,9 +20,8 @@ def build(input_files: Sequence[Path], working_dir: Path | None = None) -> tuple
     paths into LREDIR calls; without it MOUNT lines are commented out."""
     raw_dict, autoexec_commands = parse_dosbox_confs(input_files)
 
-    transformer = DosboxConfigToDosemu.model_validate(raw_dict)
-    dumped = transformer.model_dump(by_alias=True)
-    target = DosemuConfig.model_validate(dumped)
+    dosbox_config = DosboxConfig.model_validate(raw_dict)
+    target = dosbox_to_dosemu(dosbox_config)
 
     return target, autoexec_shims(autoexec_commands, working_dir)
 
