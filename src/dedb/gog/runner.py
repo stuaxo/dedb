@@ -2,17 +2,51 @@
 converting) it first if that hasn't happened yet.
 """
 
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Sequence
 
 import click
 
+from ..core import get_settings
 from .client import owned_games
 from .downloader import download_and_extract
 from .importer import import_gog_game
 from .layout import GameLayout
-from .profiles import default_profile, get_conf_files, profile_slug, select_profile, valid_profiles
+from .profiles import default_profile, get_conf_files, get_working_dir, profile_slug, select_profile, valid_profiles
+
+# Logical [dosbox] dosbox= choice -> actual binary name on PATH. Only
+# "dosbox" and "dosbox_staging" are tested; "dosbox_x" and "dosbox_pure"
+# are included for people who want to try them.
+DOSBOX_BINARIES = {
+    "dosbox": "dosbox",
+    "dosbox_staging": "dosbox-staging",
+    "dosbox_x": "dosbox-x",
+    "dosbox_pure": "dosbox-pure",
+}
+
+# "default" tries these, in order, and uses the first one installed.
+_DEFAULT_PROBE_ORDER = ["dosbox_staging", "dosbox"]
+
+
+def resolve_dosbox_binary(choice: str) -> str:
+    """Map a [dosbox] dosbox= setting to the binary to actually run.
+    "default" picks the first of dosbox_staging/dosbox found on PATH,
+    falling back to plain "dosbox" if neither is, so the eventual
+    FileNotFoundError still names the tool people know to install."""
+    if choice == "default":
+        for name in _DEFAULT_PROBE_ORDER:
+            binary = DOSBOX_BINARIES[name]
+            if shutil.which(binary):
+                return binary
+        return DOSBOX_BINARIES["dosbox"]
+
+    if choice not in DOSBOX_BINARIES:
+        valid = ", ".join(["default", *DOSBOX_BINARIES])
+        raise click.ClickException(f"Unknown [dosbox] dosbox = \"{choice}\". Valid options: {valid}")
+    return DOSBOX_BINARIES[choice]
 
 
 def ensure_downloaded(gamename: str, download_dir: Path, *, keep: bool) -> GameLayout:
@@ -48,27 +82,45 @@ def ensure_converted(layout: GameLayout, profile: str | None = None) -> Path:
     return conf_path
 
 
-def run_dosbox(layout: GameLayout, profile: str | None = None, extra_args: Sequence[str] = ()) -> int:
+def run_dosbox(
+    layout: GameLayout, profile: str | None = None, extra_args: Sequence[str] = (), verbose: bool = False
+) -> int:
     conf_files = get_conf_files(layout.game, profile)
+    binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
 
-    # DOSBox resolves relative MOUNT paths against the working directory it
-    # was launched from, not the conf file's location - match GOG's own
-    # launcher, which cds into the confs' directory first.
-    cmd = ["dosbox"]
+    # DOSBox resolves relative MOUNT paths (typically "MOUNT C ..") against
+    # the directory it was launched from - GOG's recorded workingDir, not
+    # necessarily wherever the confs themselves ended up under innoextract
+    # (see get_working_dir).
+    cmd = [binary]
     for conf in conf_files:
         cmd += ["-conf", str(conf)]
     cmd += extra_args
 
+    cwd = get_working_dir(layout.game, profile)
+    if verbose:
+        click.echo(f"$ cd {shlex.quote(str(cwd))} && {shlex.join(cmd)}")
+
     try:
-        result = subprocess.run(cmd, cwd=conf_files[0].parent)
+        result = subprocess.run(cmd, cwd=cwd)
     except FileNotFoundError:
-        raise click.ClickException("'dosbox' not found on PATH - install it first")
+        raise click.ClickException(f"'{binary}' not found on PATH - install it first")
     return result.returncode
 
 
-def run_dosemu(layout: GameLayout, profile: str | None = None, extra_args: Sequence[str] = ()) -> int:
+def run_dosemu(
+    layout: GameLayout, profile: str | None = None, extra_args: Sequence[str] = (), verbose: bool = False
+) -> int:
     dosemu_conf = ensure_converted(layout, profile)
     layout.dosemu_local.mkdir(parents=True, exist_ok=True)
+
+    # DOSEMU2's boot chain (dosrc.d/4uhook.bat) auto-runs only
+    # %USERDRV%:\userhook.bat. --Fdrive_c maps C: to layout.game, so that
+    # means layout.game/userhook.bat, not anything under layout.dosemu.
+    # Stage the selected profile's generated userhook.bat there before
+    # every launch, since the active profile can change between runs.
+    userhook_src = layout.userhook_for(_profile_file_slug(layout, profile))
+    shutil.copyfile(userhook_src, layout.game / "userhook.bat")
 
     cmd = [
         "dosemu",
@@ -78,10 +130,18 @@ def run_dosemu(layout: GameLayout, profile: str | None = None, extra_args: Seque
         str(layout.dosemu_local),
         "--Fdrive_c",
         str(layout.game),
+        # userhook.bat's LREDIR calls (see
+        # dedb.shims.autoexec.mount_lredir_shim) only ever target paths
+        # under the game's own directory - permit exactly that, nothing
+        # wider.
+        "-I",
+        f'$_lredir_paths = "{layout.game}"',
     ]
     cmd += extra_args
 
-    click.echo("Note: the game is on C: - run its .exe yourself once dosemu2 boots.")
+    if verbose:
+        click.echo(f"$ {shlex.join(cmd)}")
+
     try:
         result = subprocess.run(cmd)
     except FileNotFoundError:

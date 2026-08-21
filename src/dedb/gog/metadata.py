@@ -13,17 +13,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ..settings import CONFIG_DIR
-from .client import classify_dependencies, fetch_dependencies
+from .client import OfflineError, classify_dependencies, fetch_dependencies
 from .models import GogMetadata
 
 CACHE_PATH = CONFIG_DIR / "gog" / "metadata_cache.json"
 
 
 class MetadataCache:
-    """An on-disk JSON cache of GOG dependency metadata, loaded lazily -
-    once, on first use - rather than re-read and re-parsed from disk on
-    every lookup, as a plain get_metadata() function backed by a file
-    would otherwise do. Written back only when a new entry is added."""
+    """On-disk JSON cache of GOG dependency metadata. Loaded once, on
+    first use, and kept in memory after that. Written back only when a
+    new entry is added."""
 
     def __init__(self, path: Path = CACHE_PATH):
         self.path = path
@@ -38,15 +37,20 @@ class MetadataCache:
                 self._entries = {}
         return self._entries
 
-    def get(self, gamename: str, product_id: str, *, refresh: bool = False) -> GogMetadata:
+    def get(
+        self, gamename: str, product_id: str, *, refresh: bool = False, offline: bool = False, verbose: bool = False
+    ) -> GogMetadata:
         """Return cached dependency metadata for a game, fetching it from
         GOG and caching it if this is the first time we've seen it, or if
-        refresh is requested."""
+        refresh is requested. offline=True raises OfflineError instead of
+        fetching when there's no cached entry to fall back on."""
         entries = self._entries_loaded()
         if not refresh and gamename in entries:
             return entries[gamename]
+        if offline:
+            raise OfflineError(f"No cached GOG metadata for '{gamename}' - run once without --offline first.")
 
-        dependencies = fetch_dependencies(product_id)
+        dependencies = fetch_dependencies(product_id, verbose=verbose)
         entries[gamename] = GogMetadata(
             gamename=gamename,
             product_id=product_id,
@@ -66,5 +70,7 @@ class MetadataCache:
 _default_cache = MetadataCache()
 
 
-def get_metadata(gamename: str, product_id: str, *, refresh: bool = False) -> GogMetadata:
-    return _default_cache.get(gamename, product_id, refresh=refresh)
+def get_metadata(
+    gamename: str, product_id: str, *, refresh: bool = False, offline: bool = False, verbose: bool = False
+) -> GogMetadata:
+    return _default_cache.get(gamename, product_id, refresh=refresh, offline=offline, verbose=verbose)

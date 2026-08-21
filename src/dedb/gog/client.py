@@ -8,10 +8,12 @@ game's runtime without downloading it.
 
 import json
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 import zlib
 
+from ..settings import CONFIG_DIR
 from .models import OwnedGame
 
 BUILDS_URL = "https://content-system.gog.com/products/{product_id}/os/windows/builds?generation=2"
@@ -21,9 +23,35 @@ BUILDS_URL = "https://content-system.gog.com/products/{product_id}/os/windows/bu
 # handle a lookup failing don't each repeat this tuple.
 FETCH_ERRORS = (urllib.error.URLError, LookupError, zlib.error, json.JSONDecodeError)
 
+# Cache of the last owned_games() result, so --offline has something to read
+# instead of calling lgogdownloader (which always contacts GOG, even with
+# its own --use-cache, to check login status).
+OWNED_GAMES_CACHE_PATH = CONFIG_DIR / "gog" / "owned_games_cache.json"
 
-def owned_games() -> list[OwnedGame]:
-    """Return all owned Windows-platform games. Downloads nothing."""
+
+class OfflineError(RuntimeError):
+    """Raised for an --offline request that has no cached data to answer it."""
+
+
+def _log_connecting(url: str, *, verbose: bool) -> None:
+    if verbose:
+        print(f"Connecting to GOG: {url}", file=sys.stderr)
+
+
+def owned_games(*, verbose: bool = False, offline: bool = False) -> list[OwnedGame]:
+    """Return all owned Windows-platform games. Downloads nothing, but by
+    default still contacts GOG (via lgogdownloader) on every call - this is
+    the pause `listgog`/`downloadgog` show at startup. Pass offline=True to
+    reuse the last successful result instead, with no network access."""
+    if offline:
+        if not OWNED_GAMES_CACHE_PATH.is_file():
+            raise OfflineError(
+                f"No cached owned-games list at {OWNED_GAMES_CACHE_PATH} yet - run once without --offline first."
+            )
+        raw = json.loads(OWNED_GAMES_CACHE_PATH.read_text())
+        return [OwnedGame.model_validate(g) for g in raw]
+
+    _log_connecting("lgogdownloader --list=json --platform w (contacts gog.com to refresh login/library)", verbose=verbose)
     result = subprocess.run(
         ["lgogdownloader", "--list=json", "--platform", "w"],
         capture_output=True,
@@ -34,19 +62,27 @@ def owned_games() -> list[OwnedGame]:
     seen: dict[str, str] = {}
     for g in games:
         seen[g["gamename"]] = g["product_id"]
-    return [OwnedGame(gamename=name, product_id=pid) for name, pid in seen.items()]
+    owned = [OwnedGame(gamename=name, product_id=pid) for name, pid in seen.items()]
+
+    OWNED_GAMES_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OWNED_GAMES_CACHE_PATH.write_text(json.dumps([g.model_dump(mode="json") for g in owned]))
+
+    return owned
 
 
-def fetch_dependencies(product_id: str) -> list[str] | None:
+def fetch_dependencies(product_id: str, *, verbose: bool = False) -> list[str] | None:
     """Fetch a product's "dependencies" field from GOG's public Galaxy
     build manifest."""
-    with urllib.request.urlopen(BUILDS_URL.format(product_id=product_id), timeout=10) as resp:
+    builds_url = BUILDS_URL.format(product_id=product_id)
+    _log_connecting(builds_url, verbose=verbose)
+    with urllib.request.urlopen(builds_url, timeout=10) as resp:
         builds = json.loads(resp.read())
 
     build = next((b for b in builds.get("items", []) if b.get("generation") == 2), None)
     if build is None:
         raise LookupError("no generation-2 build available")
 
+    _log_connecting(build["link"], verbose=verbose)
     with urllib.request.urlopen(build["link"], timeout=10) as resp:
         meta = json.loads(zlib.decompress(resp.read()))
 

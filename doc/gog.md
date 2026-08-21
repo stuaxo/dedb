@@ -1,5 +1,12 @@
 # GOG
 
+GOG (Good Old Games) have many games available that use DOSBOX, the gog
+tools here extend the default DOSBOX tools and allow downloading, playing
+and conversion of these games to DOSEMU2.
+
+See `dosbox_to_dosemu.md` for general notes on mapping DOSBOX idioms to DOSEMU2
+
+
 Each game lives at `<gog.download_dir>/<game_id>/`:
 
 - `installer/` — deleted after conversion unless `--keep`
@@ -7,26 +14,99 @@ Each game lives at `<gog.download_dir>/<game_id>/`:
 - `metadata.json` — cached GOG metadata and launch profiles
 - `dosemu/` — generated `dosemu.conf`/`userhook.bat`
 
-## Launch profiles
 
-A GOG DOSBox game can ship more than one `dosbox*.conf`. These are usually
-alternate launch modes, not files to merge.
+## Configuration
 
-`goggame-*.info` lists each mode as a `playTask`, one marked primary. A
-task counts as a profile if it references at least one `-conf` file. Tasks
-that don't — tools like `GOGDOSConfig.exe` — are ignored.
+Set the download directory by editing `~/.config/dedb/dedbconf.toml` and setting `download_dir` under `[gog]`:
 
-`importgog` converts every profile by default: the primary profile writes
-`dosemu.conf`/`userhook.bat`, each other profile writes its own
-`dosemu_<profile>.conf`/`userhook_<profile>.bat`, generated from that
-profile's own confs and autoexec. `importgog`/`rungog --profile
-<name-or-slug>` selects a single profile.
+```toml
+[gog]
+download_dir = "/path/to/downloads"
+```
 
-Games without a usable `goggame-*.info` fall back to merging every
-`dosbox*.conf` found — the old behaviour, still correct for a single conf
-or a base conf plus a genuine merge-in variant.
+`rungog --dosbox` runs games' own conf(s) unmodified through a real DOSBox. Which binary it uses is set under `[dosbox]`:
 
-### Example: warcraft_orcs_and_humans
+```toml
+[dosbox]
+dosbox = "default"
+```
+
+`"default"` picks the first installed of `dosbox_staging` or `dosbox`. Set it explicitly to pin a particular one - options are `dosbox`, `dosbox_staging`, `dosbox_x`, `dosbox_pure` (only `dosbox` and `dosbox_staging` have actually been tested so far).
+
+
+## Commands
+
+GOG Commands, these all operate on games you own on GOG.
+
+| Command        | Description                                                   |
+|----------------|---------------------------------------------------------------|
+| `downloadgog`  | Download and extract DOSBOX games from GOG.                   |
+| `listgog`      | List DOSBOX games on GOG                                      |
+| `importgog`    | Create a DOSEMU2 conf and userhook from a downloaded GOG Game |
+| `rungog`       | Run a GOG game in DOSBox or DOSEMU2.                          |
+| `dosboxconfgog`| View config, autoexec and sound settings.                     |
+
+
+### listgog
+
+List owned GOG games.
+
+
+### downloadgog
+
+Download all owned GOG games:
+
+```$ downloadgog```
+
+Download a particular game:
+
+1. List the owned games:
+
+```$ listgog```
+
+2. Download a single game (tyrian_2000):
+
+```$ downloadgog tyrian_2000```
+
+On initial download, a DOSEMU2 conf isn't created, `importgog` can do this for every game.
+`rungog` also does this on demand.
+
+
+
+# Run GOG game in DOSBOX
+
+```$ rungog tyrian_2000 --dosbox```
+
+This is a good baseline as this runs the unaltered game.
+
+
+# Run GOG game in DOSEMU2
+
+```$ rungog tyrian_2000 --dosemu```
+
+rungog accepts --profile, see profiles.
+
+
+## Profiles
+
+GOG DOSBOX based games can multiple `dosbox*.conf` files, these are
+alternate launch modes (e.g. to add netplay).
+
+GOG games usually have metadataa in `goggame-*.info`, this list each mode as a `playTask`,
+the default is marked with `isPrimary`.
+
+If a game has no `goggame-*.info` file the default is that dosbox confs are merged.
+
+We save dosemu conf files for each profile, though only the primary profile
+is currently supported - others may have undefined behaviour.
+
+For our purposes we are only interested in tasks that reference a `conf` file.
+
+Ignored tasks reference tools like `GOGDOSConfig.exe` - a windows based tool
+for configuring DOSBOX in GOG.
+
+
+### Example Profile: warcraft_orcs_and_humans
 
 | Conf | Role |
 |---|---|
@@ -34,9 +114,3 @@ or a base conf plus a genuine merge-in variant.
 | `dosbox_warcraft_single.conf` | Single player — the primary profile |
 | `dosbox_warcraft_client.conf` | IPX client |
 | `dosbox_warcraft_server.conf` | IPX server |
-
-The client and server confs aren't referenced by any `playTask`. GOG
-launches multiplayer through a separate bundled tool,
-`GOGDOSConfig.exe <product_id> NET`, which picks the conf itself. `dedb`
-can't read that choice, so these two confs aren't reachable via `--profile`
-for this game.

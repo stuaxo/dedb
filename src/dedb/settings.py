@@ -32,6 +32,15 @@ class GogSettings(BaseModel):
     curated_games: list[str] = []
 
 
+class DosboxSettings(BaseModel):
+    # Which real DOSBox binary `rungog --dosbox` launches. "default" picks
+    # the first installed of dosbox_staging or dosbox. Other recognized
+    # values: "dosbox", "dosbox_staging", "dosbox_x", "dosbox_pure" - only
+    # "dosbox" and "dosbox_staging" have actually been tested so far. See
+    # dedb.gog.runner.resolve_dosbox_binary.
+    dosbox: str = "default"
+
+
 class Settings(BaseModel):
     # dotted module paths, each expected to expose a `cli.commands` list -
     # mirrors Django's INSTALLED_APPS.
@@ -40,6 +49,7 @@ class Settings(BaseModel):
         "dedb.gog"
     ]
     gog: GogSettings = GogSettings()
+    dosbox: DosboxSettings = DosboxSettings()
 
 
 def load_settings() -> Settings:

@@ -5,11 +5,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from ..dosbox.parser import parse_dosbox_confs
+from ..shims.autoexec import resolve_mounts
 from .client import FETCH_ERRORS
 from .gameinfo import parse_profiles
 from .layout import GameLayout
 from .metadata import get_metadata
 from .models import GameMetadataFile
+from .profiles import legacy_find_confs, resolve_conf_files, resolve_working_dir, valid_profiles
 
 
 def find_installer_exe(installer_dir: Path) -> Path | None:
@@ -29,6 +32,49 @@ def local_dosbox_status(layout: GameLayout) -> str | None:
     return "none"
 
 
+def merge_support_save_data(layout: GameLayout) -> None:
+    """GOG's installer natively lays game/__support/save/* onto the install
+    root itself, via its InnoSetup [Code] script - innoextract can't
+    execute that script, so we merge those files onto the game root here
+    instead, ourselves. Never overwrites a file that's already present."""
+    save_dir = layout.game / "__support" / "save"
+    if not save_dir.is_dir():
+        return
+    for src in save_dir.rglob("*"):
+        if src.is_dir():
+            continue
+        dest = layout.game / src.relative_to(save_dir)
+        if dest.exists():
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dest)
+
+
+def create_missing_mount_dirs(layout: GameLayout) -> None:
+    """GOG's installer natively creates any directory a game's autoexec
+    MOUNTs (e.g. Dungeon Keeper's cloud-save overlay target) via its
+    InnoSetup [Code] script - innoextract can't execute that script, so we
+    create them here ourselves instead. Only ever creates empty
+    directories, and only those that resolve inside the game directory."""
+    profiles = valid_profiles(layout.game)
+    if profiles:
+        confs_by_working_dir = [
+            (resolve_conf_files(layout.game, profile), resolve_working_dir(layout.game, profile) or layout.game)
+            for profile in profiles
+        ]
+    else:
+        # Mirrors get_working_dir()'s own fallback: the first conf's own
+        # directory, since there's no recorded workingDir to resolve.
+        conf_files = legacy_find_confs(layout.game)
+        confs_by_working_dir = [(conf_files, conf_files[0].parent)] if conf_files else []
+
+    for conf_files, working_dir in confs_by_working_dir:
+        _config, autoexec = parse_dosbox_confs(conf_files)
+        for mount in resolve_mounts(autoexec, working_dir):
+            if mount.host_path.is_relative_to(layout.game) and not mount.host_path.exists():
+                mount.host_path.mkdir(parents=True, exist_ok=True)
+
+
 def _write_metadata_file(layout: GameLayout, product_id: str, *, refresh: bool = False) -> None:
     """Writes metadata.json once the game is extracted, so its launch
     profiles (from goggame-*.info) can be recorded alongside the
@@ -46,12 +92,21 @@ def _write_metadata_file(layout: GameLayout, product_id: str, *, refresh: bool =
 
 
 def download_and_extract(
-    gamename: str, product_id: str, download_dir: Path, *, keep: bool, refresh: bool = False
+    gamename: str,
+    product_id: str,
+    download_dir: Path,
+    *,
+    keep: bool,
+    refresh: bool = False,
+    merge_save: bool = True,
 ) -> None:
     layout = GameLayout(download_dir, gamename)
 
     if layout.is_downloaded():
         print(f"Skipping: {gamename} (already downloaded)")
+        if merge_save:
+            merge_support_save_data(layout)
+        create_missing_mount_dirs(layout)
         _write_metadata_file(layout, product_id, refresh=refresh)
         return
 
@@ -100,6 +155,9 @@ def download_and_extract(
     layout.game.mkdir(parents=True, exist_ok=True)
     subprocess.run(["innoextract", "-d", str(layout.game), str(installer_exe)], check=True)
 
+    if merge_save:
+        merge_support_save_data(layout)
+    create_missing_mount_dirs(layout)
     _write_metadata_file(layout, product_id, refresh=refresh)
 
     if not keep:

@@ -1,17 +1,17 @@
 """Select and resolve dosbox conf files by GOG launch profile.
 
-Replaces the old approach of merging every dosbox*.conf found under a
-game's install, which breaks for games whose extra confs are alternate,
-mutually-exclusive launch modes (single vs. multiplayer client/server -
-see doc/gog.md) rather than pieces meant to be merged together.
+A game's extra confs are often alternate, mutually-exclusive launch
+modes (single vs. multiplayer client/server - see doc/gog.md), not
+pieces meant to be merged. Merging every dosbox*.conf found under the
+install breaks those games; this module picks the confs for one profile
+instead.
 
-A profile is "valid" if its playTask actually references at least one
--conf file - this naturally excludes tool tasks (e.g. GOGDOSConfig.exe)
-and document/URL tasks, which never do. Games without a usable
-goggame-*.info (or with no conf-referencing playTask) fall back to the
-old glob-everything behavior, since that's still correct for the common
-case of a single dosbox.conf, or a base conf plus a genuine merge-in
-variant.
+A profile is "valid" if its playTask references at least one -conf file.
+This excludes tool tasks (e.g. GOGDOSConfig.exe) and document/URL tasks,
+which never do. Games without a usable goggame-*.info, or with no
+conf-referencing playTask, fall back to merging every dosbox*.conf found
+- still correct for a single conf, or a base conf plus a genuine
+merge-in variant.
 """
 
 import re
@@ -85,3 +85,44 @@ def get_conf_files(extracted_dir: Path, profile_name: str | None) -> list[Path]:
     if not conf_files:
         raise click.ClickException(f"No dosbox*.conf found under {extracted_dir}")
     return conf_files
+
+
+def resolve_working_dir(extracted_dir: Path, profile: GogProfile) -> Path | None:
+    """Resolve profile's recorded workingDir (e.g. "DOSBOX") to an actual
+    directory under extracted_dir by basename search, the same
+    innoextract-layout-mismatch reasoning as resolve_conf_files - or None
+    if it wasn't recorded, or can't be found."""
+    if not profile.working_dir:
+        return None
+    basename = profile.working_dir.replace("\\", "/").rsplit("/", 1)[-1]
+    matches = [path for path in extracted_dir.rglob(basename) if path.is_dir()]
+    return matches[0] if matches else None
+
+
+def get_working_dir(extracted_dir: Path, profile_name: str | None) -> Path:
+    """The directory to launch real DOSBox from for a given profile choice.
+
+    GOG's recorded workingDir (e.g. "DOSBOX") is where dosbox.exe and its
+    confs sit together in a real install, so relative MOUNT paths in the
+    autoexec (typically "MOUNT C ..") resolve correctly from there. Under
+    innoextract, dosbox.exe's directory still matches that recorded name,
+    but the confs often don't: they're placed by InnoSetup [Code]-script
+    file copies, which innoextract can't execute, so it dumps them under
+    __support/ instead. Using the confs' own directory as cwd mounts the
+    wrong directory as C:, missing the game files. Resolve the recorded
+    workingDir by basename search instead, falling back to the confs'
+    directory if that can't be found.
+    """
+    profiles = valid_profiles(extracted_dir)
+    profile = (
+        select_profile(extracted_dir, profile_name)
+        if profile_name is not None
+        else (default_profile(profiles) if profiles else None)
+    )
+
+    if profile is not None:
+        resolved = resolve_working_dir(extracted_dir, profile)
+        if resolved is not None:
+            return resolved
+
+    return get_conf_files(extracted_dir, profile_name)[0].parent

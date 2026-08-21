@@ -9,7 +9,7 @@ from ..core import get_settings
 from ..dosbox.inspector import inspect as inspect_conf
 from ..settings import SETTINGS_PATH
 from .classify import classify_owned_games
-from .client import owned_games
+from .client import OfflineError, owned_games
 from .downloader import download_and_extract
 from .importer import build_gog_game, import_gog_game
 from .layout import GameLayout
@@ -42,7 +42,13 @@ def _require_download_dir() -> Path:
     default=False,
     help="Re-fetch GOG dependency metadata instead of using the cached copy.",
 )
-def downloadgog(keep: bool, game_id: str | None, refresh: bool) -> None:
+@click.option(
+    "--merge-save/--no-merge-save",
+    "merge_save",
+    default=True,
+    help="--no-merge-save: don't merge game/__support/save/ onto the game root (see merge_support_save_data).",
+)
+def downloadgog(keep: bool, game_id: str | None, refresh: bool, merge_save: bool) -> None:
     """Download and extract DOSBox-based owned games from GOG.
 
     By default, downloads every owned game classified as DOSBox-based (see
@@ -70,7 +76,7 @@ def downloadgog(keep: bool, game_id: str | None, refresh: bool) -> None:
         if product_id is None:
             click.echo(f"'{gamename}' not found in your GOG library - skipping")
             continue
-        download_and_extract(gamename, product_id, download_dir, keep=keep, refresh=refresh)
+        download_and_extract(gamename, product_id, download_dir, keep=keep, refresh=refresh, merge_save=merge_save)
 
     click.echo("-" * 40)
     click.echo(f"Done. Games extracted to {download_dir}/<game>/game/")
@@ -105,19 +111,40 @@ def downloadgog(keep: bool, game_id: str | None, refresh: bool) -> None:
     default=False,
     help="Re-fetch GOG dependency metadata instead of using the cached copy.",
 )
-def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: bool) -> None:
+@click.option(
+    "--offline",
+    is_flag=True,
+    default=False,
+    help="Don't contact GOG at all - use only local files and previously-cached metadata.",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    "verbose",
+    is_flag=True,
+    default=False,
+    help="Print each network request to GOG as it happens.",
+)
+def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: bool, offline: bool, verbose: bool) -> None:
     """List owned GOG games and whether they look DOSBox-based, without downloading anything."""
     if ids_shortcut:
         output_format = "ids"
+    if offline and refresh:
+        raise click.UsageError("--offline and --refresh can't be used together.")
 
-    games = sorted(owned_games(), key=lambda g: g.gamename)
+    try:
+        games = sorted(owned_games(verbose=verbose, offline=offline), key=lambda g: g.gamename)
+    except OfflineError as exc:
+        raise click.ClickException(str(exc))
     settings = get_settings()
 
     # ids + --all never needs classification; every other combination does,
     # either to filter down to dos_only or to display it in the table.
     status = None
     if dos_only or output_format == "table":
-        status = classify_owned_games(games, settings.gog.download_dir, refresh=refresh)
+        status = classify_owned_games(
+            games, settings.gog.download_dir, refresh=refresh, verbose=verbose, offline=offline
+        )
         if dos_only:
             games = [g for g in games if status[g.gamename].classification == "dosbox"]
 
@@ -128,20 +155,13 @@ def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: boo
 
     curated = set(settings.gog.curated_games)
 
-    scope = ", DOSBox-based only" if dos_only else ""
-    click.echo(f"Owned Windows-platform games on GOG ({len(games)}{scope}):")
-    click.echo(
-        "Checking already-extracted local files first; "
-        "hitting GOG's cached/build metadata only for the rest...\n"
-    )
-
     for game in games:
         s = status[game.gamename]
         marker = "*" if game.gamename in curated else " "
-        click.echo(f"  {marker} {game.gamename:<50} {s.classification} ({s.source})")
+        detail = s.source if dos_only else f"{s.classification} ({s.source})"
+        click.echo(f"{marker}{game.gamename:<50} {detail}")
 
     if curated:
-        click.echo("\n* = in your [gog] curated_games setting")
         mismatched = sorted(g for g in curated if status.get(g) is None or status[g].classification != "dosbox")
         if mismatched:
             click.echo("\nIn [gog] curated_games, but not confirmed DOSBox-based:")
@@ -149,12 +169,6 @@ def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: boo
                 s = status.get(gamename)
                 detail = f"{s.classification} ({s.source})" if s else "not found in your GOG library"
                 click.echo(f"  - {gamename}: {detail}")
-    else:
-        action = "every game listed above" if dos_only else "every game marked 'dosbox' above"
-        click.echo(
-            f"\n`downloadgog` will download {action}. "
-            "Set [gog] curated_games in the dedb settings file to restrict it to specific games."
-        )
 
 
 @click.command("importgog")
@@ -262,8 +276,21 @@ def importgog(
     default=False,
     help="Keep the installer/ directory if a download is needed.",
 )
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="Print the command line before launching DOSBox/DOSEMU2.",
+)
 def rungog(
-    game_id: str, emulator_args: tuple[str, ...], use_dosbox: bool, use_dosemu: bool, profile: str | None, keep: bool
+    game_id: str,
+    emulator_args: tuple[str, ...],
+    use_dosbox: bool,
+    use_dosemu: bool,
+    profile: str | None,
+    keep: bool,
+    verbose: bool,
 ) -> None:
     """Run a GOG game in DOSBox or DOSEMU2.
 
@@ -280,7 +307,9 @@ def rungog(
     layout = ensure_downloaded(game_id, download_dir, keep=keep)
 
     exit_code = (
-        run_dosbox(layout, profile, emulator_args) if use_dosbox else run_dosemu(layout, profile, emulator_args)
+        run_dosbox(layout, profile, emulator_args, verbose)
+        if use_dosbox
+        else run_dosemu(layout, profile, emulator_args, verbose)
     )
     if exit_code != 0:
         sys.exit(exit_code)

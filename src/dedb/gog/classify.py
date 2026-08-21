@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from .client import FETCH_ERRORS
+from .client import FETCH_ERRORS, OfflineError
 from .downloader import local_dosbox_status
 from .layout import GameLayout
 from .metadata import get_metadata
@@ -18,14 +18,21 @@ from .models import OwnedGame
 @dataclass
 class GameStatus:
     classification: str
-    source: str  # "local", "remote", or "error"
+    source: str  # "local", "remote", "offline", or "error"
 
 
 def classify_owned_games(
-    games: Sequence[OwnedGame], download_dir: Path | None, *, refresh: bool = False
+    games: Sequence[OwnedGame],
+    download_dir: Path | None,
+    *,
+    refresh: bool = False,
+    verbose: bool = False,
+    offline: bool = False,
 ) -> dict[str, GameStatus]:
     """Local extraction (if present) is always authoritative and never
-    refreshed - refresh only forces re-fetching cached remote metadata."""
+    refreshed - refresh only forces re-fetching cached remote metadata.
+    offline=True never contacts GOG: games without a local extraction or a
+    prior cached fetch come back "unknown" instead."""
     status: dict[str, GameStatus] = {}
     for game in games:
         local = local_dosbox_status(GameLayout(download_dir, game.gamename)) if download_dir else None
@@ -33,8 +40,10 @@ def classify_owned_games(
             status[game.gamename] = GameStatus(local, "local")
             continue
         try:
-            metadata = get_metadata(game.gamename, game.product_id, refresh=refresh)
+            metadata = get_metadata(game.gamename, game.product_id, refresh=refresh, offline=offline, verbose=verbose)
             status[game.gamename] = GameStatus(metadata.classification, "remote")
+        except OfflineError:
+            status[game.gamename] = GameStatus("unknown", "offline")
         except FETCH_ERRORS as exc:
             status[game.gamename] = GameStatus(f"error: {exc}", "error")
     return status

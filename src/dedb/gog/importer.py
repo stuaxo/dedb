@@ -11,7 +11,15 @@ from ..dosbox.converter import build as build_dosbox
 from ..dosbox.converter import convert as convert_dosbox
 from ..dosbox.models import DosemuConfig
 from .layout import GameLayout
-from .profiles import default_profile, legacy_find_confs, profile_slug, resolve_conf_files, select_profile, valid_profiles
+from .profiles import (
+    default_profile,
+    legacy_find_confs,
+    profile_slug,
+    resolve_conf_files,
+    resolve_working_dir,
+    select_profile,
+    valid_profiles,
+)
 
 
 def _dosemu_filename(slug: str | None) -> str:
@@ -25,10 +33,13 @@ def _userhook_filename(slug: str | None) -> str:
     return f"userhook_{slug}.bat" if slug else "userhook.bat"
 
 
-def _resolve_targets(layout: GameLayout, profile: str | None) -> tuple[bool, list[tuple[str, list[Path]]]]:
+def _resolve_targets(
+    layout: GameLayout, profile: str | None
+) -> tuple[bool, list[tuple[str, list[Path], Path]]]:
     """Figure out which profile(s) to process. Returns (is_legacy_fallback,
-    [(label, conf_files), ...]), label being "default" or a slug. Raises if
-    the game isn't downloaded, or a requested profile doesn't exist."""
+    [(label, conf_files, working_dir), ...]), label being "default" or a
+    slug. Raises if the game isn't downloaded, or a requested profile
+    doesn't exist."""
     if not layout.is_downloaded():
         raise click.ClickException(
             f"'{layout.gamename}' hasn't been downloaded yet. "
@@ -43,13 +54,16 @@ def _resolve_targets(layout: GameLayout, profile: str | None) -> tuple[bool, lis
         conf_files = legacy_find_confs(layout.game)
         if not conf_files:
             raise click.ClickException(f"No dosbox*.conf found under {layout.game}")
-        return True, [("default", conf_files)]
+        return True, [("default", conf_files, conf_files[0].parent)]
 
     targets = [select_profile(layout.game, profile)] if profile is not None else profiles
     default = default_profile(profiles)
-    resolved = [
-        (profile_slug(p) if p is not default else "default", resolve_conf_files(layout.game, p)) for p in targets
-    ]
+    resolved = []
+    for p in targets:
+        label = profile_slug(p) if p is not default else "default"
+        conf_files = resolve_conf_files(layout.game, p)
+        working_dir = resolve_working_dir(layout.game, p) or conf_files[0].parent
+        resolved.append((label, conf_files, working_dir))
     return False, resolved
 
 
@@ -68,15 +82,15 @@ def import_gog_game(
     is_legacy, targets = _resolve_targets(layout, profile)
 
     if is_legacy:
-        label, conf_files = targets[0]
-        convert_dosbox(conf_files, output_dir, force=force)
+        label, conf_files, working_dir = targets[0]
+        convert_dosbox(conf_files, output_dir, force=force, working_dir=working_dir)
         return {label: conf_files}
 
     if output_dir.exists() and not force:
         raise click.ClickException(f"'{output_dir}' already exists. Use --force to overwrite.")
 
     results: dict[str, list[Path]] = {}
-    for label, conf_files in targets:
+    for label, conf_files, working_dir in targets:
         slug = None if label == "default" else label
         convert_dosbox(
             conf_files,
@@ -84,6 +98,7 @@ def import_gog_game(
             force=True,
             dosemu_filename=_dosemu_filename(slug),
             userhook_filename=_userhook_filename(slug),
+            working_dir=working_dir,
         )
         results[label] = conf_files
     return results
@@ -98,7 +113,7 @@ def build_gog_game(
     """
     _is_legacy, targets = _resolve_targets(layout, profile)
     results: dict[str, tuple[list[Path], DosemuConfig, list[str]]] = {}
-    for label, conf_files in targets:
-        target, userhook_lines = build_dosbox(conf_files)
+    for label, conf_files, working_dir in targets:
+        target, userhook_lines = build_dosbox(conf_files, working_dir)
         results[label] = (conf_files, target, userhook_lines)
     return results

@@ -10,19 +10,21 @@ from .models import DosboxConfigToDosemu, DosemuConfig
 from .parser import parse_dosbox_confs
 
 
-def build(input_files: Sequence[Path]) -> tuple[DosemuConfig, list[str]]:
+def build(input_files: Sequence[Path], working_dir: Path | None = None) -> tuple[DosemuConfig, list[str]]:
     """Parse and transform one or more dosbox.conf files (merged in order,
-    later files overriding earlier ones — the same rule DOSBox itself uses
-    for multiple -conf files) into (dosemu_config, userhook_lines) - the
-    same content convert() writes to disk, without writing anything.
-    userhook_lines has shims already applied (see dedb.shims.autoexec)."""
+    later files overriding earlier ones, the same rule DOSBox uses for
+    multiple -conf files) into (dosemu_config, userhook_lines). Same
+    content convert() writes to disk, without writing anything.
+    userhook_lines has shims already applied (see dedb.shims.autoexec).
+    working_dir, if known, lets the mount shim resolve MOUNT's relative
+    paths into LREDIR calls; without it MOUNT lines are commented out."""
     raw_dict, autoexec_commands = parse_dosbox_confs(input_files)
 
     transformer = DosboxConfigToDosemu.model_validate(raw_dict)
     dumped = transformer.model_dump(by_alias=True)
     target = DosemuConfig.model_validate(dumped)
 
-    return target, autoexec_shims(autoexec_commands)
+    return target, autoexec_shims(autoexec_commands, working_dir)
 
 
 def convert(
@@ -32,18 +34,20 @@ def convert(
     *,
     dosemu_filename: str = "dosemu.conf",
     userhook_filename: str = "userhook.bat",
+    working_dir: Path | None = None,
 ) -> None:
     """Convert one or more dosbox.conf files into a DOSEMU2 config +
     userhook.bat, written into output_dir. dosemu_filename/userhook_filename
     let a caller write more than one converted pair into the same
-    output_dir (e.g. one per GOG launch profile - see dedb.gog.profiles)."""
+    output_dir (e.g. one per GOG launch profile - see dedb.gog.profiles).
+    See build() for working_dir."""
     if output_dir.exists() and not force:
         raise click.ClickException(
             f"Output directory '{output_dir}' already exists. Use --force to overwrite."
         )
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    target, userhook_lines = build(input_files)
+    target, userhook_lines = build(input_files, working_dir)
 
     dosemu_conf_path = output_dir / dosemu_filename
     dosemu_conf_path.write_text(target.model_dump_dosemurc())
