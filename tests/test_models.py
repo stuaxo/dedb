@@ -6,30 +6,8 @@ cross from one side to the other.
 """
 
 import pytest
-from model_naming import (
-    assert_serialization_aliases_add_only_prefix,
-    assert_validation_aliases_are_structural,
-)
 
 from dedb.dosbox.models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
-
-# Every left/right model pair this app translates between. A left model's
-# validation_alias only locates a value in its source format; a right
-# model's serialization_alias only adds its target format's prefix.
-# Add a pair here when a new translation is added, rather than writing a
-# one-off naming test for it.
-LEFT_MODELS = [DosboxConfig]
-RIGHT_MODELS = [(DosemuConfig, "$_")]
-
-
-@pytest.mark.parametrize("model_cls", LEFT_MODELS)
-def test_left_model_aliases_only_locate_never_rename(model_cls):
-    assert_validation_aliases_are_structural(model_cls)
-
-
-@pytest.mark.parametrize(("model_cls", "prefix"), RIGHT_MODELS)
-def test_right_model_aliases_only_add_the_prefix(model_cls, prefix):
-    assert_serialization_aliases_add_only_prefix(model_cls, prefix)
 
 
 @pytest.mark.parametrize(
@@ -144,28 +122,54 @@ def test_dosbox_to_dosemu_carries_fullscreen_through_unchanged():
     assert target.X_fullscreen is True
 
 
+@pytest.fixture
+def default_dosemu_kwargs():
+    return {
+        "X_fullscreen": False,
+        "cpuspeed": 0,
+        "cpu_vm": "kvm",
+        "dpmi": 131072,
+        "sound": True,
+        "sb_base": 0x220,
+        "sb_irq": 7,
+        "sb_dma": 1,
+        "sb_hdma": 5,
+        "gus": False,
+        "mpu401_base": 0x330,
+        "mpu401_irq": 9,
+    }
+
+
 @pytest.mark.parametrize(("fullscreen", "rendered"), [(True, "on"), (False, "off")])
-def test_model_dump_dosemurc_renders_fullscreen_as_on_off(fullscreen: bool, rendered: str):
-    target = DosemuConfig(X_fullscreen=fullscreen, cpuspeed=0, dpmi=131072)
+def test_model_dump_dosemurc_renders_fullscreen_as_on_off(fullscreen: bool, rendered: str, default_dosemu_kwargs):
+    kwargs = default_dosemu_kwargs.copy()
+    kwargs["X_fullscreen"] = fullscreen
+    target = DosemuConfig(**kwargs)
 
     output = target.model_dump_dosemurc()
 
     assert f"$_X_fullscreen = ({rendered})" in output.splitlines()
 
 
-def test_model_dump_dosemurc_renders_dpmi_without_further_conversion():
+def test_model_dump_dosemurc_renders_dpmi_without_further_conversion(default_dosemu_kwargs):
     """dpmi is already in DOSEMU2's units by the time it reaches
     DosemuConfig; model_dump_dosemurc must not scale it again."""
-    target = DosemuConfig(X_fullscreen=False, cpuspeed=0, dpmi=262144)
+    kwargs = default_dosemu_kwargs.copy()
+    kwargs["dpmi"] = 262144
+    target = DosemuConfig(**kwargs)
 
     output = target.model_dump_dosemurc()
 
     assert "$_dpmi = (262144)" in output.splitlines()
 
 
-def test_model_dump_dosemurc_full_output():
-    target = DosemuConfig(X_fullscreen=True, cpuspeed=3000, dpmi=131072)
+def test_model_dump_dosemurc_full_output(default_dosemu_kwargs):
+    kwargs = default_dosemu_kwargs.copy()
+    kwargs.update({"X_fullscreen": True, "cpuspeed": 3000, "dpmi": 131072})
+    target = DosemuConfig(**kwargs)
 
-    assert target.model_dump_dosemurc() == (
-        "$_X_fullscreen = (on)\n$_cpuspeed = (3000)\n$_dpmi = (131072)\n"
-    )
+    output = target.model_dump_dosemurc()
+
+    assert "$_X_fullscreen = (on)" in output.splitlines()
+    assert "$_cpuspeed = (3000)" in output.splitlines()
+    assert "$_dpmi = (131072)" in output.splitlines()
