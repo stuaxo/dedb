@@ -8,6 +8,28 @@ cross from one side to the other.
 import pytest
 
 from dedb.dosbox.models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
+from dedb.testing.model_naming import (
+    assert_serialization_aliases_add_only_prefix,
+    assert_validation_aliases_are_structural,
+)
+
+# Every left/right model pair this app translates between. A left model's
+# validation_alias only locates a value in its source format; a right
+# model's serialization_alias only adds its target format's prefix.
+# Add a pair here when a new translation is added, rather than writing a
+# one-off naming test for it.
+LEFT_MODELS = [DosboxConfig]
+RIGHT_MODELS = [(DosemuConfig, "$_")]
+
+
+@pytest.mark.parametrize("model_cls", LEFT_MODELS)
+def test_left_model_aliases_only_locate_never_rename(model_cls):
+    assert_validation_aliases_are_structural(model_cls)
+
+
+@pytest.mark.parametrize(("model_cls", "prefix"), RIGHT_MODELS)
+def test_right_model_aliases_only_add_the_prefix(model_cls, prefix):
+    assert_serialization_aliases_add_only_prefix(model_cls, prefix)
 
 
 @pytest.mark.parametrize(
@@ -25,10 +47,16 @@ from dedb.dosbox.models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
         ("", False),
     ],
 )
-def test_fullscreen_string_coercion(raw: str, expected: bool):
-    config = DosboxConfig.model_validate({"sdl": {"fullscreen": raw}})
+def test_bool_string_coercion_for_multiple_fields(raw: str, expected: bool):
+    config = DosboxConfig.model_validate({
+        "sdl": {"fullscreen": raw},
+        "gus": {"gus": raw},
+        "speaker": {"pcspeaker": raw},
+    })
 
     assert config.fullscreen is expected
+    assert config.gus is expected
+    assert config.pcspeaker is expected
 
 
 def test_fullscreen_defaults_to_false_when_absent():
@@ -122,6 +150,36 @@ def test_dosbox_to_dosemu_carries_fullscreen_through_unchanged():
     assert target.X_fullscreen is True
 
 
+def test_dosbox_to_dosemu_translates_speaker_and_serial_and_joystick():
+    target = dosbox_to_dosemu(DosboxConfig(
+        pcspeaker=True,
+        serial1="dummy",
+        joysticktype="none"
+    ))
+
+    assert target.speaker == "emulated"
+    assert target.com1 == ""
+    assert target.joystick == ""
+
+    target_alt = dosbox_to_dosemu(DosboxConfig(
+        pcspeaker=False,
+        serial1="directserial",
+        joysticktype="auto"
+    ))
+
+    assert target_alt.speaker == ""
+    assert target_alt.com1 == ""  # Always returns empty for now
+    assert target_alt.joystick == "/dev/input/js0"
+
+
+def test_dosbox_to_dosemu_translates_video_output():
+    target = dosbox_to_dosemu(DosboxConfig(output="opengl"))
+    assert target.video == "X"
+
+    target_none = dosbox_to_dosemu(DosboxConfig(output="none"))
+    assert target_none.video == ""
+
+
 @pytest.fixture
 def default_dosemu_kwargs():
     return {
@@ -137,6 +195,10 @@ def default_dosemu_kwargs():
         "gus": False,
         "mpu401_base": 0x330,
         "mpu401_irq": 9,
+        "speaker": "emulated",
+        "com1": "",
+        "joystick": "/dev/input/js0",
+        "video": "X",
     }
 
 

@@ -40,52 +40,34 @@ class DosboxConfig(BaseModel):
     hdma: int = Field(default=5, validation_alias=AliasPath("sblaster", "hdma"))
     gus: bool = Field(default=False, validation_alias=AliasPath("gus", "gus"))
     mpu401: str = Field(default="intelligent", validation_alias=AliasPath("midi", "mpu401"))
+    pcspeaker: bool = Field(default=True, validation_alias=AliasPath("speaker", "pcspeaker"))
 
-    @field_validator("fullscreen", "gus", mode="before")
+    # Serial fields
+    serial1: str = Field(default="dummy", validation_alias=AliasPath("serial", "serial1"))
+
+    # Joystick fields
+    joysticktype: str = Field(default="auto", validation_alias=AliasPath("joystick", "joysticktype"))
+
+    # Render/Video fields
+    aspect: bool = Field(default=False, validation_alias=AliasPath("render", "aspect"))
+    scaler: str = Field(default="normal2x", validation_alias=AliasPath("render", "scaler"))
+    output: str = Field(default="surface", validation_alias=AliasPath("sdl", "output"))
+
+    @field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")
     @classmethod
     def coerce_bool(cls, value: object) -> object:
         if isinstance(value, str):
             return value.strip().lower() in ("true", "1", "yes", "on")
         return value
 
-    @field_validator("memsize", mode="before")
+    @field_validator("memsize", "irq", "dma", "hdma", mode="before")
     @classmethod
-    def coerce_memsize(cls, value: object) -> object:
+    def coerce_int(cls, value: object, info) -> object:
         if isinstance(value, str):
             try:
                 return int(value.strip())
             except ValueError:
-                return 16
-        return value
-
-    @field_validator("irq", mode="before")
-    @classmethod
-    def coerce_irq(cls, value: object) -> object:
-        if isinstance(value, str):
-            try:
-                return int(value.strip())
-            except ValueError:
-                return 7
-        return value
-
-    @field_validator("dma", mode="before")
-    @classmethod
-    def coerce_dma(cls, value: object) -> object:
-        if isinstance(value, str):
-            try:
-                return int(value.strip())
-            except ValueError:
-                return 1
-        return value
-
-    @field_validator("hdma", mode="before")
-    @classmethod
-    def coerce_hdma(cls, value: object) -> object:
-        if isinstance(value, str):
-            try:
-                return int(value.strip())
-            except ValueError:
-                return 5
+                return cls.model_fields[info.field_name].default
         return value
 
 
@@ -114,6 +96,16 @@ class DosemuConfig(BaseModel):
     gus: bool = Field(serialization_alias="$_gus")
     mpu401_base: int = Field(serialization_alias="$_mpu401_base")
     mpu401_irq: int = Field(serialization_alias="$_mpu401_irq")
+    speaker: str = Field(serialization_alias="$_speaker")
+
+    # Serial fields
+    com1: str = Field(serialization_alias="$_com1")
+
+    # Joystick fields
+    joystick: str = Field(serialization_alias="$_joystick")
+
+    # Render/Video fields
+    video: str = Field(serialization_alias="$_video")
 
     def model_dump_dosemurc(self) -> str:
         """Render as a DOSEMU2 config file: `$_var = (n)` for
@@ -133,14 +125,14 @@ class DosemuConfig(BaseModel):
         for name, field in type(self).model_fields.items():
             value = getattr(self, name)
             if isinstance(value, bool):
-                rendered = "on" if value else "off"
+                rendered = f"({'on' if value else 'off'})"
             elif name in ("sb_base", "mpu401_base") and isinstance(value, int):
-                rendered = hex(value)
+                rendered = f"({hex(value)})"
             elif isinstance(value, str):
                 rendered = f'"{value}"'
             else:
-                rendered = value
-            lines.append(f"{field.serialization_alias} = ({rendered})")
+                rendered = f"({value})"
+            lines.append(f"{field.serialization_alias} = {rendered}")
         return "\n".join(lines) + "\n"
 
 
@@ -199,6 +191,27 @@ def _mpu401_to_irq(mpu401: str) -> int:
     return 0 if mpu401.strip().lower() == "none" else 9
 
 
+def _pcspeaker_to_speaker(pcspeaker: bool) -> str:
+    """DOSBox synthesizes PC speaker; DOSEmu2 routes emulated speaker to host audio."""
+    return "emulated" if pcspeaker else ""
+
+
+def _serial_to_com(serial: str) -> str:
+    """DOSBox provides dummy serial ports; DOSEmu2 requires explicit host device paths. Defaulting to disabled."""
+    return ""
+
+
+def _joystick_to_device(joysticktype: str) -> str:
+    """DOSBox emulates specific joystick protocols; DOSEmu2 maps directly to host input devices."""
+    return "" if joysticktype.strip().lower() == "none" else "/dev/input/js0"
+
+
+def _output_to_video(output: str) -> str:
+    """DOSBox selects SDL output surfaces (opengl, overlay, etc.); DOSEmu2 usually expects 'X' for windowed environments."""
+    output_lower = output.strip().lower()
+    return "X" if output_lower != "none" else ""
+
+
 def dosbox_to_dosemu(dosbox: DosboxConfig) -> DosemuConfig:
     """Translate a DosboxConfig into a DosemuConfig. The only place
     DOSBox's field names and units become DOSEMU2's."""
@@ -215,4 +228,8 @@ def dosbox_to_dosemu(dosbox: DosboxConfig) -> DosemuConfig:
         gus=dosbox.gus,
         mpu401_base=_mpu401_to_base(dosbox.mpu401),
         mpu401_irq=_mpu401_to_irq(dosbox.mpu401),
+        speaker=_pcspeaker_to_speaker(dosbox.pcspeaker),
+        com1=_serial_to_com(dosbox.serial1),
+        joystick=_joystick_to_device(dosbox.joysticktype),
+        video=_output_to_video(dosbox.output),
     )
