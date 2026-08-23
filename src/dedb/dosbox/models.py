@@ -29,11 +29,21 @@ class DosboxConfig(BaseModel):
 
     fullscreen: bool = Field(default=False, validation_alias=AliasPath("sdl", "fullscreen"))
     cycles: str = Field(default="auto", validation_alias=AliasPath("cpu", "cycles"))
+    core: str = Field(default="auto", validation_alias=AliasPath("cpu", "core"))
     memsize: int = Field(default=16, validation_alias=AliasPath("dosbox", "memsize"))
 
-    @field_validator("fullscreen", mode="before")
+    # Sound fields
+    sbtype: str = Field(default="sb16", validation_alias=AliasPath("sblaster", "sbtype"))
+    sbbase: str = Field(default="220", validation_alias=AliasPath("sblaster", "sbbase"))
+    irq: int = Field(default=7, validation_alias=AliasPath("sblaster", "irq"))
+    dma: int = Field(default=1, validation_alias=AliasPath("sblaster", "dma"))
+    hdma: int = Field(default=5, validation_alias=AliasPath("sblaster", "hdma"))
+    gus: bool = Field(default=False, validation_alias=AliasPath("gus", "gus"))
+    mpu401: str = Field(default="intelligent", validation_alias=AliasPath("midi", "mpu401"))
+
+    @field_validator("fullscreen", "gus", mode="before")
     @classmethod
-    def coerce_fullscreen(cls, value: object) -> object:
+    def coerce_bool(cls, value: object) -> object:
         if isinstance(value, str):
             return value.strip().lower() in ("true", "1", "yes", "on")
         return value
@@ -46,6 +56,36 @@ class DosboxConfig(BaseModel):
                 return int(value.strip())
             except ValueError:
                 return 16
+        return value
+
+    @field_validator("irq", mode="before")
+    @classmethod
+    def coerce_irq(cls, value: object) -> object:
+        if isinstance(value, str):
+            try:
+                return int(value.strip())
+            except ValueError:
+                return 7
+        return value
+
+    @field_validator("dma", mode="before")
+    @classmethod
+    def coerce_dma(cls, value: object) -> object:
+        if isinstance(value, str):
+            try:
+                return int(value.strip())
+            except ValueError:
+                return 1
+        return value
+
+    @field_validator("hdma", mode="before")
+    @classmethod
+    def coerce_hdma(cls, value: object) -> object:
+        if isinstance(value, str):
+            try:
+                return int(value.strip())
+            except ValueError:
+                return 5
         return value
 
 
@@ -62,7 +102,18 @@ class DosemuConfig(BaseModel):
 
     X_fullscreen: bool = Field(serialization_alias="$_X_fullscreen")
     cpuspeed: int = Field(serialization_alias="$_cpuspeed")
+    cpu_vm: str = Field(serialization_alias="$_cpu_vm")
     dpmi: int = Field(serialization_alias="$_dpmi")
+
+    # Sound fields
+    sound: bool = Field(serialization_alias="$_sound")
+    sb_base: int = Field(serialization_alias="$_sb_base")
+    sb_irq: int = Field(serialization_alias="$_sb_irq")
+    sb_dma: int = Field(serialization_alias="$_sb_dma")
+    sb_hdma: int = Field(serialization_alias="$_sb_hdma")
+    gus: bool = Field(serialization_alias="$_gus")
+    mpu401_base: int = Field(serialization_alias="$_mpu401_base")
+    mpu401_irq: int = Field(serialization_alias="$_mpu401_irq")
 
     def model_dump_dosemurc(self) -> str:
         """Render as a DOSEMU2 config file: `$_var = (n)` for
@@ -81,7 +132,14 @@ class DosemuConfig(BaseModel):
         lines = []
         for name, field in type(self).model_fields.items():
             value = getattr(self, name)
-            rendered = ("on" if value else "off") if isinstance(value, bool) else value
+            if isinstance(value, bool):
+                rendered = "on" if value else "off"
+            elif name in ("sb_base", "mpu401_base") and isinstance(value, int):
+                rendered = hex(value)
+            elif isinstance(value, str):
+                rendered = f'"{value}"'
+            else:
+                rendered = value
             lines.append(f"{field.serialization_alias} = ({rendered})")
         return "\n".join(lines) + "\n"
 
@@ -111,11 +169,50 @@ def _memsize_to_dpmi_kb(memsize: int) -> int:
     return max(memsize, MIN_DPMI_MEMORY_MB) * 1024
 
 
+def _core_to_cpu_vm(core: str) -> str:
+    """DOSBox throttles a fixed cycle count; DOSEmu2 runs near-native via KVM."""
+    if core.strip().lower() == "normal":
+        return "emulated"
+    return "kvm"
+
+
+def _sbtype_to_sound_enabled(sbtype: str) -> bool:
+    """DOSBox emulates specific SoundBlaster chips; DOSEmu2 emulates fixed hardware and forwards to host audio."""
+    return sbtype.strip().lower() != "none"
+
+
+def _sbbase_to_hex(sbbase: str) -> int:
+    """DOSBox implicitly uses hex for ports; DOSEmu2 requires explicit 0x prefix."""
+    try:
+        return int(sbbase.strip(), 16)
+    except ValueError:
+        return 0x220
+
+
+def _mpu401_to_base(mpu401: str) -> int:
+    """DOSBox uses various MIDI devices; DOSEmu2 exposes MPU-401 for host routing."""
+    return 0 if mpu401.strip().lower() == "none" else 0x330
+
+
+def _mpu401_to_irq(mpu401: str) -> int:
+    """Default IRQ 9 for MPU-401 if enabled, 0 if none."""
+    return 0 if mpu401.strip().lower() == "none" else 9
+
+
 def dosbox_to_dosemu(dosbox: DosboxConfig) -> DosemuConfig:
     """Translate a DosboxConfig into a DosemuConfig. The only place
     DOSBox's field names and units become DOSEMU2's."""
     return DosemuConfig(
         X_fullscreen=dosbox.fullscreen,
         cpuspeed=_cycles_to_cpuspeed(dosbox.cycles),
+        cpu_vm=_core_to_cpu_vm(dosbox.core),
         dpmi=_memsize_to_dpmi_kb(dosbox.memsize),
+        sound=_sbtype_to_sound_enabled(dosbox.sbtype),
+        sb_base=_sbbase_to_hex(dosbox.sbbase),
+        sb_irq=dosbox.irq,
+        sb_dma=dosbox.dma,
+        sb_hdma=dosbox.hdma,
+        gus=dosbox.gus,
+        mpu401_base=_mpu401_to_base(dosbox.mpu401),
+        mpu401_irq=_mpu401_to_irq(dosbox.mpu401),
     )
