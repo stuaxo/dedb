@@ -8,6 +8,8 @@ and unit conversion happen there, nowhere else."""
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
+from .validators import coerce_int, istruthy
+
 # DOSEMU2's documented default for $_dpmi (0x20000 Kb,
 # /etc/dosemu/dosemu.conf). Used as a floor under DOSBox's memsize, not
 # a ceiling - see _memsize_to_dpmi_kb.
@@ -53,22 +55,8 @@ class DosboxConfig(BaseModel):
     scaler: str = Field(default="normal2x", validation_alias=AliasPath("render", "scaler"))
     output: str = Field(default="surface", validation_alias=AliasPath("sdl", "output"))
 
-    @field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")
-    @classmethod
-    def coerce_bool(cls, value: object) -> object:
-        if isinstance(value, str):
-            return value.strip().lower() in ("true", "1", "yes", "on")
-        return value
-
-    @field_validator("memsize", "irq", "dma", "hdma", mode="before")
-    @classmethod
-    def coerce_int(cls, value: object, info) -> object:
-        if isinstance(value, str):
-            try:
-                return int(value.strip())
-            except ValueError:
-                return cls.model_fields[info.field_name].default
-        return value
+    coerce_bool = field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")(istruthy)
+    coerce_int = field_validator("memsize", "irq", "dma", "hdma", mode="before")(coerce_int)
 
 
 class DosemuConfig(BaseModel):
