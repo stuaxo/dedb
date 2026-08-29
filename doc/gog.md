@@ -45,7 +45,7 @@ GOG Commands, these all operate on games you own on GOG.
 | `listgog`      | List DOSBOX games on GOG                                      |
 | `importgog`    | Create a DOSEMU2 conf and userhook from a downloaded GOG Game |
 | `rungog`       | Run a GOG game in DOSBox or DOSEMU2.                          |
-| `dosboxconfgog`| View config, autoexec and sound settings.                     |
+| `dosboxconfgog`| View config, autoexec, sound settings, and `--issues`.        |
 | `rmgog`        | Delete a downloaded game's directory.                        |
 
 

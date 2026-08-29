@@ -11,6 +11,36 @@ The `[autoexec]` section used to create a `userhook.bat` script.
 
 **shims** are used to comment out unsupported commands and translate others where possible.
 
+Each shim (a `Workaround` in `dedb.shims.autoexec`) is filed under a severity:
+
+- **supported** - translated to a working DOSEMU2 equivalent.
+- **partially supported** - still runs after the shim, but not identically to DOSBox
+  (e.g. `CHOICE` with its flags stripped, or `MOUNT` rewritten to `LREDIR`).
+- **unsupported** - no equivalent; the shim only comments the command out so it doesn't
+  error at runtime (`IMGMOUNT`, overlay `MOUNT`). The game may misbehave.
+
+The `SUPPORTED` / `PARTIALLY_SUPPORTED` / `UNSUPPORTED` lists in that module are the
+source of truth; `active_workarounds()` flattens them into the pipeline the converter
+runs.
+
+To see which commands a conf needs a shim for *before* converting it, run
+`dedb dosboxconf CONF --issues` (or `dedb dosboxconfgog GAME --issues` for a downloaded
+GOG game). It runs the real shim pipeline, so it always matches what ends up in
+`userhook.bat`. The default output is compact - one `unittest`-style set of workaround
+names per severity band:
+
+```
+[issues]
+Commands not supported as-is under DOSEMU2:
+'imgmount'
+Commands only partially supported:
+'choice'
+'mount'
+```
+
+Add `-v` / `--verbose` to expand each band to every offending line and its rewrite. A
+conf that needs no shims reports `(none)`.
+
 
 ## Drive Mapping
 

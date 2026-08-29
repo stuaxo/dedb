@@ -9,8 +9,10 @@ from pathlib import Path
 import pytest
 
 from dedb.shims.autoexec import (
+    Severity,
     autoexec_shims,
     choice_shim,
+    diagnose_autoexec,
     mount_lredir_shim,
     resolve_mounts,
     unsupported_command,
@@ -148,3 +150,44 @@ def test_autoexec_shims_with_working_dir_still_comments_out_c_and_overlay_mounts
     # so it is never converted to an LREDIR call.
     assert 'REM MOUNT D "..\\cloud_saves" -t overlay' in result
     assert not any(line.startswith("LREDIR") for line in result)
+
+
+def test_autoexec_shims_comment_out_imgmount(launcher_autoexec_lines):
+    result = autoexec_shims([*launcher_autoexec_lines, "IMGMOUNT E disk.img -t iso"])
+
+    assert "REM IMGMOUNT E disk.img -t iso" in result
+
+
+def test_diagnose_autoexec_reports_the_lines_each_workaround_rewrote(launcher_autoexec_lines):
+    issues = diagnose_autoexec([*launcher_autoexec_lines, "IMGMOUNT E disk.img"])
+
+    triggered = {(i.workaround, i.line): i for i in issues}
+    assert triggered[("mount", 'MOUNT C ".."')].rewritten == 'REM MOUNT C ".."'
+    assert triggered[("overlay-mount", 'MOUNT D "..\\cloud_saves" -t overlay')].rewritten.startswith("REM ")
+    assert triggered[("choice", "CHOICE /C123 /S Which program do you want to run?: /N")].rewritten == (
+        "CHOICE Which program do you want to run?:"
+    )
+    assert triggered[("imgmount", "IMGMOUNT E disk.img")].rewritten == "REM IMGMOUNT E disk.img"
+
+
+def test_diagnose_autoexec_tags_each_issue_with_its_severity(launcher_autoexec_lines):
+    severities = {
+        i.workaround: i.severity
+        for i in diagnose_autoexec([*launcher_autoexec_lines, "IMGMOUNT E disk.img"])
+    }
+
+    assert severities["imgmount"] is Severity.UNSUPPORTED
+    assert severities["overlay-mount"] is Severity.UNSUPPORTED
+    assert severities["choice"] is Severity.PARTIALLY_SUPPORTED
+    assert severities["mount"] is Severity.PARTIALLY_SUPPORTED
+
+
+def test_diagnose_autoexec_reports_nothing_for_a_clean_autoexec():
+    assert diagnose_autoexec(["@ECHO OFF", "c:", "GAME.EXE"]) == []
+
+
+def test_diagnose_autoexec_with_working_dir_reports_the_lredir_translation(tmp_path: Path):
+    (issue,) = diagnose_autoexec(["MOUNT D SAVES"], tmp_path)
+
+    assert issue.workaround == "mount"
+    assert issue.rewritten == f"LREDIR -f D: {(tmp_path / 'SAVES').resolve()}"

@@ -2,8 +2,19 @@
 
 from pathlib import Path
 from typing import Sequence
+from unittest.util import safe_repr
 
+from ..shims.autoexec import (
+    SEVERITY_BLURB,
+    SEVERITY_HEADING,
+    AutoexecIssue,
+    Severity,
+    diagnose_autoexec,
+)
 from .parser import parse_dosbox_confs
+
+# Most severe first, matching active_workarounds()' pipeline order.
+_SEVERITY_ORDER = (Severity.UNSUPPORTED, Severity.PARTIALLY_SUPPORTED, Severity.SUPPORTED)
 
 
 def _format_section(title: str, options: dict) -> str:
@@ -18,23 +29,67 @@ def _format_autoexec(commands: Sequence[str]) -> str:
     return "\n".join(lines)
 
 
+def _format_issues(issues: Sequence[AutoexecIssue], *, verbose: bool = False) -> str:
+    """Render diagnose_autoexec()'s findings.
+
+    Default: one block per severity band, laid out the way
+    unittest.TestCase.assertSetEqual prints a set difference - a heading,
+    then the triggered workaround names one compact repr() per line
+    (unittest.util.safe_repr). verbose additionally lists every offending
+    autoexec line and what it is rewritten to.
+    """
+    lines = ["[issues]"]
+    if not issues:
+        lines.append("(none)")
+        return "\n".join(lines)
+
+    for severity in _SEVERITY_ORDER:
+        in_band = [issue for issue in issues if issue.severity is severity]
+        if not in_band:
+            continue
+
+        if not verbose:
+            lines.append(SEVERITY_HEADING[severity])
+            lines.extend(safe_repr(name, short=True) for name in sorted({i.workaround for i in in_band}))
+            continue
+
+        lines.append(f"{severity.value} ({SEVERITY_BLURB[severity]}):")
+        grouped: dict[str, tuple[str, list[AutoexecIssue]]] = {}
+        for issue in in_band:
+            grouped.setdefault(issue.workaround, (issue.summary, []))[1].append(issue)
+        for name, (summary, group) in grouped.items():
+            lines.append(f"  {name}: {summary}")
+            for issue in group:
+                lines.append(f"    {issue.line}  ->  {issue.rewritten}")
+    return "\n".join(lines)
+
+
 def inspect(
     paths: Sequence[Path],
     *,
     autoexec: bool = False,
     sblaster: bool = False,
     gus: bool = False,
+    issues: bool = False,
+    verbose: bool = False,
+    working_dir: Path | None = None,
 ) -> str:
     """Render the requested aspects of one or more merged dosbox.conf files.
 
-    If none of autoexec/sblaster/gus is requested, all three are shown.
+    If none of autoexec/sblaster/gus/issues is requested, autoexec,
+    sblaster and gus are all shown (issues stays opt-in). verbose expands
+    the issues block to every rewritten line. working_dir, if known, lets
+    the issues report show MOUNT's LREDIR translation rather than
+    reporting it as commented out.
     """
-    if not (autoexec or sblaster or gus):
+    if not (autoexec or sblaster or gus or issues):
         autoexec = sblaster = gus = True
 
     config, autoexec_commands = parse_dosbox_confs(paths)
 
     blocks = []
+    if issues:
+        blocks.append(_format_issues(diagnose_autoexec(autoexec_commands, working_dir), verbose=verbose))
     if autoexec:
         blocks.append(_format_autoexec(autoexec_commands))
     if sblaster:

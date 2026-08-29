@@ -81,12 +81,33 @@ def importdosbox(
     help="Show Sound Blaster ([sblaster]) settings.",
 )
 @click.option("--gus", "-g", is_flag=True, default=False, help="Show Gravis Ultrasound ([gus]) settings.")
-def dosboxconf(conf_files: tuple[Path, ...], autoexec: bool, sblaster: bool, gus: bool) -> None:
+@click.option(
+    "--issues",
+    "-i",
+    is_flag=True,
+    default=False,
+    help="List the commands DOSEMU2 can't run as-is, grouped by severity.",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="With --issues, also show each autoexec line and what it is rewritten to.",
+)
+def dosboxconf(
+    conf_files: tuple[Path, ...], autoexec: bool, sblaster: bool, gus: bool, issues: bool, verbose: bool
+) -> None:
     """Show aspects of one or more dosbox.conf files, merged in order.
 
-    With none of -a/-s/-g given, all aspects are shown.
+    With none of -a/-s/-g given, those three aspects are shown; --issues
+    is always opt-in.
     """
-    click.echo(inspect_conf(conf_files, autoexec=autoexec, sblaster=sblaster, gus=gus))
+    click.echo(
+        inspect_conf(
+            conf_files, autoexec=autoexec, sblaster=sblaster, gus=gus, issues=issues, verbose=verbose
+        )
+    )
 
 
 commands = [importdosbox, dosboxconf]

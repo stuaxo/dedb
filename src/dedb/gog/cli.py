@@ -12,7 +12,7 @@ from .client import OfflineError, owned_games
 from .downloader import download_and_extract
 from .importer import build_gog_game, import_gog_game
 from .layout import GameLayout
-from .profiles import get_conf_files
+from .profiles import get_conf_files, get_working_dir
 from .runner import ensure_downloaded, run_dosbox, run_dosemu
 
 
@@ -358,16 +358,51 @@ def rungog(
     help="Show Sound Blaster ([sblaster]) settings.",
 )
 @click.option("--gus", "-g", is_flag=True, default=False, help="Show Gravis Ultrasound ([gus]) settings.")
-def dosboxconfgog(game_id: str, profile: str | None, autoexec: bool, sblaster: bool, gus: bool) -> None:
+@click.option(
+    "--issues",
+    "-i",
+    is_flag=True,
+    default=False,
+    help="List the commands DOSEMU2 can't run as-is, grouped by severity.",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="With --issues, also show each autoexec line and what it is rewritten to.",
+)
+def dosboxconfgog(
+    game_id: str,
+    profile: str | None,
+    autoexec: bool,
+    sblaster: bool,
+    gus: bool,
+    issues: bool,
+    verbose: bool,
+) -> None:
     """Show aspects of an already-downloaded GOG game's resolved dosbox conf(s).
 
     Resolves the same conf(s) `rungog --dosbox` would use for the given
     --profile (default: the primary profile). With none of -a/-s/-g given,
-    all aspects are shown.
+    those three aspects are shown; --issues is always opt-in.
     """
     layout = GameLayout(require_download_dir("gog"), game_id)
     conf_files = get_conf_files(layout.game, profile)
-    click.echo(inspect_conf(conf_files, autoexec=autoexec, sblaster=sblaster, gus=gus))
+    # The issues report resolves MOUNT against the same working directory
+    # `rungog --dosbox` would launch from, so it shows the real LREDIR.
+    working_dir = get_working_dir(layout.game, profile) if issues else None
+    click.echo(
+        inspect_conf(
+            conf_files,
+            autoexec=autoexec,
+            sblaster=sblaster,
+            gus=gus,
+            issues=issues,
+            verbose=verbose,
+            working_dir=working_dir,
+        )
+    )
 
 
 @click.command("rmgog")
