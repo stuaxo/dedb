@@ -49,16 +49,27 @@ def resolve_dosbox_binary(choice: str) -> str:
     return DOSBOX_BINARIES[choice]
 
 
-def ensure_downloaded(gamename: str, download_dir: Path, *, keep: bool) -> GameLayout:
-    """Download and extract gamename if it isn't already, returning its layout."""
+def ensure_downloaded(
+    gamename: str,
+    download_dir: Path,
+    *,
+    keep: bool,
+    refresh_metadata: bool = False,
+    redownload: bool = False,
+) -> GameLayout:
+    """Download and extract gamename if it isn't already, returning its layout.
+    --redownload re-fetches it even when already present; --refreshmetadata
+    re-fetches the cached GOG dependency metadata."""
     layout = GameLayout(download_dir, gamename)
-    if layout.is_downloaded():
+    if not (redownload or refresh_metadata or not layout.is_downloaded()):
         return layout
 
     product_id = next((g.product_id for g in owned_games() if g.gamename == gamename), None)
     if product_id is None:
         raise click.ClickException(f"'{gamename}' not found in your GOG library")
-    download_and_extract(gamename, product_id, download_dir, keep=keep)
+    download_and_extract(
+        gamename, product_id, download_dir, keep=keep, refresh=refresh_metadata, redownload=redownload
+    )
     return layout
 
 

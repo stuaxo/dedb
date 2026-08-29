@@ -98,9 +98,18 @@ def download_and_extract(
     *,
     keep: bool,
     refresh: bool = False,
+    redownload: bool = False,
     merge_save: bool = True,
 ) -> None:
     layout = GameLayout(download_dir, gamename)
+
+    if redownload and layout.is_downloaded():
+        print(f"Removing existing download: {gamename}")
+        shutil.rmtree(layout.game, ignore_errors=True)
+        shutil.rmtree(layout.installer, ignore_errors=True)
+        # The converted DOSEMU2 conf(s) are derived from the extracted
+        # files - drop them too so the next `rungog --dosemu` regenerates.
+        shutil.rmtree(layout.dosemu, ignore_errors=True)
 
     if layout.is_downloaded():
         print(f"Skipping: {gamename} (already downloaded)")

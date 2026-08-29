@@ -9,6 +9,17 @@ List all the available subcommands.
 `$ dedb`
 
 
+## Configuration
+
+Downloaded games/items live under one shared `download_dir`, namespaced per source
+(`<download_dir>/gog/`, `<download_dir>/archive/`, ...). Set it by editing
+`~/.config/dedb/dedbconf.toml`:
+
+```toml
+download_dir = "/path/to/downloads"
+```
+
+
 ## Good Old Games (GOG)
 
 Import and run directly from GoG (Good Old Games).
@@ -27,16 +38,7 @@ Dependencies:
 `sudo apt install lgogdownloader innoextract`
 
 
-Configuration:
-
-Set the download directory by editing `~/.config/dedb/dedbconf.toml` and setting `download_dir` under `[gog]`:
-
-```toml
-[gog]
-download_dir = "/path/to/downloads"
-```
-
-
+Games live under `<download_dir>/gog/` - see Configuration above.
 
 Commands: `downloadgog`, `listgog`, `importgog`, `rungog`. See `dedb <command> --help`.
 
@@ -78,3 +80,17 @@ For example, `warcraft_orcs_and_humans` has:
 
 Game profiles configured by GOGDOSConfig, these games are shipped without a `playTask` entry, these are currently
 ignored.
+
+
+## archive.org
+
+Download, import and run DOS games/software hosted on archive.org's software library
+(e.g. https://archive.org/details/msdos_Electro_Man_1992), identified either by their
+archive.org identifier or their full item URL.
+
+Unlike GOG, archive.org items aren't owned - each command just takes an item directly,
+no login required.
+
+Items live under `<download_dir>/archive/` - see Configuration above.
+
+Commands: `downloadarchive`, `importarchive`, `runarchive`. See `dedb <command> --help` and `doc/archive.md`.

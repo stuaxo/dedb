@@ -25,7 +25,6 @@ SETTINGS_PATH = CONFIG_DIR / "dedbconf.toml"
 
 
 class GogSettings(BaseModel):
-    download_dir: Path | None = None
     # Optional: restrict `downloadgog` to exactly these game ids. Without
     # this, it downloads every owned game classified as DOSBox-based - see
     # dedb.gog.classify.
@@ -46,8 +45,13 @@ class Settings(BaseModel):
     # mirrors Django's INSTALLED_APPS.
     apps: list[str] = [
         "dedb.dosbox",
-        "dedb.gog"
+        "dedb.gog",
+        "dedb.archive",
     ]
+    # Shared downloads root - each app gets its own namespaced subdirectory
+    # under it (<download_dir>/gog/, <download_dir>/archive/, ...), resolved
+    # by dedb.core.require_download_dir/get_download_dir.
+    download_dir: Path | None = None
     gog: GogSettings = GogSettings()
     dosbox: DosboxSettings = DosboxSettings()
 
