@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from ..core import get_download_dir, get_settings, require_download_dir
+from ..core import get_download_dir, get_settings, remove_download, require_download_dir
 from ..dosbox.inspector import inspect as inspect_conf
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
@@ -25,11 +25,18 @@ from .runner import ensure_downloaded, run_dosbox, run_dosemu
     help="Download only this game id, instead of every DOSBox-classified owned game.",
 )
 @click.option(
-    "--refresh",
+    "--refreshmetadata",
     "-r",
+    "refresh_metadata",
     is_flag=True,
     default=False,
     help="Re-fetch GOG dependency metadata instead of using the cached copy.",
+)
+@click.option(
+    "--redownload",
+    is_flag=True,
+    default=False,
+    help="Re-download and re-extract games even if they're already downloaded.",
 )
 @click.option(
     "--merge-save/--no-merge-save",
@@ -37,7 +44,9 @@ from .runner import ensure_downloaded, run_dosbox, run_dosemu
     default=True,
     help="--no-merge-save: don't merge game/__support/save/ onto the game root (see merge_support_save_data).",
 )
-def downloadgog(keep: bool, game_id: str | None, refresh: bool, merge_save: bool) -> None:
+def downloadgog(
+    keep: bool, game_id: str | None, refresh_metadata: bool, redownload: bool, merge_save: bool
+) -> None:
     """Download and extract DOSBox-based owned games from GOG.
 
     By default, downloads every owned game classified as DOSBox-based (see
@@ -55,7 +64,7 @@ def downloadgog(keep: bool, game_id: str | None, refresh: bool, merge_save: bool
     elif curated := get_settings().gog.curated_games:
         targets = curated
     else:
-        status = classify_owned_games(games, download_dir, refresh=refresh)
+        status = classify_owned_games(games, download_dir, refresh=refresh_metadata)
         targets = sorted(name for name, s in status.items() if s.classification == "dosbox")
 
     click.echo(f"Using download directory: {download_dir}")
@@ -65,7 +74,15 @@ def downloadgog(keep: bool, game_id: str | None, refresh: bool, merge_save: bool
         if product_id is None:
             click.echo(f"'{gamename}' not found in your GOG library - skipping")
             continue
-        download_and_extract(gamename, product_id, download_dir, keep=keep, refresh=refresh, merge_save=merge_save)
+        download_and_extract(
+            gamename,
+            product_id,
+            download_dir,
+            keep=keep,
+            refresh=refresh_metadata,
+            redownload=redownload,
+            merge_save=merge_save,
+        )
 
     click.echo("-" * 40)
     click.echo(f"Done. Games extracted to {download_dir}/<game>/game/")
@@ -94,8 +111,9 @@ def downloadgog(keep: bool, game_id: str | None, refresh: bool, merge_save: bool
     help="--dos (default): only show games classified as DOSBox-based. --all: show every owned game.",
 )
 @click.option(
-    "--refresh",
+    "--refreshmetadata",
     "-r",
+    "refresh_metadata",
     is_flag=True,
     default=False,
     help="Re-fetch GOG dependency metadata instead of using the cached copy.",
@@ -114,12 +132,14 @@ def downloadgog(keep: bool, game_id: str | None, refresh: bool, merge_save: bool
     default=False,
     help="Print each network request to GOG as it happens.",
 )
-def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: bool, offline: bool, verbose: bool) -> None:
+def listgog(
+    output_format: str, ids_shortcut: bool, dos_only: bool, refresh_metadata: bool, offline: bool, verbose: bool
+) -> None:
     """List owned GOG games and whether they look DOSBox-based, without downloading anything."""
     if ids_shortcut:
         output_format = "ids"
-    if offline and refresh:
-        raise click.UsageError("--offline and --refresh can't be used together.")
+    if offline and refresh_metadata:
+        raise click.UsageError("--offline and --refreshmetadata can't be used together.")
 
     try:
         games = sorted(owned_games(verbose=verbose, offline=offline), key=lambda g: g.gamename)
@@ -131,7 +151,9 @@ def listgog(output_format: str, ids_shortcut: bool, dos_only: bool, refresh: boo
     # either to filter down to dos_only or to display it in the table.
     status = None
     if dos_only or output_format == "table":
-        status = classify_owned_games(games, get_download_dir("gog"), refresh=refresh, verbose=verbose, offline=offline)
+        status = classify_owned_games(
+            games, get_download_dir("gog"), refresh=refresh_metadata, verbose=verbose, offline=offline
+        )
         if dos_only:
             games = [g for g in games if status[g.gamename].classification == "dosbox"]
 
@@ -264,6 +286,20 @@ def importgog(
     help="Keep the installer/ directory if a download is needed.",
 )
 @click.option(
+    "--refreshmetadata",
+    "-r",
+    "refresh_metadata",
+    is_flag=True,
+    default=False,
+    help="Re-fetch GOG dependency metadata if a download is needed (or already downloaded).",
+)
+@click.option(
+    "--redownload",
+    is_flag=True,
+    default=False,
+    help="Re-download and re-extract the game even if it's already downloaded.",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -277,6 +313,8 @@ def rungog(
     use_dosemu: bool,
     profile: str | None,
     keep: bool,
+    refresh_metadata: bool,
+    redownload: bool,
     verbose: bool,
 ) -> None:
     """Run a GOG game in DOSBox or DOSEMU2.
@@ -291,7 +329,9 @@ def rungog(
         raise click.UsageError("Specify exactly one of --dosbox or --dosemu.")
 
     download_dir = require_download_dir("gog")
-    layout = ensure_downloaded(game_id, download_dir, keep=keep)
+    layout = ensure_downloaded(
+        game_id, download_dir, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+    )
 
     exit_code = (
         run_dosbox(layout, profile, emulator_args, verbose)
@@ -330,4 +370,19 @@ def dosboxconfgog(game_id: str, profile: str | None, autoexec: bool, sblaster: b
     click.echo(inspect_conf(conf_files, autoexec=autoexec, sblaster=sblaster, gus=gus))
 
 
-commands = [downloadgog, listgog, importgog, rungog, dosboxconfgog]
+@click.command("rmgog")
+@click.argument("game_id")
+@click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting for confirmation.")
+def rmgog(game_id: str, yes: bool) -> None:
+    """Delete a downloaded GOG game.
+
+    Removes its whole directory under <download_dir>/gog/ - the
+    innoextract output, every converted DOSEMU2 config, and the cached
+    metadata.json. The globally-cached GOG dependency metadata is kept;
+    use `downloadgog --refreshmetadata` to re-fetch that. Doesn't touch
+    your GOG library - `downloadgog --game GAME_ID` re-fetches it.
+    """
+    remove_download(require_download_dir("gog"), game_id, assume_yes=yes)
+
+
+commands = [downloadgog, listgog, importgog, rungog, dosboxconfgog, rmgog]

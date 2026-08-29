@@ -46,8 +46,23 @@ def _get_metadata_or_die(identifier: str, *, refresh: bool) -> ArchiveMetadata:
         raise click.ClickException(f"Could not fetch archive.org metadata for '{identifier}': {exc}")
 
 
-def download_and_extract(identifier: str, download_dir: Path, *, keep: bool = False, refresh: bool = False) -> None:
+def download_and_extract(
+    identifier: str,
+    download_dir: Path,
+    *,
+    keep: bool = False,
+    refresh: bool = False,
+    redownload: bool = False,
+) -> None:
     layout = GameLayout(download_dir, identifier)
+
+    if redownload and layout.is_downloaded():
+        print(f"Removing existing download: {identifier}")
+        shutil.rmtree(layout.game, ignore_errors=True)
+        shutil.rmtree(layout.download, ignore_errors=True)
+        # The converted DOSEMU2 conf is derived from the extracted files -
+        # drop it too so the next `runarchive --dosemu` regenerates it.
+        shutil.rmtree(layout.dosemu, ignore_errors=True)
 
     if layout.is_downloaded():
         print(f"Skipping: {identifier} (already downloaded)")

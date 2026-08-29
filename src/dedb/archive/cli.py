@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from ..core import require_download_dir
+from ..core import remove_download, require_download_dir
 from .client import parse_identifier
 from .downloader import download_and_extract
 from .importer import build_archive_game, import_archive_game
@@ -17,13 +17,20 @@ from .runner import ensure_downloaded, run_dosbox, run_dosemu
 @click.argument("item")
 @click.option("--keep", is_flag=True, default=False, help="Keep the downloaded archive after extracting.")
 @click.option(
-    "--refresh",
+    "--refreshmetadata",
     "-r",
+    "refresh_metadata",
     is_flag=True,
     default=False,
     help="Re-fetch archive.org item metadata instead of using the cached copy.",
 )
-def downloadarchive(item: str, keep: bool, refresh: bool) -> None:
+@click.option(
+    "--redownload",
+    is_flag=True,
+    default=False,
+    help="Re-download and re-extract the item even if it's already downloaded.",
+)
+def downloadarchive(item: str, keep: bool, refresh_metadata: bool, redownload: bool) -> None:
     """Download and extract a DOSBox-playable item from archive.org.
 
     ITEM is either an archive.org identifier (e.g.
@@ -34,7 +41,9 @@ def downloadarchive(item: str, keep: bool, refresh: bool) -> None:
     download_dir = require_download_dir("archive")
     download_dir.mkdir(parents=True, exist_ok=True)
 
-    download_and_extract(identifier, download_dir, keep=keep, refresh=refresh)
+    download_and_extract(
+        identifier, download_dir, keep=keep, refresh=refresh_metadata, redownload=redownload
+    )
 
     click.echo(f"Done. '{identifier}' extracted to {download_dir}/{identifier}/game/")
 
@@ -127,6 +136,20 @@ def importarchive(
     help="Keep the downloaded archive if a download is needed.",
 )
 @click.option(
+    "--refreshmetadata",
+    "-r",
+    "refresh_metadata",
+    is_flag=True,
+    default=False,
+    help="Re-fetch archive.org item metadata if a download is needed (or already downloaded).",
+)
+@click.option(
+    "--redownload",
+    is_flag=True,
+    default=False,
+    help="Re-download and re-extract the item even if it's already downloaded.",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -139,6 +162,8 @@ def runarchive(
     use_dosbox: bool,
     use_dosemu: bool,
     keep: bool,
+    refresh_metadata: bool,
+    redownload: bool,
     verbose: bool,
 ) -> None:
     """Run an archive.org item in DOSBox or DOSEMU2.
@@ -154,7 +179,9 @@ def runarchive(
 
     identifier = parse_identifier(item)
     download_dir = require_download_dir("archive")
-    layout = ensure_downloaded(identifier, download_dir, keep=keep)
+    layout = ensure_downloaded(
+        identifier, download_dir, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+    )
 
     exit_code = (
         run_dosbox(layout, emulator_args, verbose) if use_dosbox else run_dosemu(layout, emulator_args, verbose)
@@ -163,4 +190,22 @@ def runarchive(
         sys.exit(exit_code)
 
 
-commands = [downloadarchive, importarchive, runarchive]
+@click.command("rmarchive")
+@click.argument("item")
+@click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting for confirmation.")
+def rmarchive(item: str, yes: bool) -> None:
+    """Delete a downloaded archive.org item.
+
+    Removes its whole directory under <download_dir>/archive/ - extracted
+    game files, the converted DOSEMU2 config, and the cached
+    metadata.json. The globally-cached archive.org item metadata is kept;
+    use `downloadarchive --refreshmetadata` to re-fetch that.
+
+    ITEM is an archive.org identifier or a full item URL, as for
+    `downloadarchive`.
+    """
+    identifier = parse_identifier(item)
+    remove_download(require_download_dir("archive"), identifier, assume_yes=yes)
+
+
+commands = [downloadarchive, importarchive, runarchive, rmarchive]

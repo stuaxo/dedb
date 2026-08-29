@@ -50,6 +50,24 @@ def _scalar(value: object) -> str | None:
     return value  # type: ignore[return-value]
 
 
+def _pick_archive(candidates: list[str], meta: dict) -> str:
+    """Choose which of several emulator_ext-matching files to download.
+
+    An item that ships more than one archive (e.g. a shareware build
+    alongside the registered version its player actually boots) names the
+    one to mount as C: in its "dosbox_drive_c" metadata field - the same
+    field archive.org's own in-browser DOSBox loader reads. Match it
+    case-insensitively against the real file names; fall back to the first
+    candidate when it's absent (the usual single-archive item) or names a
+    file that isn't there."""
+    drive_c = _scalar(meta.get("dosbox_drive_c"))
+    if drive_c:
+        for name in candidates:
+            if name.lower() == drive_c.lower():
+                return name
+    return candidates[0]
+
+
 def fetch_item(identifier: str) -> ArchiveItemInfo:
     """Fetch identifier's metadata and resolve which of its files to
     download. Raises NotDosItemError if it has no DOS emulator metadata,
@@ -70,7 +88,7 @@ def fetch_item(identifier: str) -> ArchiveItemInfo:
     candidates = [f["name"] for f in files if f.get("name", "").lower().endswith(f".{ext}")]
     if not candidates:
         raise LookupError(f"No .{ext} file found among '{identifier}''s files")
-    filename = candidates[0]
+    filename = _pick_archive(candidates, meta)
 
     return ArchiveItemInfo(
         identifier=identifier,

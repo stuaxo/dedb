@@ -19,11 +19,22 @@ from .importer import autoexec_commands, import_archive_game, load_metadata
 from .layout import GameLayout
 
 
-def ensure_downloaded(identifier: str, download_dir: Path, *, keep: bool = False) -> GameLayout:
-    """Download and extract identifier if it isn't already, returning its layout."""
+def ensure_downloaded(
+    identifier: str,
+    download_dir: Path,
+    *,
+    keep: bool = False,
+    refresh_metadata: bool = False,
+    redownload: bool = False,
+) -> GameLayout:
+    """Download and extract identifier if it isn't already, returning its layout.
+    --redownload re-fetches it even when already present; --refreshmetadata
+    re-fetches the cached archive.org item metadata."""
     layout = GameLayout(download_dir, identifier)
-    if not layout.is_downloaded():
-        download_and_extract(identifier, download_dir, keep=keep)
+    if redownload or refresh_metadata or not layout.is_downloaded():
+        download_and_extract(
+            identifier, download_dir, keep=keep, refresh=refresh_metadata, redownload=redownload
+        )
     return layout
 
 

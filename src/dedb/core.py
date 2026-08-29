@@ -6,6 +6,7 @@ module, ...) should go through here rather than loading settings.json
 or importing another app's cli module directly.
 """
 
+import shutil
 from collections import OrderedDict
 from functools import lru_cache
 from importlib import import_module
@@ -51,3 +52,22 @@ def require_download_dir(app_name: str) -> Path:
             '  download_dir = "/path/to/downloads"'
         )
     return app_dir
+
+
+def remove_download(download_root: Path, name: str, *, assume_yes: bool) -> None:
+    """Shared implementation of the `rm*` commands: delete one game/item's
+    whole directory tree (game files, converted config, cached
+    metadata.json, ...) under an app's downloads root, after confirming.
+    Refuses anything that doesn't resolve to a single child of the root."""
+    root = download_root.resolve()
+    target = (download_root / name).resolve()
+    if target.parent != root:
+        raise click.ClickException(f"Refusing to remove '{name}' - not a single item under {download_root}")
+
+    if not target.exists():
+        click.echo(f"Nothing to remove for '{name}' ({target} doesn't exist)")
+        return
+    if not assume_yes:
+        click.confirm(f"Remove '{name}' and everything under {target}?", abort=True)
+    shutil.rmtree(target)
+    click.echo(f"Removed '{name}' ({target})")
