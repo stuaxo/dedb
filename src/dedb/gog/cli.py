@@ -1,11 +1,11 @@
-"""Click commands contributed by the gog app: `downloadgog` (bulk library
-download) and `listgog` (owned-games list), both acting on your GOG
+"""Click commands contributed by the gog app: `downloadgog` (library
+download) and `lsgog` (owned-games list), both acting on your GOG
 library. Single games are named `gog://<id>` and driven by the generic
 commands - see dedb.verbs and dedb.gog.backend."""
 
 import click
 
-from ..core import get_download_dir, get_settings, require_download_dir
+from ..core import get_download_dir, require_download_dir
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
 from .downloader import download_and_extract
@@ -17,7 +17,14 @@ from .downloader import download_and_extract
     "--game",
     "game_id",
     default=None,
-    help="Download only this game id, instead of every DOSBox-classified owned game.",
+    help="Download only this game id.",
+)
+@click.option(
+    "--all",
+    "all_games",
+    is_flag=True,
+    default=False,
+    help="Download every owned game classified as DOSBox-based.",
 )
 @click.option(
     "--refreshmetadata",
@@ -40,13 +47,12 @@ from .downloader import download_and_extract
     help="--no-merge-save: don't merge game/__support/save/ onto the game root (see merge_support_save_data).",
 )
 def downloadgog(
-    keep: bool, game_id: str | None, refresh_metadata: bool, redownload: bool, merge_save: bool
+    keep: bool, game_id: str | None, all_games: bool, refresh_metadata: bool, redownload: bool, merge_save: bool
 ) -> None:
     """Download and extract DOSBox-based owned games from GOG.
 
-    By default, downloads every owned game classified as DOSBox-based (see
-    `listgog`). Set [gog] curated_games in the dedb settings file to
-    restrict this to specific games, or pass --game for just one.
+    Pass --game for a single game, or --all for every owned game
+    classified as DOSBox-based (see `lsgog`).
     """
     download_dir = require_download_dir("gog")
     download_dir.mkdir(parents=True, exist_ok=True)
@@ -56,11 +62,14 @@ def downloadgog(
 
     if game_id:
         targets = [game_id]
-    elif curated := get_settings().gog.curated_games:
-        targets = curated
-    else:
+    elif all_games:
         status = classify_owned_games(games, download_dir, refresh=refresh_metadata)
         targets = sorted(name for name, s in status.items() if s.classification == "dosbox")
+    else:
+        raise click.UsageError(
+            "Nothing to download. Pass --game <id>, or --all for every "
+            "DOSBox-based owned game."
+        )
 
     click.echo(f"Using download directory: {download_dir}")
     for gamename in targets:
@@ -83,27 +92,19 @@ def downloadgog(
     click.echo(f"Done. Games extracted to {download_dir}/<game>/game/")
 
 
-@click.command("listgog")
-@click.option(
-    "--format",
-    "-F",
-    "output_format",
-    type=click.Choice(["table", "ids"]),
-    default="table",
-    help="table: human-readable classification table. ids: one game id per line.",
-)
+@click.command("lsgog")
 @click.option(
     "-1",
-    "ids_shortcut",
+    "names_only",
     is_flag=True,
     default=False,
-    help="Shortcut for --format ids (like `ls -1`).",
+    help="Just `gog:<id>` per line - no classification column.",
 )
 @click.option(
     "--dos/--all",
     "dos_only",
     default=True,
-    help="--dos (default): only show games classified as DOSBox-based. --all: show every owned game.",
+    help="--dos (default): only DOSBox-based games. --all: every owned game.",
 )
 @click.option(
     "--refreshmetadata",
@@ -117,7 +118,7 @@ def downloadgog(
     "--offline",
     is_flag=True,
     default=False,
-    help="Don't contact GOG at all - use only local files and previously-cached metadata.",
+    help="Don't contact GOG at all - use only local files and cached metadata.",
 )
 @click.option(
     "--verbose",
@@ -127,12 +128,10 @@ def downloadgog(
     default=False,
     help="Print each network request to GOG as it happens.",
 )
-def listgog(
-    output_format: str, ids_shortcut: bool, dos_only: bool, refresh_metadata: bool, offline: bool, verbose: bool
+def lsgog(
+    names_only: bool, dos_only: bool, refresh_metadata: bool, offline: bool, verbose: bool
 ) -> None:
     """List owned GOG games and whether they look DOSBox-based, without downloading anything."""
-    if ids_shortcut:
-        output_format = "ids"
     if offline and refresh_metadata:
         raise click.UsageError("--offline and --refreshmetadata can't be used together.")
 
@@ -140,39 +139,26 @@ def listgog(
         games = sorted(owned_games(verbose=verbose, offline=offline), key=lambda g: g.gamename)
     except OfflineError as exc:
         raise click.ClickException(str(exc))
-    settings = get_settings()
 
-    # ids + --all never needs classification; every other combination does,
-    # either to filter down to dos_only or to display it in the table.
+    # Bare names + --all needs no classification; every other combination
+    # does, either to filter to dos_only or to show it in the listing.
     status = None
-    if dos_only or output_format == "table":
+    if dos_only or not names_only:
         status = classify_owned_games(
             games, get_download_dir("gog"), refresh=refresh_metadata, verbose=verbose, offline=offline
         )
         if dos_only:
             games = [g for g in games if status[g.gamename].classification == "dosbox"]
 
-    if output_format == "ids":
+    if names_only:
         for game in games:
-            click.echo(game.gamename)
+            click.echo(f"gog:{game.gamename}")
         return
-
-    curated = set(settings.gog.curated_games)
 
     for game in games:
         s = status[game.gamename]
-        marker = "*" if game.gamename in curated else " "
         detail = s.source if dos_only else f"{s.classification} ({s.source})"
-        click.echo(f"{marker}{game.gamename:<50} {detail}")
-
-    if curated:
-        mismatched = sorted(g for g in curated if status.get(g) is None or status[g].classification != "dosbox")
-        if mismatched:
-            click.echo("\nIn [gog] curated_games, but not confirmed DOSBox-based:")
-            for gamename in mismatched:
-                s = status.get(gamename)
-                detail = f"{s.classification} ({s.source})" if s else "not found in your GOG library"
-                click.echo(f"  - {gamename}: {detail}")
+        click.echo(f"{'gog:' + game.gamename:<50} {detail}")
 
 
-commands = [downloadgog, listgog]
+commands = [downloadgog, lsgog]

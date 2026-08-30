@@ -24,13 +24,6 @@ CONFIG_DIR = _config_dir()
 SETTINGS_PATH = CONFIG_DIR / "dedbconf.toml"
 
 
-class GogSettings(BaseModel):
-    # Optional: restrict `downloadgog` to exactly these game ids. Without
-    # this, it downloads every owned game classified as DOSBox-based - see
-    # dedb.gog.classify.
-    curated_games: list[str] = []
-
-
 class DosboxSettings(BaseModel):
     # Which real DOSBox binary `dedb run <target> --dosbox` launches. "default" picks
     # the first installed of dosbox_staging or dosbox. Other recognized
@@ -52,7 +45,6 @@ class Settings(BaseModel):
     # under it (<download_dir>/gog/, <download_dir>/archive/, ...), resolved
     # by dedb.core.require_download_dir/get_download_dir.
     download_dir: Path | None = None
-    gog: GogSettings = GogSettings()
     dosbox: DosboxSettings = DosboxSettings()
 
 

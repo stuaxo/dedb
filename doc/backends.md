@@ -60,5 +60,5 @@ profile).
 `dedb download <url>` does nothing if the game is already downloaded. Pass
 `--redownload` or `--refreshmetadata` to force it.
 
-A backend can add library-level commands in its `cli.py`, like GOG's `listgog`
+A backend can add library-level commands in its `cli.py`, like GOG's `lsgog`
 and `downloadgog`.

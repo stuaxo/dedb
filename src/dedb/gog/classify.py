@@ -1,7 +1,7 @@
 """Classify every owned GOG game as dosbox/scummvm/none/other, checking
 already-extracted local files first and falling back to (cached) GOG build
-metadata. Shared by `listgog` and `downloadgog` - with no curated list
-configured, `downloadgog` downloads whatever this classifies as "dosbox".
+metadata. Shared by `lsgog` and `downloadgog` - `downloadgog --all`
+downloads whatever this classifies as "dosbox".
 """
 
 from dataclasses import dataclass

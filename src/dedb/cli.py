@@ -102,8 +102,7 @@ def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     multiple=True,
     callback=_parse_backends,
     help=(
-        "Which download backend(s) to list. Repeatable and/or "
-        "comma-separated: --type=gog --type=archive, or --type=gog,archive. "
+        "Download backend(s) to list, repeatable or comma-separated. "
         f"Default: all ({', '.join(DOWNLOAD_BACKENDS)})."
     ),
 )
@@ -113,14 +112,14 @@ def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     "short",
     is_flag=True,
     default=False,
-    help="Bare name per line; add a `<scheme>:` prefix only for a name owned by >1 backend. (default)",
+    help="Bare name; `<scheme>:` prefix only when >1 backend owns the name. (default)",
 )
 @click.option(
     "-1",
     "names_only",
     is_flag=True,
     default=False,
-    help="Bare names only, one per line (deduplicated).",
+    help="Bare names only, deduplicated.",
 )
 @click.option(
     "-l",
@@ -128,15 +127,10 @@ def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     "qualified",
     is_flag=True,
     default=False,
-    help="Every entry as a full `<scheme>:<id>` target - pasteable into `dedb run` etc.",
+    help="Every entry as a full `<scheme>:<id>` target (pasteable into `dedb run`).",
 )
 def list_downloads(backends: list[str], short: bool, names_only: bool, qualified: bool) -> None:
-    """List downloaded games, one per line, sorted.
-
-    Default (-s): a bare name, or `<scheme>:<id>` when the name exists
-    under more than one backend. -1: bare names only. -l: every game as
-    `<scheme>:<id>`.
-    """
+    """List downloaded games, one per line, sorted."""
     if sum([bool(short), names_only, qualified]) > 1:
         raise click.UsageError("Choose at most one of -s / -1 / -l.")
 

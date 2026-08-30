@@ -1,6 +1,6 @@
 """GOG build-dependency metadata, cached globally by game id.
 
-Shared across `listgog` and `downloadgog`, so a game we've already
+Shared across `lsgog` and `downloadgog`, so a game we've already
 classified - including one we've decided isn't worth downloading - never
 needs its metadata re-fetched from GOG on a later run, unless refresh=True
 is passed. Lives alongside dedbconf.toml under the XDG config directory,

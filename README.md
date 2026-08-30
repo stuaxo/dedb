@@ -5,46 +5,66 @@ DOSEMU2-DOSBOX importer and run games packaged for DOSBOX in DOSEMU2.
 
 ## Core commands
 
-List the subcommands:
+List available commands:
 `$ dedb`
 
-List downloaded games:
+List downloaded programs:
 `$ dedb ls`
 
-`dedb ls` prints one game per line. A name gets a `<scheme>:` prefix when it
-exists under more than one backend. `-1` prints bare names. `-l` prints every
-game as a `<scheme>:<id>` URL, for piping into `dedb run` or `dedb rm`.
+List downloaded program URIs:
+
+`$ dedb ls -l`
+
+Each program has a URI based on where it was downloaded from and an id,
+this is an example listing containing some owned GoG games and some games that
+have been licensed freely and then downloaded from archive.org:
+
+```
+$ dedb ls -l
+gog:bio_menace
+gog:jazz_jackrabbit_collection
+archive:MajorStryker
+archive:msdos_Electro_Man_1992
+```
 
 Filter by backend (repeatable, or comma-separated):
 `$ dedb ls --type=gog`
 `$ dedb ls --type=gog,archive`
 
 
+For more ls options:
+`$ dedb ls --help`
+
+
 ### Naming a game
 
 `dedb run`, `download`, `import` and `rm` take one GAME argument:
 
-| GAME                              | Is                                             |
-|-----------------------------------|------------------------------------------------|
-| `gog:<gamename>`                  | a GOG game (the lgogdownloader gamename slug)   |
-| `gog:<gamename>?profile=<slug>`   | a GOG launch profile                            |
-| `archive:<identifier>`            | an archive.org item                             |
-| `https://archive.org/details/<id>`| an archive.org item, by URL                     |
-| `<name>`                          | a downloaded game, by name                      |
+| GAME                                 | Is                                            |
+|--------------------------------------|-----------------------------------------------|
+| `gog:<gamename>`                     | a GOG game (the lgogdownloader gamename slug) |
+| `gog:<gamename>?profile=<slug>`      | a GOG launch profile                          |
+| `archive:<identifier>`               | an archive.org item                           |
+| `https://archive.org/details/<name>` | an archive.org item, by URL                   |
+| `<name>`                             | a downloaded game by name                     |
+
+Examples:
 
 ```
-$ dedb run gog://tyrian_2000 --dosbox
-$ dedb run archive://msdos_Electro_Man_1992 --dosemu
-$ dedb run 'gog://warcraft_orcs_and_humans?profile=server' --dosbox -- -fullscreen
-$ dedb download gog://tyrian_2000
-$ dedb rm gog://tyrian_2000
+$ dedb run gog:tyrian_2000 --dosbox
+$ dedb run archive:msdos_Electro_Man_1992 --dosemu
+$ dedb run 'gog:warcraft_orcs_and_humans?profile=server' --dosbox -- -fullscreen
+$ dedb download gog:tyrian_2000
+$ dedb rm gog:tyrian_2000
 ```
 
-Slashes after the colon are optional: `gog:x`, `gog://x` and `gog:///x` are the
-same.
 
-A bare name works only when the game is downloaded under one backend. Otherwise
-add the scheme, as a prefix or with `-b`:
+Slashes after the colon are ignored, the following are equivalent:
+  `gog:x`, `gog://x` and `gog:///x`.
+
+Names without backends can be used for games and programs that have already been
+downloaded, unless they clash, in which case use a URI or specify a backend with
+`-b`:
 
 ```
 $ dedb run tyrian_2000 -b gog --profile server --dosbox
@@ -57,87 +77,105 @@ To add a backend, see [doc/backends.md](doc/backends.md).
 
 ## Configuration
 
-Downloaded games/items live under one shared `download_dir`, namespaced per source
-(`<download_dir>/gog/`, `<download_dir>/archive/`, ...). Set it by editing
-`~/.config/dedb/dedbconf.toml`:
+The dedb config file is `~/.config/dedb/dedbconf.toml`.
+
+The main two things to configure are the `download_dir` and `dosbox`,
+most programs work better in a patched `doxbox` rather than the default, e.g.
+`dosbox-staging` or `dosbox-x` (note only dosbox-staging has been tested so far)
+
+Example config:
 
 ```toml
-download_dir = "/path/to/downloads"
+# Directory to download programs and games.
+# Backends get subdirectories off this e.g. 
+# <download_dir>/gog/, <download_dir>/archive/, ...
+download_dir = "/home/stu/dos/downloads"
+
+
+[dosbox]
+# Set the dosbox implementation used by `dedb run <game> --dosbox`.
+# "default" First available dosbox-staging
+# "dosbox"  Stock DOSBOX (not recommended)
+# "dosbox_staging" DOSBOX-staging
+# "dosbox_x" DOSBOX-testing (currently untested)
+# "dosbox_pure" DOSBOX-pure (currently untested)
+dosbox = "default"
+```
+
+
+Developer config settings:
+```toml
+# Enable or disable apps that make up dedb (default is to include all):
+# apps = ["dedb.dosbox", "dedb.gog", "dedb.archive"]
 ```
 
 
 ## Good Old Games (GOG)
 
-Import and run directly from GoG (Good Old Games).
+If you have a GOG (Good Old Games) account you can download and run your games.
 
-GOG marks DOS games as "Windows" with a dependency on DOSBOX, `dedb` uses `lgogdownloader` to search for Windows games 
-and then does a metadata query to find the DOSBOX dependency.
+### Requirements:
 
-Data is cached locally to avoid hitting GOG more than is nessacary.
+GOG support requires `lgogdownloader` and `innoextract`, install them first:
 
-
-
-Dependencies:
-
-# On Debian / Ubuntu run:
+On Debian / Ubuntu run:
 
 `sudo apt install lgogdownloader innoextract`
 
-
-Games live under `<download_dir>/gog/` - see Configuration above.
-
-Name a game `gog://<gamename>`, then use `dedb download`, `run`, `import`, `rm`
-or `dosboxconf` (see Naming a game above and `doc/gog.md`). `listgog` lists your
-DOS games on GOG; `downloadgog` downloads all of them.
-
-### Launch profiles
-
-Games from GOG can ship multiple `dosbox*.conf` files, each one is a profile,
-e.g. to change the hardware profile or add multiplayer networking.
-
-The primary conf is exported to `dosemu.conf` others are named per profile,
-e.g. `dosemu_<profile>.conf`.
+When you first use a command that connects to GOG such as lsgog or download, you
+will be prompted for your GOG sign-up email and password.
 
 
-### Non-Primary Profiles:
+### List games
 
-[Partially supported]
+lsgog lists the games you own on GOG.
 
-These are not fully supported:
+```sh
+$ dedb lsgog
+gog:bio_menace                                     local
+gog:tyrian_2000                                    remote
+```
 
-Profiles can provide their own [autoexec], but only the primary autoexec is currently used for now,
-expect undefined behaviour using them.
+### Download and run games
 
+GOG games are specified using a URI scheme with `gog:` at the front, e.g.
+`gog:<id>` or `gog:<id>?profile=<slug>`.
 
-`dedb run`/`dedb import` take `--profile <name-or-slug>` (or
-`gog://<id>?profile=<slug>`) to pick a non-default one; `dedb import` with no
-`--profile` converts every valid profile, writing the default as
-`dosemu.conf`/`userhook.bat` and others as
-`dosemu_<profile>.conf`/`userhook_<profile>.bat`.
+Download tyrian_2000:
 
-For example, `warcraft_orcs_and_humans` has:
+```$ dedb download gog:tyrian_2000```
 
-| Conf                        | Purpose                |
-|-----------------------------|------------------------|
-| dosbox_warcraft.conf        | Base hardware settings |
-| dosbox_warcraft_single.conf | Single player          |
-| dosbox_warcraft_client.conf | IPX client             |
-| dosbox_warcraft_server.conf | IPX server             |
+Run tyrian_2000 in dosemu:
 
+```$ dedb run gog:tyrian_2000 --dosemu``` 
 
-### GOGDOSConfig configured games:
+Run tyrian_2000 in dosbox:
 
-Game profiles configured by GOGDOSConfig, these games are shipped without a `playTask` entry, these are currently
-ignored.
+```$ dedb run gog:tyrian_2000 --dosbox``` 
 
 
-## archive.org
+### Downloading in bulk
 
-Run DOS games from archive.org's software library
-(e.g. https://archive.org/details/msdos_Electro_Man_1992). There is no login.
+`downloadgog --all` downloads every owned game that looks DOSBox-based;
+`downloadgog --game <id>` downloads just one.
 
-Games live under `<download_dir>/archive/` - see Configuration above.
 
-Name a game `archive://<identifier>`, or paste its
-`https://archive.org/details/<id>` URL, then use `dedb download`, `run`,
-`import` or `rm` (see Naming a game above and `doc/archive.md`).
+### More information:
+
+See `docs/gog.md` for more information on managing games from GOG.
+
+
+## Archive.org
+
+Games in archive.orgs DOS collection can be downloaded and run.
+
+You can use their URL directly:
+
+```$ dedb run https://archive.org/details/msdos_Electro_Man_1992```
+
+These have a URI scheme that looks like ```archive:<id>```
+
+
+You can also use:
+
+```$ dedb run archive:msdos_Electro_Man_1992```

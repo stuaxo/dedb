@@ -41,7 +41,7 @@ def _log_connecting(url: str, *, verbose: bool) -> None:
 def owned_games(*, verbose: bool = False, offline: bool = False) -> list[OwnedGame]:
     """Return all owned Windows-platform games. Downloads nothing, but by
     default still contacts GOG (via lgogdownloader) on every call - this is
-    the pause `listgog`/`downloadgog` show at startup. Pass offline=True to
+    the pause `lsgog`/`downloadgog` show at startup. Pass offline=True to
     reuse the last successful result instead, with no network access."""
     if offline:
         if not OWNED_GAMES_CACHE_PATH.is_file():

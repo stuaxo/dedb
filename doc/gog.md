@@ -1,100 +1,90 @@
 # GOG
 
-GOG (Good Old Games) have many games available that use DOSBOX, the gog
-tools here extend the default DOSBOX tools and allow downloading, playing
-and conversion of these games to DOSEMU2.
+GOG (Good Old Games) have DOS based games in their catelogue, these
+usually run in DOSBOX.
 
-See `dosbox_to_dosemu.md` for general notes on mapping DOSBOX idioms to DOSEMU2
+If you have a GOG account the tools here can download a DOSBOX based
+game from GOG and generate a DOSEMU2 conf and related files for testing
+vs DOSBOX.
 
-
-Each game lives at `<download_dir>/gog/<game_id>/`:
-
-- `installer/` — deleted after conversion unless `--keep`
-- `game/` — extracted install
-- `metadata.json` — cached GOG metadata and launch profiles
-- `dosemu/` — generated `dosemu.conf`/`userhook.bat`
+For more information on the conversion process see `dosbox_to_dosemu.md`.
 
 
 ## Configuration
 
-`download_dir` is shared across every source dedb can pull games from (GOG, archive.org, ...)
-- each gets its own namespaced subdirectory under it (`<download_dir>/gog/`, `<download_dir>/archive/`).
-Set it by editing `~/.config/dedb/dedbconf.toml`:
+See the main README for `download_dir` and `[dosbox]` setup.
 
-```toml
-download_dir = "/path/to/downloads"
-```
-
-`dedb run gog://<id> --dosbox` runs a game's own conf(s) unmodified through a real DOSBox. Which binary it uses is set under `[dosbox]`:
+GOG DOSBox games need at least `dosbox-staging` - they don't run under
+plain upstream `dosbox`. If `dosbox-staging` is on PATH the default
+`[dosbox]` setting already picks it up; otherwise set it explicitly:
 
 ```toml
 [dosbox]
-dosbox = "default"
+dosbox = "dosbox_staging"
 ```
-
-`"default"` picks the first installed of `dosbox_staging` or `dosbox`. Set it explicitly to pin a particular one - options are `dosbox`, `dosbox_staging`, `dosbox_x`, `dosbox_pure` (only `dosbox` and `dosbox_staging` have actually been tested so far).
 
 
 ## Commands
 
-Name a GOG game `gog://<gamename>` (see the main README), then:
+Name a GOG game `gog:///<gamename>` (see the main README), then:
 
 ```
-$ dedb download gog://tyrian_2000
-$ dedb run gog://tyrian_2000 --dosbox
-$ dedb run 'gog://warcraft_orcs_and_humans?profile=server' --dosbox
+$ dedb download gog:///tyrian_2000
+$ dedb run gog:///tyrian_2000 --dosbox
+$ dedb run 'gog:///warcraft_orcs_and_humans?profile=server' --dosbox
 $ dedb run tyrian_2000 -b gog --dosbox      # -b instead of the prefix
-$ dedb import gog://tyrian_2000
-$ dedb dosboxconf gog://tyrian_2000 --issues
-$ dedb rm gog://tyrian_2000
+$ dedb import gog:///tyrian_2000
+$ dedb dosboxconf gog:///tyrian_2000 --issues
+$ dedb rm gog:///tyrian_2000
 ```
 
 GOG-specific commands act on your GOG library, not a single game:
 
-| Command       | Does                                                         |
-|---------------|------------------------------------------------------------- |
-| `listgog`     | List your DOS games on GOG and how they're classified.       |
-| `downloadgog` | Download your whole DOS library. `--game <id>` for one.      |
+| Command       | Does                                                   |
+|---------------|--------------------------------------------------------|
+| `lsgog`       | List your DOS games on GOG.                            |
+| `downloadgog` | Download your GOG DOS games. `--all` for the whole DOS library, `--game <id>` for one. |
 
 
-### listgog
+### lsgog
 
-List owned GOG games.
+List your GOG games, by default filters for DOS games use `--all` to show
+every game.
+
+Compact listing:
+
+`lsgog -1`
 
 
 ### downloadgog
 
-Download all owned GOG games:
+Download every owned game that looks DOSBox-based:
 
-```$ downloadgog```
+```$ downloadgog --all```
 
-Download a particular game:
+Or download a single game:
 
-1. List the owned games:
+```$ downloadgog --game tyrian_2000```
 
-```$ listgog```
+(`dedb download gog:///tyrian_2000` does the same for one game.)
 
-2. Download a single game (tyrian_2000):
-
-```$ dedb download gog://tyrian_2000```
-
-On initial download, a DOSEMU2 conf isn't created; `dedb import gog://<id>` can
+On initial download, a DOSEMU2 conf isn't created; `dedb import gog:///<id>` can
 do this, and `dedb run` also does it on demand.
 
 
 
 # Run GOG game in DOSBOX
 
-```$ dedb run gog://tyrian_2000 --dosbox```
+```$ dedb run gog:///tyrian_2000 --dosbox```
 
 This is a good baseline as this runs the unaltered game.
 
 
 # Run GOG game in DOSEMU2
 
-```$ dedb run gog://tyrian_2000 --dosemu```
+```$ dedb run gog:///tyrian_2000 --dosemu```
 
-Pick a launch profile with `gog://<id>?profile=<slug>` or `--profile <slug>` -
+Pick a launch profile with `gog:///<id>?profile=<slug>` or `--profile <slug>` -
 see profiles below.
 
 
@@ -103,18 +93,11 @@ see profiles below.
 GOG DOSBOX based games can multiple `dosbox*.conf` files, these are
 alternate launch modes (e.g. to add netplay).
 
-GOG games usually have metadataa in `goggame-*.info`, this list each mode as a `playTask`,
-the default is marked with `isPrimary`.
+GOG stores metadata in `goggame-*.info` files,, these contain "modes" and each has
+a `playTask`.
 
-If a game has no `goggame-*.info` file the default is that dosbox confs are merged.
-
-We save dosemu conf files for each profile, though only the primary profile
-is currently supported - others may have undefined behaviour.
-
-For our purposes we are only interested in tasks that reference a `conf` file.
-
-Ignored tasks reference tools like `GOGDOSConfig.exe` - a windows based tool
-for configuring DOSBOX in GOG.
+Some playTasks are launch parameters for DOSBOX, from these we create launch profiles.
+Non DOSBOX modes are for GOG specific tools such as `GOGDOSConfig.exe` which we ignore.
 
 
 ### Example Profile: warcraft_orcs_and_humans
@@ -125,3 +108,12 @@ for configuring DOSBOX in GOG.
 | `dosbox_warcraft_single.conf` | Single player — the primary profile |
 | `dosbox_warcraft_client.conf` | IPX client |
 | `dosbox_warcraft_server.conf` | IPX server |
+
+
+## Directory structure
+Games are downloaded to `<download_dir>/gog/<game_id>/`:
+
+- `installer/` — deleted after conversion unless `--keep`
+- `game/` — extracted install
+- `metadata.json` — cached GOG metadata and launch profiles
+- `dosemu/` — generated `dosemu.conf`/`userhook.bat`
