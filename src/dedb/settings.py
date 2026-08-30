@@ -1,9 +1,15 @@
 """Shared dedb settings, backed by a small TOML file under the user's XDG
 config directory. Any app (dosbox, gog, ...) can read from here; app-specific
-caches live in their own subdirectory of CONFIG_DIR rather than in here."""
+caches live in their own subdirectory of CONFIG_DIR rather than in here.
+
+load_settings() never raises: a missing file is created from the packaged
+default (dedbconf.default.toml), and an unreadable or invalid file falls
+back to the built-in defaults with a warning. dedb should always start.
+"""
 
 import os
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -22,6 +28,7 @@ def _config_dir() -> Path:
 
 CONFIG_DIR = _config_dir()
 SETTINGS_PATH = CONFIG_DIR / "dedbconf.toml"
+DEFAULT_SETTINGS_RESOURCE = "dedbconf.default.toml"
 
 
 class DosboxSettings(BaseModel):
@@ -48,10 +55,38 @@ class Settings(BaseModel):
     dosbox: DosboxSettings = DosboxSettings()
 
 
+def default_settings_text() -> str:
+    """The packaged default config, comments and all."""
+    return (files("dedb") / DEFAULT_SETTINGS_RESOURCE).read_text(encoding="utf-8")
+
+
+def _write_default_settings() -> None:
+    """Populate SETTINGS_PATH from the packaged default on first run. Best
+    effort - a config dir we can't write to just means we run on the
+    built-in defaults this time."""
+    try:
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        SETTINGS_PATH.write_text(default_settings_text(), encoding="utf-8")
+    except OSError as exc:
+        print(f"dedb: could not create {SETTINGS_PATH}: {exc}", file=sys.stderr)
+
+
 def load_settings() -> Settings:
+    """Load settings, never raising. Creates the file from the packaged
+    default when it's missing; on a parse or validation error, warns and
+    returns the built-in defaults."""
+    if not SETTINGS_PATH.is_file():
+        _write_default_settings()
+
     if not SETTINGS_PATH.is_file():
         return Settings()
 
-    with SETTINGS_PATH.open("rb") as f:
-        data = tomllib.load(f)
-    return Settings.model_validate(data)
+    try:
+        with SETTINGS_PATH.open("rb") as f:
+            data = tomllib.load(f)
+        return Settings.model_validate(data)
+    except (OSError, ValueError) as exc:
+        # ValueError covers both tomllib.TOMLDecodeError and pydantic's
+        # ValidationError.
+        print(f"dedb: ignoring invalid {SETTINGS_PATH} ({exc}); using defaults", file=sys.stderr)
+        return Settings()
