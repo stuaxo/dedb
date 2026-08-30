@@ -99,7 +99,9 @@ def _do_import(game, backend, *, output_dir, force, refreshconf, dumpconf, dumpu
             return
         force = True
 
-    dest = backend.convert(game, output_dir=output_dir, profile=game.profile, force=force)
+    # The profile travels on the resolved target (game.profile); convert()
+    # reads it from there - don't pass it as a separate kwarg.
+    dest = backend.convert(game, output_dir=output_dir, force=force)
     click.echo(f"Imported '{game.identifier}' -> '{dest}'")
 
 

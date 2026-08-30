@@ -104,15 +104,37 @@ def test_download_dispatches(download_dir, monkeypatch):
 
 def test_import_dispatches(download_dir, monkeypatch):
     seen = {}
-    monkeypatch.setattr(
-        "dedb.gog.backend.GogBackend.convert",
-        lambda self, target, **kw: seen.update(id=target.identifier, **kw) or Path("/out"),
-    )
+
+    # Stub with convert()'s real signature (keyword-only output_dir/force,
+    # no `profile` - the profile rides on the target), so a mismatched
+    # call from _do_import fails the test instead of being swallowed.
+    def fake_convert(self, target, *, output_dir=None, force=False):
+        seen.update(id=target.identifier, output_dir=output_dir, force=force)
+        return Path("/out")
+
+    monkeypatch.setattr("dedb.gog.backend.GogBackend.convert", fake_convert)
     result = CliRunner().invoke(cli, ["import", "gog://x", "--force"])
 
     assert result.exit_code == 0
     assert (seen["id"], seen["force"]) == ("x", True)
     assert "Imported 'x' -> '/out'" in result.output
+
+
+def test_import_refreshconf_reconverts_a_downloaded_archive_item(download_dir, monkeypatch):
+    """`import archive://<id> --refreshconf` on a downloaded item calls
+    convert(force=True) with the archive backend's real signature."""
+    seen = {}
+    monkeypatch.setattr("dedb.archive.backend.ArchiveBackend.is_downloaded", lambda self, ident: True)
+
+    def fake_convert(self, target, *, output_dir=None, force=False):
+        seen.update(id=target.identifier, force=force)
+        return Path("/out")
+
+    monkeypatch.setattr("dedb.archive.backend.ArchiveBackend.convert", fake_convert)
+    result = CliRunner().invoke(cli, ["import", "archive://x", "--refreshconf"])
+
+    assert result.exit_code == 0, result.output
+    assert seen == {"id": "x", "force": True}
 
 
 def test_rm_dispatches(download_dir, monkeypatch):
