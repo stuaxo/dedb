@@ -1,7 +1,7 @@
-"""Backend registry and target resolution.
+"""Backend registry and game-reference resolution.
 
-A "backend" is a source of DOSBox games - GOG, archive.org, ... - addressed
-by a URL-style target: ``gog://<gamename>``, ``archive://<identifier>``,
+A "backend" is a source of DOSBox games - GOG, archive.org, ... - and a
+game is named by a URL: ``gog://<gamename>``, ``archive://<identifier>``,
 optionally ``gog://<id>?profile=<slug>``. An ``https://archive.org/details/...``
 URL, or a bare name that matches a local download, resolves too.
 
@@ -101,14 +101,14 @@ class BackendBase:
     def dosbox_sources(self, target: "Target") -> "tuple[list, object]":
         """The dosbox.conf file(s) for ``target`` and the working directory
         their relative MOUNTs resolve against, for `dedb dosboxconf`.
-        Backends whose items have no dosbox.conf (archive.org) raise."""
-        raise click.ClickException(f"{self.scheme}:// targets have no dosbox.conf to inspect.")
+        Backends whose games have no dosbox.conf (archive.org) raise."""
+        raise click.ClickException(f"{self.scheme}:// games have no dosbox.conf to inspect.")
 
 
 @dataclass(frozen=True)
 class Target:
-    """A resolved target: which backend, which item, and (GOG only) which
-    launch profile. ``raw`` is the string the user typed, for messages."""
+    """A resolved game reference: which backend, which game, and (GOG
+    only) which launch profile. ``raw`` is the string the user typed."""
 
     scheme: str
     identifier: str
@@ -141,12 +141,12 @@ def _closest_name(value: str, names: "list[str]") -> "str | None":
 
 def _finish(backend: BackendBase, identifier: str, profile: "str | None", raw: str) -> Target:
     if profile is not None and not backend.supports_profile:
-        raise click.ClickException(f"{backend.scheme}:// targets don't support --profile.")
+        raise click.ClickException(f"{backend.scheme}:// games have no launch profiles (drop --profile).")
     return Target(backend.scheme, identifier, profile, raw)
 
 
 def resolve(value: str, *, profile: "str | None" = None) -> Target:
-    """Turn a user-supplied target into a :class:`Target`.
+    """Turn a user-supplied game reference into a :class:`Target`.
 
     Accepts ``<scheme>:<id>`` with any number of slashes after the colon
     (``gog:x``, ``gog://x``, ``gog:///x`` are equivalent - the id isn't a
@@ -177,13 +177,13 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
         # gog:x -> path, gog://x -> netloc, gog:///x -> path; all mean the same.
         identifier = (parsed.netloc or parsed.path.lstrip("/")).rstrip("/")
         if not identifier:
-            raise click.ClickException(f"Missing identifier in target: {value}")
+            raise click.ClickException(f"No game id in '{value}'")
         url_profile = parse_qs(parsed.query).get("profile", [None])[0]
         return _finish(backend, identifier, profile if profile is not None else url_profile, value)
 
     if scheme:
         known = ", ".join(f"{s}://" for s in sorted(registry))
-        raise click.ClickException(f"Unknown target scheme '{scheme}://'. Known schemes: {known}")
+        raise click.ClickException(f"Unknown scheme '{scheme}://'. Known schemes: {known}")
 
     # Bare name -> match against local downloads.
     local = {backend: backend.local_names() for backend in registry.values()}

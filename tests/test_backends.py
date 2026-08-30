@@ -80,7 +80,7 @@ def test_resolve_urls(value, kwargs, expected):
         ("archive://msdos_Foo?profile=x", {}, "profile"),
         ("archive://msdos_Foo", {"profile": "x"}, "profile"),
         ("https://example.com/game", {}, "Don't know how to handle URL"),
-        ("steam://12345", {}, "Unknown target scheme"),  # not treated as a bare name
+        ("steam://12345", {}, "Unknown scheme"),  # not treated as a bare name
     ],
 )
 def test_resolve_url_errors(value, kwargs, match):

@@ -37,8 +37,8 @@ dosbox = "default"
 
 ## Commands
 
-Most GOG work now goes through the generic, target-driven commands with a
-`gog://<gamename>` target (see the main README):
+Most GOG work now goes through the generic commands, naming a game by
+`gog://<gamename>` (see the main README):
 
 ```
 $ dedb download gog://tyrian_2000

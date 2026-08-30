@@ -1,23 +1,24 @@
 # Backends
 
-A **backend** is a source of DOSBox games addressed by a URL scheme:
+A **backend** is a source of DOSBox games. A game is named by a URL scheme:
 `gog://<gamename>`, `archive://<identifier>`. The generic commands
-(`dedb run|download|import|rm <target>`, and `dedb dosboxconf`) resolve a target
-to a backend and dispatch to it.
+(`dedb run|download|import|rm GAME`, and `dedb dosboxconf`) resolve GAME to a
+backend and dispatch to it.
 
 Every generic command also accepts the URL's parts as options instead of a
 prefix (the way `psql` takes a URI *or* `-h/-U/-d`): `-b/--backend <scheme>`
 plus a bare id is exactly `<scheme>://<id>`, and `--profile <slug>` is
-`?profile=<slug>`. Passing both a `scheme://` target and `-b` is an error.
+`?profile=<slug>`. Passing both a `scheme://` URL and `-b` is an error.
 
 ## How resolution works
 
-`dedb.backends.resolve(value)` turns whatever the user typed into a `Target`:
+`dedb.backends.resolve(value)` turns whatever the user typed into a `Target`
+(backend + game id + profile):
 
 1. `<scheme>:<id>` (optionally `?profile=<slug>`) - looked up directly in the
    registry. The id is not a host, so the slashes after the colon are optional
    and cosmetic: `gog:tyrian_2000`, `gog://tyrian_2000` and `gog:///tyrian_2000`
-   are the same target.
+   are the same game.
 2. `http(s)://...` - each backend is asked `identifier_from_url(url)`; the first
    to recognise it wins (archive.org item pages, say).
 3. a bare name - matched against every backend's local downloads
@@ -69,7 +70,7 @@ The old `run{gog,archive}` / `import{gog,archive}` / `dosboxconfgog` /
 `dedb run|import|dosboxconf|rm <scheme>://<id>` / `dedb download <scheme>://<id>`
 commands.
 
-Two GOG-only commands remain because they have no per-target meaning: `listgog`
+Two GOG-only commands remain because they name no single game: `listgog`
 (lists the DOS games you own on GOG) and `downloadgog` (bulk-downloads your whole
 library). `importdosbox` and `dedb dosboxconf <file.conf>` still operate on raw
 `.conf` paths.

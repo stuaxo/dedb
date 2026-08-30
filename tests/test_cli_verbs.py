@@ -184,10 +184,11 @@ def test_import_refreshconf_skips_when_not_downloaded(download_dir, monkeypatch)
 # --- dedb dosboxconf: file paths vs targets ----------------------
 
 
-def test_dosboxconf_missing_file_points_at_target_syntax(tmp_path):
+def test_dosboxconf_missing_file_points_at_a_game(tmp_path):
     result = CliRunner().invoke(dosboxconf, [str(tmp_path / "nope.conf")])
     assert result.exit_code == 2
-    assert "<scheme>://<id>" in result.output
+    assert "not an existing dosbox.conf" in result.output
+    assert "gog://<id>" in result.output
 
 
 @pytest.mark.parametrize("args", [["gog://tyrian_2000"], ["tyrian_2000", "-b", "gog"]])

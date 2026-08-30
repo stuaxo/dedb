@@ -74,8 +74,8 @@ def _existing_conf(source: str) -> Path:
     path = Path(source)
     if not path.is_file():
         raise click.BadParameter(
-            f"{source!r} is not an existing dosbox.conf. For a downloaded game, pass a "
-            f"'<scheme>://<id>' target (or a bare id with --backend)."
+            f"{source!r} is not an existing dosbox.conf. For a downloaded game, pass "
+            f"'gog://<id>' (or a bare id with --backend)."
         )
     return path
 
@@ -87,9 +87,9 @@ def _existing_conf(source: str) -> Path:
     "-b",
     default=None,
     metavar="SCHEME",
-    help="Treat SOURCES as a single bare id for this backend, instead of dosbox.conf paths.",
+    help="Read SOURCES as one bare game id for this backend, rather than dosbox.conf paths.",
 )
-@click.option("--profile", default=None, help="Launch profile, for a gog:// target.")
+@click.option("--profile", default=None, help="Launch profile, for a gog:// game.")
 @click.option("--autoexec", "-a", is_flag=True, default=False, help="Show the [autoexec] commands.")
 @click.option(
     "--sblaster",
@@ -125,19 +125,19 @@ def dosboxconf(
 ) -> None:
     """Show aspects of dosbox.conf(s), merged in order.
 
-    SOURCES is one or more dosbox.conf paths, or a single 'gog://<id>'
-    target (or a bare id with --backend) whose resolved conf(s) are shown.
-    With none of -a/-s/-g given, those three aspects are shown; --issues
-    is always opt-in.
+    SOURCES is one or more dosbox.conf paths, or a single downloaded game
+    ('gog://<id>', or a bare id with --backend) whose resolved conf(s) are
+    shown. With none of -a/-s/-g given, those three aspects are shown;
+    --issues is always opt-in.
     """
     if backend is not None or (len(sources) == 1 and "://" in sources[0]):
         if len(sources) != 1:
-            raise click.UsageError("Pass a single target when using a scheme or --backend.")
+            raise click.UsageError("Pass a single game when using a scheme or --backend.")
         from ..core import get_backends
-        from ..verbs import _resolve_target
+        from ..verbs import _resolve_game
 
-        target = _resolve_target(sources[0], backend, profile=profile)
-        conf_files, working_dir = get_backends()[target.scheme].dosbox_sources(target)
+        game = _resolve_game(sources[0], backend, profile=profile)
+        conf_files, working_dir = get_backends()[game.scheme].dosbox_sources(game)
     else:
         conf_files = [_existing_conf(source) for source in sources]
         working_dir = None

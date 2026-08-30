@@ -13,7 +13,7 @@ List locally-downloaded games/items, across download backends.
 
 By default each game is a bare name, one per line; a name gets a `<scheme>:`
 prefix only when the *same* name exists under more than one backend. `-1` prints
-bare names only; `-l` prints every entry as a full `<scheme>:<id>` target
+bare names only; `-l` prints every entry as a full `<scheme>:<id>` URL
 (pasteable into `dedb run`, `dedb rm`, ...).
 
 Filter to specific backends - repeatable and/or comma-separated:
@@ -21,12 +21,11 @@ Filter to specific backends - repeatable and/or comma-separated:
 `$ dedb ls --type=archive,gog`
 
 
-### Targets
+### Naming a game
 
-Games are addressed by a URL-style target, so one set of commands works across
-every backend:
+`dedb run`, `download`, `import` and `rm` all take one GAME argument. It can be:
 
-| Target                            | Means                                          |
+| GAME                              | Means                                          |
 |-----------------------------------|------------------------------------------------|
 | `gog:<gamename>`                  | a GOG game (the lgogdownloader gamename slug)   |
 | `gog:<gamename>?profile=<slug>`   | a specific GOG launch profile                   |
@@ -92,10 +91,10 @@ Dependencies:
 
 Games live under `<download_dir>/gog/` - see Configuration above.
 
-Use the generic commands with a `gog://<gamename>` target: `dedb download`,
-`dedb import`, `dedb run`, `dedb rm`, `dedb dosboxconf` (see Targets above and
-`doc/gog.md`). The only GOG-specific commands are `listgog` (lists your owned DOS
-games) and `downloadgog` (bulk-downloads your whole library).
+Name a game `gog://<gamename>` and use the generic commands: `dedb download`,
+`dedb import`, `dedb run`, `dedb rm`, `dedb dosboxconf` (see Naming a game above
+and `doc/gog.md`). The only GOG-specific commands are `listgog` (lists your owned
+DOS games) and `downloadgog` (bulk-downloads your whole library).
 
 ### Launch profiles
 
@@ -149,7 +148,7 @@ no login required.
 
 Items live under `<download_dir>/archive/` - see Configuration above.
 
-archive.org has no commands of its own - use the generic commands with an
-`archive://<identifier>` target (or a pasted `https://archive.org/details/<id>`
-URL): `dedb download`, `dedb import`, `dedb run`, `dedb rm` (see Targets above
+archive.org has no commands of its own - name a game `archive://<identifier>` (or
+paste its `https://archive.org/details/<id>` URL) and use the generic commands:
+`dedb download`, `dedb import`, `dedb run`, `dedb rm` (see Naming a game above
 and `doc/archive.md`).

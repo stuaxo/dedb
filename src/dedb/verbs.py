@@ -1,7 +1,7 @@
-"""Generic, URL-driven commands: `dedb run|download|import|rm <target>`.
+"""Generic commands that name a game by URL: `dedb run|download|import|rm`.
 
-Each resolves a target (see dedb.backends.resolve) to a backend and
-dispatches. Registered onto the root group by dedb.cli.
+Each resolves the GAME argument (see dedb.backends.resolve) to a backend
+and dispatches. Registered onto the root group by dedb.cli.
 """
 
 import sys
@@ -14,29 +14,29 @@ from .core import get_backends
 
 
 def _backend_option(func):
-    """`-b/--backend <scheme>`: treat TARGET as a bare identifier for that
-    backend rather than a <scheme>://<id> URL (the psql "components instead
-    of a URI" form)."""
+    """`-b/--backend <scheme>`: read GAME as a bare id for that backend
+    rather than a <scheme>://<id> URL (the psql "components instead of a
+    URI" form)."""
     return click.option(
         "--backend",
         "-b",
         default=None,
         metavar="SCHEME",
-        help="Treat TARGET as a bare id for this backend, instead of a <scheme>://<id> URL.",
+        help="Read GAME as a bare id for this backend, rather than a <scheme>://<id> URL.",
     )(func)
 
 
-def _resolve_target(target: str, backend: "str | None", *, profile: "str | None" = None):
-    """resolve(), but honouring the -b/--backend option: `TARGET -b gog`
-    is the same as `gog://TARGET`."""
+def _resolve_game(game: str, backend: "str | None", *, profile: "str | None" = None):
+    """resolve(), honouring the -b/--backend option: `NAME -b gog` is the
+    same as `gog://NAME`."""
     if backend is not None:
         registry = get_backends()
         if backend not in registry:
             raise click.UsageError(f"Unknown backend '{backend}'. Known: {', '.join(registry)}.")
-        if "://" in target:
-            raise click.UsageError("Give a <scheme>://<id> target or --backend, not both.")
-        target = f"{backend}://{target}"
-    return resolve(target, profile=profile)
+        if "://" in game:
+            raise click.UsageError("Give a <scheme>://<id> URL or --backend, not both.")
+        game = f"{backend}://{game}"
+    return resolve(game, profile=profile)
 
 
 def _download_options(func):
@@ -68,20 +68,20 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
     return "dosbox" if use_dosbox else "dosemu"
 
 
-def _run(target, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload) -> None:
-    """Download (if needed) and launch a resolved target; exit non-zero if the emulator does."""
+def _run(game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload) -> None:
+    """Download (if needed) and launch a resolved game; exit non-zero if the emulator does."""
     layout = backend.ensure_downloaded(
-        target.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+        game.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
     )
-    exit_code = backend.run(target, layout, emulator=emulator, extra_args=extra_args, verbose=verbose)
+    exit_code = backend.run(game, layout, emulator=emulator, extra_args=extra_args, verbose=verbose)
     if exit_code != 0:
         sys.exit(exit_code)
 
 
-def _do_import(target, backend, *, output_dir, force, refreshconf, dumpconf, dumpuserhook) -> None:
-    """Convert a resolved target to DOSEMU2 config(s), or --dump* them to stdout."""
+def _do_import(game, backend, *, output_dir, force, refreshconf, dumpconf, dumpuserhook) -> None:
+    """Convert a resolved game to DOSEMU2 config(s), or --dump* them to stdout."""
     if dumpconf or dumpuserhook:
-        entries = backend.build(target)
+        entries = backend.build(game)
         for i, (label, conf_text, userhook_lines) in enumerate(entries):
             if i:
                 click.echo()
@@ -94,24 +94,24 @@ def _do_import(target, backend, *, output_dir, force, refreshconf, dumpconf, dum
         return
 
     if refreshconf:
-        if not backend.is_downloaded(target.identifier):
-            click.echo(f"Skipping '{target.identifier}' (not downloaded)")
+        if not backend.is_downloaded(game.identifier):
+            click.echo(f"Skipping '{game.identifier}' (not downloaded)")
             return
         force = True
 
-    dest = backend.convert(target, output_dir=output_dir, profile=target.profile, force=force)
-    click.echo(f"Imported '{target.identifier}' -> '{dest}'")
+    dest = backend.convert(game, output_dir=output_dir, profile=game.profile, force=force)
+    click.echo(f"Imported '{game.identifier}' -> '{dest}'")
 
 
 @click.command("run")
-@click.argument("target")
+@click.argument("game")
 @click.argument("emulator_args", nargs=-1, type=click.UNPROCESSED)
 @click.option("--dosbox", "use_dosbox", is_flag=True, default=False, help="Run in DOSBox.")
 @click.option("--dosemu", "use_dosemu", is_flag=True, default=False, help="Run in DOSEMU2.")
 @click.option(
     "--profile",
     default=None,
-    help="Launch profile (gog:// only). Equivalent to gog://<id>?profile=<slug>.",
+    help="Launch profile (gog:// only). Same as gog://<id>?profile=<slug>.",
 )
 @_backend_option
 @_download_options
@@ -119,17 +119,17 @@ def _do_import(target, backend, *, output_dir, force, refreshconf, dumpconf, dum
     "--verbose", "-v", is_flag=True, default=False, help="Print the command line before launching."
 )
 def run(
-    target, emulator_args, use_dosbox, use_dosemu, profile, backend, keep, refresh_metadata, redownload, verbose
+    game, emulator_args, use_dosbox, use_dosemu, profile, backend, keep, refresh_metadata, redownload, verbose
 ):
-    """Run a target in DOSBox or DOSEMU2.
+    """Run a game in DOSBox or DOSEMU2.
 
-    TARGET is gog://<id>, archive://<id>, an archive.org item URL, or the
-    bare name of something already downloaded. Downloads (and, for
+    GAME is gog://<id>, archive://<id>, an archive.org item URL, or the
+    bare name of one you've already downloaded. Downloads (and, for
     --dosemu, converts) it first if needed. Anything after `--` is passed
     straight through to the emulator.
     """
     emulator = _require_one_emulator(use_dosbox, use_dosemu)
-    resolved = _resolve_target(target, backend, profile=profile)
+    resolved = _resolve_game(game, backend, profile=profile)
     _run(
         resolved,
         get_backends()[resolved.scheme],
@@ -143,17 +143,17 @@ def run(
 
 
 @click.command("download")
-@click.argument("target")
+@click.argument("game")
 @_backend_option
 @_download_options
-def download(target, backend, keep, refresh_metadata, redownload):
-    """Download and extract a target.
+def download(game, backend, keep, refresh_metadata, redownload):
+    """Download and extract a game.
 
-    TARGET must carry a scheme (gog://<id>, archive://<id>, or an
-    archive.org item URL), or name a backend with --backend - a bare name
-    only resolves once something is already downloaded.
+    GAME must carry a scheme (gog://<id>, archive://<id>, or an archive.org
+    item URL), or name a backend with --backend - a bare name only
+    resolves once the game is already downloaded.
     """
-    resolved = _resolve_target(target, backend)
+    resolved = _resolve_game(game, backend)
     get_backends()[resolved.scheme].ensure_downloaded(
         resolved.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
     )
@@ -161,7 +161,7 @@ def download(target, backend, keep, refresh_metadata, redownload):
 
 
 @click.command("import")
-@click.argument("target")
+@click.argument("game")
 @click.option(
     "--output-dir",
     "-o",
@@ -177,15 +177,15 @@ def download(target, backend, keep, refresh_metadata, redownload):
     "--refreshconf",
     is_flag=True,
     default=False,
-    help="Regenerate the config for an already-downloaded target (implies --force; skips if not downloaded).",
+    help="Regenerate the config for an already-downloaded game (implies --force; skips if not downloaded).",
 )
 @click.option("--dumpconf", is_flag=True, default=False, help="Print the dosemu.conf instead of writing.")
 @click.option(
     "--dumpuserhook", is_flag=True, default=False, help="Print the userhook.bat instead of writing."
 )
-def import_target(target, output_dir, profile, backend, force, refreshconf, dumpconf, dumpuserhook):
-    """Import an already-downloaded target into DOSEMU2 config(s)."""
-    resolved = _resolve_target(target, backend, profile=profile)
+def import_target(game, output_dir, profile, backend, force, refreshconf, dumpconf, dumpuserhook):
+    """Import an already-downloaded game into DOSEMU2 config(s)."""
+    resolved = _resolve_game(game, backend, profile=profile)
     _do_import(
         resolved,
         get_backends()[resolved.scheme],
@@ -198,12 +198,12 @@ def import_target(target, output_dir, profile, backend, force, refreshconf, dump
 
 
 @click.command("rm")
-@click.argument("target")
+@click.argument("game")
 @_backend_option
 @click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting.")
-def rm(target, backend, yes):
-    """Delete a downloaded target's whole directory tree."""
-    resolved = _resolve_target(target, backend)
+def rm(game, backend, yes):
+    """Delete a downloaded game's whole directory tree."""
+    resolved = _resolve_game(game, backend)
     get_backends()[resolved.scheme].remove(resolved.identifier, assume_yes=yes)
 
 

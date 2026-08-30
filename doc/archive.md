@@ -49,8 +49,8 @@ GOG - see `doc/gog.md`.
 
 ## Commands
 
-archive.org has no commands of its own - it's handled entirely by the generic,
-target-driven commands with an `archive://<identifier>` target (a pasted
+archive.org has no commands of its own - it's handled entirely by the generic
+commands, naming a game by `archive://<identifier>` (a pasted
 `https://archive.org/details/<id>` URL works too):
 
 ```
