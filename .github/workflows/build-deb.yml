@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper dh-python python3-all python3-hatchling python3-click python3-pydantic python3-tomli pybuild-plugin-pyproject fakeroot
+          sudo apt-get install -y build-essential devscripts debhelper dh-python python3-all python3-hatchling python3-click python3-pydantic python3-tomli pybuild-plugin-pyproject fakeroot
 
       - name: Build package
         run: |
