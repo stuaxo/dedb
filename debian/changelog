@@ -1,3 +1,16 @@
+dedb (0.0.7) unstable; urgency=medium
+
+  * Fix every `dedb run ... --dosemu`: stop emitting `$_video = "X"` into
+    the generated dosemu.conf. dosemu2's $_video is the emulated video
+    adapter style, not a display backend, and the bogus value aborted
+    dosemu2 at startup.
+  * Regenerate the DOSEMU2 config on every launch, so a config written by
+    an older dedb no longer lingers.
+  * Fix `dedb import` crashing with a convert() TypeError before writing
+    any config.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Sun, 30 Aug 2026 23:08:38 +0100
+
 dedb (0.0.6) unstable; urgency=medium
 
   * Expand a leading ~ and $VARs in the download_dir setting.
