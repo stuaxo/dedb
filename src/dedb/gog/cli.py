@@ -1,6 +1,5 @@
 """Click commands contributed by the gog app."""
 
-import sys
 from pathlib import Path
 
 import click
@@ -13,7 +12,6 @@ from .downloader import download_and_extract
 from .importer import build_gog_game, import_gog_game
 from .layout import GameLayout
 from .profiles import get_conf_files, get_working_dir
-from .runner import ensure_downloaded, run_dosbox, run_dosemu
 
 
 @click.command("downloadgog")
@@ -319,27 +317,27 @@ def rungog(
 ) -> None:
     """Run a GOG game in DOSBox or DOSEMU2.
 
-    Downloads the game first if it hasn't been downloaded yet, and for
-    --dosemu, converts its dosbox.conf(s) first if that hasn't been done yet.
-
-    Anything after a `--` is passed straight through to the emulator, e.g.
-    `dedb rungog mygame --dosbox -- -fullscreen`.
+    Deprecated alias for `dedb run gog://<game_id>` - see that command.
+    Anything after a `--` is passed straight through to the emulator.
     """
-    if use_dosbox == use_dosemu:
-        raise click.UsageError("Specify exactly one of --dosbox or --dosemu.")
+    click.echo("warning: `rungog` is deprecated - use `dedb run gog://<game_id>` instead.", err=True)
 
-    download_dir = require_download_dir("gog")
-    layout = ensure_downloaded(
-        game_id, download_dir, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
-    )
+    from ..backends import resolve
+    from ..core import get_backends
+    from ..verbs import _require_one_emulator, _run
 
-    exit_code = (
-        run_dosbox(layout, profile, emulator_args, verbose)
-        if use_dosbox
-        else run_dosemu(layout, profile, emulator_args, verbose)
+    emulator = _require_one_emulator(use_dosbox, use_dosemu)
+    target = resolve(f"gog://{game_id}", profile=profile)
+    _run(
+        target,
+        get_backends()["gog"],
+        emulator=emulator,
+        extra_args=emulator_args,
+        verbose=verbose,
+        keep=keep,
+        refresh_metadata=refresh_metadata,
+        redownload=redownload,
     )
-    if exit_code != 0:
-        sys.exit(exit_code)
 
 
 @click.command("dosboxconfgog")

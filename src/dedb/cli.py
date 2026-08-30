@@ -12,11 +12,13 @@ backend) are defined here and shown under a "[dedb]" heading.
 
 import click
 
-from .core import get_apps, get_download_dir
+from .core import get_apps, get_backends, get_download_dir
+from .verbs import GENERIC_COMMANDS
 
-# Download backends `list` knows about - each an app with a namespaced
-# <download_dir>/<backend>/ tree of one directory per downloaded game/item.
-DOWNLOAD_BACKENDS = ("gog", "archive")
+# Download backends `list` knows about - each a registered backend with a
+# namespaced <download_dir>/<scheme>/ tree of one dir per downloaded game/item.
+# Sourced from the backend registry so there's a single source of truth.
+DOWNLOAD_BACKENDS = tuple(get_backends())
 
 
 class AppGroupedGroup(click.Group):
@@ -127,7 +129,7 @@ def list_downloads(backends: list[str], names_only: bool) -> None:
             click.echo("  (none)")
 
 
-ROOT_COMMANDS = [list_downloads]
+ROOT_COMMANDS = [list_downloads, *GENERIC_COMMANDS]
 
 for _command in ROOT_COMMANDS:
     cli.add_command(_command)

@@ -37,16 +37,25 @@ dosbox = "default"
 
 ## Commands
 
-GOG Commands, these all operate on games you own on GOG.
+Most GOG work now goes through the generic, target-driven commands with a
+`gog://<gamename>` target (see the main README):
+
+```
+$ dedb download gog://tyrian_2000
+$ dedb run gog://tyrian_2000 --dosbox
+$ dedb run 'gog://warcraft_orcs_and_humans?profile=server' --dosbox
+$ dedb import gog://tyrian_2000
+$ dedb rm gog://tyrian_2000
+```
 
 | Command        | Description                                                   |
 |----------------|---------------------------------------------------------------|
-| `downloadgog`  | Download and extract DOSBOX games from GOG.                   |
-| `listgog`      | List DOSBOX games on GOG                                      |
-| `importgog`    | Create a DOSEMU2 conf and userhook from a downloaded GOG Game |
-| `rungog`       | Run a GOG game in DOSBox or DOSEMU2.                          |
+| `listgog`      | List DOSBOX games you own on GOG                             |
 | `dosboxconfgog`| View config, autoexec, sound settings, and `--issues`.        |
-| `rmgog`        | Delete a downloaded game's directory.                        |
+| `downloadgog`  | Bulk download; also `--game <id>` for one. `dedb download gog://<id>` for a single game. |
+| `importgog`    | Per-profile detail. `dedb import gog://<id>` for the common case. |
+| `rungog`       | **Deprecated** alias for `dedb run gog://<id>`.               |
+| `rmgog`        | `dedb rm gog://<id>`.                                         |
 
 
 ### listgog
@@ -68,25 +77,26 @@ Download a particular game:
 
 2. Download a single game (tyrian_2000):
 
-```$ downloadgog tyrian_2000```
+```$ dedb download gog://tyrian_2000```
 
-On initial download, a DOSEMU2 conf isn't created, `importgog` can do this for every game.
-`rungog` also does this on demand.
+On initial download, a DOSEMU2 conf isn't created; `dedb import gog://<id>` can
+do this, and `dedb run` also does it on demand.
 
 
 
 # Run GOG game in DOSBOX
 
-```$ rungog tyrian_2000 --dosbox```
+```$ dedb run gog://tyrian_2000 --dosbox```
 
 This is a good baseline as this runs the unaltered game.
 
 
 # Run GOG game in DOSEMU2
 
-```$ rungog tyrian_2000 --dosemu```
+```$ dedb run gog://tyrian_2000 --dosemu```
 
-rungog accepts --profile, see profiles.
+Pick a launch profile with `gog://<id>?profile=<slug>` or `--profile <slug>` -
+see profiles below. (`rungog`/`runarchive` still work as deprecated aliases.)
 
 
 ## Profiles

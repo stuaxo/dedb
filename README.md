@@ -18,6 +18,34 @@ Filter to specific backends - repeatable and/or comma-separated:
 Add `-1` for one bare name per line (no per-backend headings).
 
 
+### Targets
+
+Games are addressed by a URL-style target, so one set of commands works across
+every backend:
+
+| Target                         | Means                                            |
+|--------------------------------|--------------------------------------------------|
+| `gog://<gamename>`             | a GOG game (the lgogdownloader gamename slug)     |
+| `gog://<gamename>?profile=<slug>` | a specific GOG launch profile                  |
+| `archive://<identifier>`       | an archive.org item                              |
+| `https://archive.org/details/<id>` | same, as a pasted item URL                   |
+| `<name>`                       | a bare name - resolved against local downloads   |
+
+```
+$ dedb run gog://tyrian_2000 --dosbox
+$ dedb run archive://msdos_Electro_Man_1992 --dosemu
+$ dedb run 'gog://warcraft_orcs_and_humans?profile=server' --dosbox -- -fullscreen
+$ dedb download gog://tyrian_2000
+$ dedb import archive://msdos_Electro_Man_1992
+$ dedb rm gog://tyrian_2000
+```
+
+A bare name (no scheme) only resolves once the game is downloaded and lives
+under exactly one backend; otherwise prefix it with `gog://` / `archive://`.
+
+To add a backend of your own, see [doc/backends.md](doc/backends.md).
+
+
 ## Configuration
 
 Downloaded games/items live under one shared `download_dir`, namespaced per source
@@ -49,7 +77,9 @@ Dependencies:
 
 Games live under `<download_dir>/gog/` - see Configuration above.
 
-Commands: `downloadgog`, `listgog`, `importgog`, `rungog`. See `dedb <command> --help`.
+Use the generic commands with a `gog://<gamename>` target: `dedb download`,
+`dedb import`, `dedb run`, `dedb rm` (see Targets above). `listgog` lists your
+owned DOS games. `rungog` is a deprecated alias for `dedb run gog://<id>`.
 
 ### Launch profiles
 
@@ -102,4 +132,7 @@ no login required.
 
 Items live under `<download_dir>/archive/` - see Configuration above.
 
-Commands: `downloadarchive`, `importarchive`, `runarchive`. See `dedb <command> --help` and `doc/archive.md`.
+Use the generic commands with an `archive://<identifier>` target (or a pasted
+`https://archive.org/details/<id>` URL): `dedb download`, `dedb import`,
+`dedb run`, `dedb rm` (see Targets above and `doc/archive.md`). `runarchive` is
+a deprecated alias for `dedb run archive://<id>`.

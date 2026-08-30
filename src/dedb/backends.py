@@ -1,0 +1,195 @@
+"""Backend registry and target resolution.
+
+A "backend" is a source of DOSBox games - GOG, archive.org, ... - addressed
+by a URL-style target: ``gog://<gamename>``, ``archive://<identifier>``,
+optionally ``gog://<id>?profile=<slug>``. An ``https://archive.org/details/...``
+URL, or a bare name that matches a local download, resolves too.
+
+Each backend is a small frozen-dataclass class registered with
+``@register_backend("<scheme>")`` (see dedb.gog.backend / dedb.archive.backend).
+``dedb.core.get_backends()`` imports those modules and returns the registry.
+
+This module deliberately imports nothing from ``dedb`` at module level - the
+backend classes and ``resolve()`` reach into ``dedb.core`` (and each backend's
+own runner/importer) with function-local imports, so importing ``dedb.backends``
+stays cycle-free and cheap.
+"""
+
+import difflib
+from dataclasses import dataclass
+from urllib.parse import parse_qs, urlparse
+
+import click
+
+# scheme -> backend instance. Populated by register_backend, which each
+# dedb.<app>.backend module calls at import time.
+_REGISTRY: "dict[str, BackendBase]" = {}
+
+
+def register_backend(scheme: str):
+    """Class decorator: instantiate the (zero-required-arg) backend class
+    and store it under ``scheme``. Returns the class unchanged."""
+
+    def decorator(cls: "type[BackendBase]") -> "type[BackendBase]":
+        _REGISTRY[scheme] = cls()
+        return cls
+
+    return decorator
+
+
+class BackendBase:
+    """Behaviour shared by every backend. Subclasses are frozen dataclasses
+    that add the ``scheme`` / ``supports_profile`` fields and override the
+    four abstract methods (``layout``, ``ensure_downloaded``, ``run``,
+    ``convert``). The rest have working defaults."""
+
+    scheme: str
+    supports_profile: bool = False
+
+    # --- URL recognition -------------------------------------------------
+
+    def identifier_from_url(self, url: str) -> "str | None":
+        """If ``url`` is an external http(s) URL this backend owns (e.g.
+        an archive.org item page), return the bare identifier, else None."""
+        return None
+
+    # --- filesystem state ----------------------------------------------
+
+    def layout(self, identifier: str):
+        """The backend's GameLayout for ``identifier``."""
+        raise NotImplementedError
+
+    def is_downloaded(self, identifier: str) -> bool:
+        return self.layout(identifier).is_downloaded()
+
+    def local_names(self) -> "list[str]":
+        """Names of everything downloaded under this backend, for bare-name
+        target resolution."""
+        from .core import get_download_dir
+
+        root = get_download_dir(self.scheme)
+        if root is None or not root.is_dir():
+            return []
+        return sorted(p.name for p in root.iterdir() if p.is_dir())
+
+    def remove(self, identifier: str, *, assume_yes: bool) -> None:
+        from .core import remove_download, require_download_dir
+
+        remove_download(require_download_dir(self.scheme), identifier, assume_yes=assume_yes)
+
+    # --- actions -------------------------------------------------------
+
+    def ensure_downloaded(self, identifier: str, *, keep: bool, refresh_metadata: bool, redownload: bool):
+        """Download + extract ``identifier`` if needed; return its GameLayout."""
+        raise NotImplementedError
+
+    def run(self, target: "Target", layout, *, emulator: str, extra_args, verbose: bool) -> int:
+        """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu"); return the exit code."""
+        raise NotImplementedError
+
+    def convert(self, target: "Target", *, output_dir=None, profile: "str | None" = None, force: bool = False):
+        """Convert an already-downloaded ``target`` to DOSEMU2 config(s);
+        return the directory they were written to."""
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class Target:
+    """A resolved target: which backend, which item, and (GOG only) which
+    launch profile. ``raw`` is the string the user typed, for messages."""
+
+    scheme: str
+    identifier: str
+    profile: "str | None"
+    raw: str
+
+    @property
+    def url(self) -> str:
+        base = f"{self.scheme}://{self.identifier}"
+        return f"{base}?profile={self.profile}" if self.profile else base
+
+
+def _closest_name(value: str, names: "list[str]") -> "str | None":
+    """Best "did you mean" for a bare name that matched nothing. A unique
+    case-insensitive prefix or substring wins (catches abbreviations like
+    "jazz" -> "jazz_jackrabbit_collection"); otherwise fall back to
+    difflib's near-miss ratio (catches typos like "tyrian_200"). Uses only
+    the stdlib - no fuzzy-match dependency."""
+    lowered = value.lower()
+    for candidates in (
+        [n for n in names if n.lower().startswith(lowered)],
+        [n for n in names if lowered in n.lower()],
+    ):
+        if len(candidates) == 1:
+            return candidates[0]
+
+    close = difflib.get_close_matches(value, names, n=1, cutoff=0.6)
+    return close[0] if close else None
+
+
+def _finish(backend: BackendBase, identifier: str, profile: "str | None", raw: str) -> Target:
+    if profile is not None and not backend.supports_profile:
+        raise click.ClickException(f"{backend.scheme}:// targets don't support --profile.")
+    return Target(backend.scheme, identifier, profile, raw)
+
+
+def resolve(value: str, *, profile: "str | None" = None) -> Target:
+    """Turn a user-supplied target into a :class:`Target`.
+
+    Accepts ``<scheme>://<id>`` (optionally ``?profile=<slug>``), an
+    ``https://archive.org/...`` item URL, or a bare name that matches a
+    local download under exactly one backend. ``profile`` (the --profile
+    flag) overrides any ``?profile=`` in the URL. Raises
+    ``click.ClickException`` if nothing resolves.
+    """
+    from .core import get_backends
+
+    registry = get_backends()
+    parsed = urlparse(value)
+    scheme = parsed.scheme  # urlparse lowercases the scheme; netloc/path keep case
+
+    if scheme in ("http", "https"):
+        for backend in registry.values():
+            identifier = backend.identifier_from_url(value)
+            if identifier is not None:
+                return _finish(backend, identifier, profile, value)
+        raise click.ClickException(
+            f"Don't know how to handle URL: {value}\n"
+            "Use a scheme instead, e.g. archive://<id>."
+        )
+
+    if scheme in registry:
+        backend = registry[scheme]
+        identifier = (parsed.netloc or parsed.path.lstrip("/")).rstrip("/")
+        if not identifier:
+            raise click.ClickException(f"Missing identifier in target: {value}")
+        url_profile = parse_qs(parsed.query).get("profile", [None])[0]
+        return _finish(backend, identifier, profile if profile is not None else url_profile, value)
+
+    if scheme:
+        known = ", ".join(f"{s}://" for s in sorted(registry))
+        raise click.ClickException(f"Unknown target scheme '{scheme}://'. Known schemes: {known}")
+
+    # Bare name -> match against local downloads.
+    local = {backend: backend.local_names() for backend in registry.values()}
+    hits = [backend for backend, names in local.items() if value in names]
+    if len(hits) == 1:
+        return _finish(hits[0], value, profile, value)
+
+    schemes = sorted(registry)
+    if not hits:
+        lines = [f"'{value}' isn't a URL and isn't downloaded under any backend."]
+        all_names = sorted({name for names in local.values() for name in names})
+        suggestion = _closest_name(value, all_names)
+        if suggestion is not None:
+            lines.append(f"Did you mean:  dedb run {suggestion}")
+        lines.append(
+            "Otherwise prefix it with a scheme, e.g. "
+            + " or ".join(f"{s}://{value}" for s in schemes)
+        )
+        raise click.ClickException("\n".join(lines))
+    found = sorted(backend.scheme for backend in hits)
+    raise click.ClickException(
+        f"'{value}' is downloaded under multiple backends ({', '.join(found)}).\n"
+        f"Disambiguate with a scheme, e.g. {found[0]}://{value}"
+    )

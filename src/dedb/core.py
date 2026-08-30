@@ -33,6 +33,30 @@ def get_apps() -> "OrderedDict[str, list[click.Command]]":
     return apps
 
 
+def get_backends() -> "OrderedDict[str, object]":
+    """Import each app's optional `backend` module (which self-registers via
+    dedb.backends.register_backend) and return the registry, keyed by scheme
+    (== app short name) in Settings.apps order. Apps without a backend module
+    (e.g. dedb.dosbox) are skipped."""
+    from .backends import _REGISTRY
+
+    for dotted_path in get_settings().apps:
+        try:
+            import_module(f"{dotted_path}.backend")
+        except ModuleNotFoundError as exc:
+            # Only swallow "there is no such backend module"; a genuine
+            # broken import *inside* an existing backend module must surface.
+            if exc.name != f"{dotted_path}.backend":
+                raise
+
+    backends: "OrderedDict[str, object]" = OrderedDict()
+    for dotted_path in get_settings().apps:
+        short_name = dotted_path.rsplit(".", 1)[-1]
+        if short_name in _REGISTRY:
+            backends[short_name] = _REGISTRY[short_name]
+    return backends
+
+
 def get_download_dir(app_name: str) -> Path | None:
     """<download_dir>/<app_name>, or None if [download_dir] isn't configured."""
     download_dir = get_settings().download_dir

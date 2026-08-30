@@ -1,6 +1,5 @@
 """Click commands contributed by the archive app."""
 
-import sys
 from pathlib import Path
 
 import click
@@ -10,7 +9,6 @@ from .client import parse_identifier
 from .downloader import download_and_extract
 from .importer import build_archive_game, import_archive_game
 from .layout import GameLayout
-from .runner import ensure_downloaded, run_dosbox, run_dosemu
 
 
 @click.command("downloadarchive")
@@ -168,26 +166,30 @@ def runarchive(
 ) -> None:
     """Run an archive.org item in DOSBox or DOSEMU2.
 
-    Downloads the item first if it hasn't been downloaded yet, and for
-    --dosemu, converts it first if that hasn't been done yet.
-
-    Anything after a `--` is passed straight through to the emulator, e.g.
-    `dedb runarchive msdos_Electro_Man_1992 --dosbox -- -fullscreen`.
+    Deprecated alias for `dedb run archive://<item>` - see that command.
+    ITEM may still be a bare identifier or a full archive.org item URL.
+    Anything after a `--` is passed straight through to the emulator.
     """
-    if use_dosbox == use_dosemu:
-        raise click.UsageError("Specify exactly one of --dosbox or --dosemu.")
-
-    identifier = parse_identifier(item)
-    download_dir = require_download_dir("archive")
-    layout = ensure_downloaded(
-        identifier, download_dir, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+    click.echo(
+        "warning: `runarchive` is deprecated - use `dedb run archive://<item>` instead.", err=True
     )
 
-    exit_code = (
-        run_dosbox(layout, emulator_args, verbose) if use_dosbox else run_dosemu(layout, emulator_args, verbose)
+    from ..backends import resolve
+    from ..core import get_backends
+    from ..verbs import _require_one_emulator, _run
+
+    emulator = _require_one_emulator(use_dosbox, use_dosemu)
+    target = resolve(f"archive://{parse_identifier(item)}")
+    _run(
+        target,
+        get_backends()["archive"],
+        emulator=emulator,
+        extra_args=emulator_args,
+        verbose=verbose,
+        keep=keep,
+        refresh_metadata=refresh_metadata,
+        redownload=redownload,
     )
-    if exit_code != 0:
-        sys.exit(exit_code)
 
 
 @click.command("rmarchive")
