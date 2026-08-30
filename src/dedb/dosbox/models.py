@@ -93,7 +93,16 @@ class DosemuConfig(BaseModel):
     joystick: str = Field(serialization_alias="$_joystick")
 
     # Render/Video fields
-    video: str = Field(serialization_alias="$_video")
+    #
+    # No $_video field: dosemu2's $_video is the emulated video *adapter*
+    # style (one of vga/ega/mda/mga/cga/none), not a display backend.
+    # DOSBox's `output` (surface/opengl/texture/...) selects a host
+    # rendering surface and has no dosemu2 equivalent - dosemu2 chooses
+    # its own backend (SDL) and defaults $_video to "vga", which is what
+    # DOS games want anyway. Emitting `$_video = "X"` (the old DOSEMU1
+    # spelling for "use X") actually breaks dosemu2: its built-in
+    # global.conf expands $_video into `video { X }`, a parse error that
+    # aborts startup.
 
     def model_dump_dosemurc(self) -> str:
         """Render as a DOSEMU2 config file: `$_var = (n)` for
@@ -194,12 +203,6 @@ def _joystick_to_device(joysticktype: str) -> str:
     return "" if joysticktype.strip().lower() == "none" else "/dev/input/js0"
 
 
-def _output_to_video(output: str) -> str:
-    """DOSBox selects SDL output surfaces (opengl, overlay, etc.); DOSEmu2 usually expects 'X' for windowed environments."""
-    output_lower = output.strip().lower()
-    return "X" if output_lower != "none" else ""
-
-
 def dosbox_to_dosemu(dosbox: DosboxConfig) -> DosemuConfig:
     """Translate a DosboxConfig into a DosemuConfig. The only place
     DOSBox's field names and units become DOSEMU2's."""
@@ -219,5 +222,6 @@ def dosbox_to_dosemu(dosbox: DosboxConfig) -> DosemuConfig:
         speaker=_pcspeaker_to_speaker(dosbox.pcspeaker),
         com1=_serial_to_com(dosbox.serial1),
         joystick=_joystick_to_device(dosbox.joysticktype),
-        video=_output_to_video(dosbox.output),
+        # dosbox.output is intentionally not translated - see the
+        # "Render/Video fields" note on DosemuConfig.
     )

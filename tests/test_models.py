@@ -172,12 +172,11 @@ def test_dosbox_to_dosemu_translates_speaker_and_serial_and_joystick():
     assert target_alt.joystick == "/dev/input/js0"
 
 
-def test_dosbox_to_dosemu_translates_video_output():
-    target = dosbox_to_dosemu(DosboxConfig(output="opengl"))
-    assert target.video == "X"
-
-    target_none = dosbox_to_dosemu(DosboxConfig(output="none"))
-    assert target_none.video == ""
+def test_dosbox_to_dosemu_does_not_emit_video():
+    """DOSBox's `output` is a host rendering-surface choice with no
+    dosemu2 equivalent, so it is not translated and $_video is left out
+    of the rendered conf entirely (dosemu2 defaults it to "vga")."""
+    assert not hasattr(dosbox_to_dosemu(DosboxConfig(output="opengl")), "video")
 
 
 @pytest.fixture
@@ -198,7 +197,6 @@ def default_dosemu_kwargs():
         "speaker": "emulated",
         "com1": "",
         "joystick": "/dev/input/js0",
-        "video": "X",
     }
 
 
