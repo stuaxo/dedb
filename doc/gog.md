@@ -50,7 +50,7 @@ $ dedb dosboxconf gog://tyrian_2000 --issues
 $ dedb rm gog://tyrian_2000
 ```
 
-Two commands act on your GOG library rather than one game:
+GOG-specific commands act on your GOG library rather than a single game:
 
 | Command       | Purpose                                                        |
 |---------------|---------------------------------------------------------------- |
