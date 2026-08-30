@@ -55,25 +55,19 @@ plus a bare id is exactly `<scheme>://<id>`, and `--profile <slug>` is
    shape), and a `dosbox_sources` that raises "no dosbox.conf" (override if your
    items ship one, for `dedb dosboxconf`).
 
-2. Add `"dedb.<app>"` to `Settings.apps` (it already needs to be there to
-   contribute CLI commands). `dedb.core.get_backends()` auto-imports
+2. List `"dedb.<app>"` in `Settings.apps`. `dedb.core.get_backends()` auto-imports
    `dedb.<app>.backend`; `DOWNLOAD_BACKENDS` and `dedb ls` pick it up from the
-   registry.
+   registry. (`get_apps()` also imports `dedb.<app>.cli` for its `commands` list;
+   that list may be empty.)
 
 3. Keep `backend.py` import-light - do runner/importer imports inside the
    method bodies. It is imported when the CLI starts.
 
-## Per-backend commands
+## Command behaviour
 
-The old `run{gog,archive}` / `import{gog,archive}` / `dosboxconfgog` /
-`rm{gog,archive}` / `downloadarchive` verbs have been removed - use the generic
-`dedb run|import|dosboxconf|rm <scheme>://<id>` / `dedb download <scheme>://<id>`
-commands.
+`dedb download <scheme>://<id>` is a no-op when the game is already present,
+unless `--redownload` or `--refreshmetadata` is given.
 
-Two GOG-only commands remain because they name no single game: `listgog`
-(lists the DOS games you own on GOG) and `downloadgog` (bulk-downloads your whole
-library). `importdosbox` and `dedb dosboxconf <file.conf>` still operate on raw
-`.conf` paths.
-
-Note: `dedb download <scheme>://<id>` is a no-op when the game is already present
-(unless `--redownload` / `--refreshmetadata`).
+A backend may also contribute account-level commands through its `cli.py`
+(e.g. GOG's `listgog` and `downloadgog`, which act on your library rather than
+one game).

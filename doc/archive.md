@@ -49,9 +49,8 @@ GOG - see `doc/gog.md`.
 
 ## Commands
 
-archive.org has no commands of its own - it's handled entirely by the generic
-commands, naming a game by `archive://<identifier>` (a pasted
-`https://archive.org/details/<id>` URL works too):
+Name a game `archive://<identifier>` (a pasted `https://archive.org/details/<id>`
+URL works too) and use the generic commands:
 
 ```
 $ dedb download archive://msdos_Electro_Man_1992
@@ -60,9 +59,6 @@ $ dedb run msdos_Electro_Man_1992 -b archive --dosbox   # -b/--backend form
 $ dedb import archive://msdos_Electro_Man_1992
 $ dedb rm archive://msdos_Electro_Man_1992
 ```
-
-(The old `downloadarchive` / `importarchive` / `runarchive` / `rmarchive`
-commands have been removed.)
 
 
 ### Download

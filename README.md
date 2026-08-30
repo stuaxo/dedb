@@ -93,8 +93,8 @@ Games live under `<download_dir>/gog/` - see Configuration above.
 
 Name a game `gog://<gamename>` and use the generic commands: `dedb download`,
 `dedb import`, `dedb run`, `dedb rm`, `dedb dosboxconf` (see Naming a game above
-and `doc/gog.md`). The only GOG-specific commands are `listgog` (lists your owned
-DOS games) and `downloadgog` (bulk-downloads your whole library).
+and `doc/gog.md`). `listgog` lists your owned DOS games and `downloadgog`
+bulk-downloads your whole library.
 
 ### Launch profiles
 
@@ -140,15 +140,12 @@ ignored.
 ## archive.org
 
 Download, import and run DOS games/software hosted on archive.org's software library
-(e.g. https://archive.org/details/msdos_Electro_Man_1992), identified either by their
-archive.org identifier or their full item URL.
+(e.g. https://archive.org/details/msdos_Electro_Man_1992). archive.org items aren't
+owned - there's no login.
 
-Unlike GOG, archive.org items aren't owned - each command just takes an item directly,
-no login required.
+Games live under `<download_dir>/archive/` - see Configuration above.
 
-Items live under `<download_dir>/archive/` - see Configuration above.
-
-archive.org has no commands of its own - name a game `archive://<identifier>` (or
-paste its `https://archive.org/details/<id>` URL) and use the generic commands:
-`dedb download`, `dedb import`, `dedb run`, `dedb rm` (see Naming a game above
-and `doc/archive.md`).
+Name a game `archive://<identifier>` (or paste its
+`https://archive.org/details/<id>` URL) and use the generic commands: `dedb
+download`, `dedb import`, `dedb run`, `dedb rm` (see Naming a game above and
+`doc/archive.md`).

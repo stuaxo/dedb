@@ -7,7 +7,7 @@ however that comes after making them work at all.
 ## Startup: autoexec to `userhook.bat`
 
 DOSBox stores startup commands in the `[autoexec]` section of `dosbox.conf`.
-The `[autoexec]` section used to create a `userhook.bat` script.
+That section is converted into a `userhook.bat` script.
 
 **shims** are used to comment out unsupported commands and translate others where possible.
 

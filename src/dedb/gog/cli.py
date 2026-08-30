@@ -1,6 +1,7 @@
 """Click commands contributed by the gog app: `downloadgog` (bulk library
-download) and `listgog` (owned-games list). Everything else is a generic
-target-driven command - see dedb.verbs and dedb.gog.backend."""
+download) and `listgog` (owned-games list), both acting on your GOG
+library. Single games are named `gog://<id>` and driven by the generic
+commands - see dedb.verbs and dedb.gog.backend."""
 
 import click
 
