@@ -12,7 +12,7 @@ import sys
 from importlib.resources import files
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -53,6 +53,16 @@ class Settings(BaseModel):
     # by dedb.core.require_download_dir/get_download_dir.
     download_dir: Path | None = None
     dosbox: DosboxSettings = DosboxSettings()
+
+    @field_validator("download_dir", mode="before")
+    @classmethod
+    def _expand_download_dir(cls, value: object) -> object:
+        """Expand a leading ~ and any $VARs in download_dir, so
+        `download_dir = "~/downloads"` resolves against $HOME rather than
+        becoming a literal `~` directory under the working dir."""
+        if isinstance(value, str):
+            return os.path.expanduser(os.path.expandvars(value))
+        return value
 
 
 def default_settings_text() -> str:

@@ -15,8 +15,9 @@ apps = [
 # Shared downloads root. Each app gets a namespaced subdirectory under it
 # (<download_dir>/gog/, <download_dir>/archive/, ...). Set this before
 # downloading anything; a path under the system temp dir is created
-# automatically, anywhere else must exist already.
-# download_dir = "/path/to/downloads"
+# automatically, anywhere else must exist already. A leading ~ and any
+# $VARs are expanded.
+# download_dir = "~/downloads"
 
 [dosbox]
 # Which real DOSBox binary `dedb run <target> --dosbox` launches.
