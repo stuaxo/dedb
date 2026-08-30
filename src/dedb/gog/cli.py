@@ -44,7 +44,10 @@ from .downloader import download_and_extract
     "--merge-save/--no-merge-save",
     "merge_save",
     default=True,
-    help="--no-merge-save: don't merge game/__support/save/ onto the game root (see merge_support_save_data).",
+    help=(
+        "--no-merge-save: leave bundled save files under game/__support/save/ "
+        "instead of copying them onto the game root the way GOG's installer would."
+    ),
 )
 def downloadgog(
     keep: bool, game_id: str | None, all_games: bool, refresh_metadata: bool, redownload: bool, merge_save: bool
