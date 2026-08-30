@@ -148,7 +148,7 @@ def run(
 def download(game, backend, keep, refresh_metadata, redownload):
     """Download and extract a game.
 
-    GAME needs a scheme (gog://<id>, archive://<id>, or an archive.org
+    GAME needs a scheme (gog:<id>, archive:<id>, or an archive.org
     URL), or -b <scheme> with a bare id. A bare name works only for a
     game already downloaded.
     """
@@ -183,7 +183,7 @@ def download(game, backend, keep, refresh_metadata, redownload):
     "--dumpuserhook", is_flag=True, default=False, help="Print the userhook.bat instead of writing."
 )
 def import_target(game, output_dir, profile, backend, force, refreshconf, dumpconf, dumpuserhook):
-    """Import an already-downloaded game into DOSEMU2 config(s)."""
+    """Create a DOSEMU2 config for a downloaded program."""
     resolved = _resolve_game(game, backend, profile=profile)
     _do_import(
         resolved,
