@@ -131,11 +131,11 @@ def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     help="Every entry as a full `<scheme>:<id>` target - pasteable into `dedb run` etc.",
 )
 def list_downloads(backends: list[str], short: bool, names_only: bool, qualified: bool) -> None:
-    """List locally-downloaded games/items, one per line, sorted.
+    """List downloaded games, one per line, sorted.
 
-    Default (-s): a bare name, unless the same name exists under more than
-    one backend - then each is shown as `<scheme>:<id>`. -1: bare names
-    only. -l: every entry as `<scheme>:<id>`.
+    Default (-s): a bare name, or `<scheme>:<id>` when the name exists
+    under more than one backend. -1: bare names only. -l: every game as
+    `<scheme>:<id>`.
     """
     if sum([bool(short), names_only, qualified]) > 1:
         raise click.UsageError("Choose at most one of -s / -1 / -l.")

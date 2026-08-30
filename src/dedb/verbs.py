@@ -123,10 +123,9 @@ def run(
 ):
     """Run a game in DOSBox or DOSEMU2.
 
-    GAME is gog://<id>, archive://<id>, an archive.org item URL, or the
-    bare name of one you've already downloaded. Downloads (and, for
-    --dosemu, converts) it first if needed. Anything after `--` is passed
-    straight through to the emulator.
+    GAME is gog://<id>, archive://<id>, an archive.org URL, or a name you
+    have downloaded. It is downloaded, and for --dosemu converted, first
+    if needed. Arguments after `--` go straight to the emulator.
     """
     emulator = _require_one_emulator(use_dosbox, use_dosemu)
     resolved = _resolve_game(game, backend, profile=profile)
@@ -149,9 +148,9 @@ def run(
 def download(game, backend, keep, refresh_metadata, redownload):
     """Download and extract a game.
 
-    GAME must carry a scheme (gog://<id>, archive://<id>, or an archive.org
-    item URL), or name a backend with --backend - a bare name only
-    resolves once the game is already downloaded.
+    GAME needs a scheme (gog://<id>, archive://<id>, or an archive.org
+    URL), or -b <scheme> with a bare id. A bare name works only for a
+    game already downloaded.
     """
     resolved = _resolve_game(game, backend)
     get_backends()[resolved.scheme].ensure_downloaded(

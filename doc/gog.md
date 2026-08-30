@@ -37,25 +37,24 @@ dosbox = "default"
 
 ## Commands
 
-Name a GOG game `gog://<gamename>` and use the generic commands (see the main
-README):
+Name a GOG game `gog://<gamename>` (see the main README), then:
 
 ```
 $ dedb download gog://tyrian_2000
 $ dedb run gog://tyrian_2000 --dosbox
 $ dedb run 'gog://warcraft_orcs_and_humans?profile=server' --dosbox
-$ dedb run tyrian_2000 -b gog --dosbox      # -b/--backend in place of the gog:// prefix
+$ dedb run tyrian_2000 -b gog --dosbox      # -b instead of the prefix
 $ dedb import gog://tyrian_2000
 $ dedb dosboxconf gog://tyrian_2000 --issues
 $ dedb rm gog://tyrian_2000
 ```
 
-GOG-specific commands act on your GOG library rather than a single game:
+GOG-specific commands act on your GOG library, not a single game:
 
-| Command       | Purpose                                                        |
-|---------------|---------------------------------------------------------------- |
-| `listgog`     | List the DOS games you own on GOG and how they're classified. |
-| `downloadgog` | Bulk-download your whole DOS library; `--game <id>` for one.   |
+| Command       | Does                                                         |
+|---------------|------------------------------------------------------------- |
+| `listgog`     | List your DOS games on GOG and how they're classified.       |
+| `downloadgog` | Download your whole DOS library. `--game <id>` for one.      |
 
 
 ### listgog

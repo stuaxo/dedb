@@ -27,11 +27,10 @@ An archive.org DOS item's metadata carries three fields:
 - `emulator_ext` — the extension of the file to download (currently only `zip` is supported)
 - `emulator_start` — the path, relative to that file's root, of the executable to run (e.g. `ElectroM/EM.EXE`)
 
-That's the entire launch recipe: there's no `dosbox.conf` to parse. `dedb import`
-takes DOSBox's own defaults (the same ones `importdosbox` falls back to for
-settings a conf doesn't specify) and synthesizes a minimal autoexec from
-`emulator_start` - mount the item's root as `C:`, `cd` into its directory, run it.
-(`dedb dosboxconf archive://<id>` therefore has nothing to show and says so.)
+There's no `dosbox.conf`. `dedb import` uses DOSBox's default settings and builds
+an autoexec from `emulator_start`: mount the item root as `C:`, `cd` to the
+game's directory, run the file. `dedb dosboxconf archive://<id>` has nothing to
+show.
 
 
 ## Configuration
@@ -49,35 +48,26 @@ GOG - see `doc/gog.md`.
 
 ## Commands
 
-Name a game `archive://<identifier>` (a pasted `https://archive.org/details/<id>`
-URL works too) and use the generic commands:
+Name a game `archive://<identifier>`, or paste its
+`https://archive.org/details/<id>` URL, then:
 
 ```
 $ dedb download archive://msdos_Electro_Man_1992
 $ dedb run archive://msdos_Electro_Man_1992 --dosbox
-$ dedb run msdos_Electro_Man_1992 -b archive --dosbox   # -b/--backend form
+$ dedb run msdos_Electro_Man_1992 -b archive --dosbox   # -b instead of the prefix
 $ dedb import archive://msdos_Electro_Man_1992
 $ dedb rm archive://msdos_Electro_Man_1992
 ```
 
-
-### Download
-
-```$ dedb download archive://msdos_Electro_Man_1992```
-
-or, with a full URL:
-
-```$ dedb download https://archive.org/details/msdos_Electro_Man_1992```
-
-On initial download, a DOSEMU2 conf isn't created - `dedb import archive://<id>`
-does this, and `dedb run` also does it on demand.
+`dedb run` downloads the game and, for `--dosemu`, converts it, if that hasn't
+happened yet.
 
 
 ### Run in DOSBox
 
 ```$ dedb run archive://msdos_Electro_Man_1992 --dosbox```
 
-A good baseline, as this runs the item exactly as archive.org's own player would.
+Runs the game as archive.org's own player would.
 
 
 ### Run in DOSEMU2
