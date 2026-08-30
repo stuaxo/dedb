@@ -60,8 +60,10 @@ def test_identifier_from_url(backend, url, expected):
     ("value", "kwargs", "expected"),
     [
         ("gog://tyrian_2000", {}, ("gog", "tyrian_2000", None)),
-        ("gog:tyrian_2000", {}, ("gog", "tyrian_2000", None)),  # no "//"
+        ("gog:tyrian_2000", {}, ("gog", "tyrian_2000", None)),  # no slashes
+        ("gog:///tyrian_2000", {}, ("gog", "tyrian_2000", None)),  # empty authority
         ("gog://x?profile=host", {}, ("gog", "x", "host")),  # profile from query
+        ("gog:///x?profile=host", {}, ("gog", "x", "host")),  # slashes + query
         ("gog://x?profile=host", {"profile": "cli"}, ("gog", "x", "cli")),  # flag wins
         ("archive://msdos_Foo", {}, ("archive", "msdos_Foo", None)),  # case kept
         (ARCHIVE_URL, {}, ("archive", "msdos_Electro_Man_1992", None)),  # pasted URL

@@ -23,13 +23,16 @@ Add `-1` for one bare name per line (no per-backend headings).
 Games are addressed by a URL-style target, so one set of commands works across
 every backend:
 
-| Target                         | Means                                            |
-|--------------------------------|--------------------------------------------------|
-| `gog://<gamename>`             | a GOG game (the lgogdownloader gamename slug)     |
-| `gog://<gamename>?profile=<slug>` | a specific GOG launch profile                  |
-| `archive://<identifier>`       | an archive.org item                              |
-| `https://archive.org/details/<id>` | same, as a pasted item URL                   |
-| `<name>`                       | a bare name - resolved against local downloads   |
+| Target                            | Means                                          |
+|-----------------------------------|------------------------------------------------|
+| `gog:<gamename>`                  | a GOG game (the lgogdownloader gamename slug)   |
+| `gog:<gamename>?profile=<slug>`   | a specific GOG launch profile                   |
+| `archive:<identifier>`            | an archive.org item                             |
+| `https://archive.org/details/<id>`| same, as a pasted item URL                      |
+| `<name>`                          | a bare name - resolved against local downloads  |
+
+The slashes after the colon are optional - `gog:x`, `gog://x` and `gog:///x` are
+the same (the id isn't a host). `gog://` reads most naturally in a shell.
 
 ```
 $ dedb run gog://tyrian_2000 --dosbox

@@ -148,11 +148,13 @@ def _finish(backend: BackendBase, identifier: str, profile: "str | None", raw: s
 def resolve(value: str, *, profile: "str | None" = None) -> Target:
     """Turn a user-supplied target into a :class:`Target`.
 
-    Accepts ``<scheme>://<id>`` (optionally ``?profile=<slug>``), an
-    ``https://archive.org/...`` item URL, or a bare name that matches a
-    local download under exactly one backend. ``profile`` (the --profile
-    flag) overrides any ``?profile=`` in the URL. Raises
-    ``click.ClickException`` if nothing resolves.
+    Accepts ``<scheme>:<id>`` with any number of slashes after the colon
+    (``gog:x``, ``gog://x``, ``gog:///x`` are equivalent - the id isn't a
+    host), optionally ``?profile=<slug>``; an ``https://archive.org/...``
+    item URL; or a bare name that matches a local download under exactly
+    one backend. ``profile`` (the --profile flag) overrides any
+    ``?profile=`` in the URL. Raises ``click.ClickException`` if nothing
+    resolves.
     """
     from .core import get_backends
 
@@ -172,6 +174,7 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
 
     if scheme in registry:
         backend = registry[scheme]
+        # gog:x -> path, gog://x -> netloc, gog:///x -> path; all mean the same.
         identifier = (parsed.netloc or parsed.path.lstrip("/")).rstrip("/")
         if not identifier:
             raise click.ClickException(f"Missing identifier in target: {value}")

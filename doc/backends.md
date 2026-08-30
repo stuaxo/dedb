@@ -14,8 +14,10 @@ plus a bare id is exactly `<scheme>://<id>`, and `--profile <slug>` is
 
 `dedb.backends.resolve(value)` turns whatever the user typed into a `Target`:
 
-1. `<scheme>://<id>` (optionally `?profile=<slug>`) - looked up directly in the
-   registry.
+1. `<scheme>:<id>` (optionally `?profile=<slug>`) - looked up directly in the
+   registry. The id is not a host, so the slashes after the colon are optional
+   and cosmetic: `gog:tyrian_2000`, `gog://tyrian_2000` and `gog:///tyrian_2000`
+   are the same target.
 2. `http(s)://...` - each backend is asked `identifier_from_url(url)`; the first
    to recognise it wins (archive.org item pages, say).
 3. a bare name - matched against every backend's local downloads
