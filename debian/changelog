@@ -1,3 +1,11 @@
+dedb (0.0.3) unstable; urgency=medium
+
+  * Fix build-deb workflow: collect build artifacts into dist/ so
+    actions/upload-artifact@v4 accepts them (no '..' paths).
+  * Bump softprops/action-gh-release to v2.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Sun, 30 Aug 2026 14:47:17 +0100
+
 dedb (0.1.0) unstable; urgency=medium
 
   * Initial release
