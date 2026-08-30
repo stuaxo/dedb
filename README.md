@@ -9,13 +9,20 @@ List all the available subcommands.
 `$ dedb`
 
 List locally-downloaded games/items, by name, across download backends.
-`$ dedb list`
+`$ dedb ls`
 
 Filter to specific backends - repeatable and/or comma-separated:
-`$ dedb list --type=gog --type=archive`
-`$ dedb list --type=archive,gog`
+`$ dedb ls --type=gog --type=archive`
+`$ dedb ls --type=archive,gog`
 
-Add `-1` for one bare name per line (no per-backend headings).
+Add `-1` for one `<scheme>:<id>` target per line (pasteable into `dedb run`,
+`dedb rm`, ...):
+
+```
+$ dedb ls -1
+gog:tyrian_2000
+archive:msdos_Electro_Man_1992
+```
 
 
 ### Targets

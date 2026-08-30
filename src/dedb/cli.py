@@ -6,8 +6,8 @@ dedb.dosbox) and registered here flat on the root command group —
 groups them by contributing app, the way a Django project's manage.py
 groups per-app commands.
 
-A few cross-app commands (e.g. `list`, which spans every download
-backend) are defined here and shown under a "[dedb]" heading.
+A few cross-app commands (e.g. `ls`, which spans every download backend)
+are defined here and shown under a "[dedb]" heading.
 """
 
 import click
@@ -15,7 +15,7 @@ import click
 from .core import get_apps, get_backends, get_download_dir
 from .verbs import GENERIC_COMMANDS
 
-# Download backends `list` knows about - each a registered backend with a
+# Download backends `ls` knows about - each a registered backend with a
 # namespaced <download_dir>/<scheme>/ tree of one dir per downloaded game/item.
 # Sourced from the backend registry so there's a single source of truth.
 DOWNLOAD_BACKENDS = tuple(get_backends())
@@ -81,7 +81,7 @@ def _parse_backends(
     return selected or list(DOWNLOAD_BACKENDS)
 
 
-@click.command("list")
+@click.command("ls")
 @click.option(
     "--type",
     "backends",
@@ -96,12 +96,12 @@ def _parse_backends(
 )
 @click.option(
     "-1",
-    "names_only",
+    "as_targets",
     is_flag=True,
     default=False,
-    help="Print one name per line, with no per-backend heading or status.",
+    help="Print one `<scheme>:<id>` target per line - pasteable into `dedb run` etc.",
 )
-def list_downloads(backends: list[str], names_only: bool) -> None:
+def list_downloads(backends: list[str], as_targets: bool) -> None:
     """List locally-downloaded games/items per backend, by name.
 
     Scans <download_dir>/<backend>/ (see Configuration in the README) and
@@ -115,9 +115,9 @@ def list_downloads(backends: list[str], names_only: bool) -> None:
             else []
         )
 
-        if names_only:
+        if as_targets:
             for name in entries:
-                click.echo(name)
+                click.echo(f"{backend}:{name}")
             continue
 
         if i:

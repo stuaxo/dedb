@@ -56,7 +56,7 @@ plus a bare id is exactly `<scheme>://<id>`, and `--profile <slug>` is
 
 2. Add `"dedb.<app>"` to `Settings.apps` (it already needs to be there to
    contribute CLI commands). `dedb.core.get_backends()` auto-imports
-   `dedb.<app>.backend`; `DOWNLOAD_BACKENDS` and `dedb list` pick it up from the
+   `dedb.<app>.backend`; `DOWNLOAD_BACKENDS` and `dedb ls` pick it up from the
    registry.
 
 3. Keep `backend.py` import-light - do runner/importer imports inside the
