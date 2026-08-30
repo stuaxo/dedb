@@ -31,12 +31,12 @@ class ArchiveBackend(BackendBase):
         return GameLayout(require_download_dir("archive"), identifier)
 
     def ensure_downloaded(self, identifier, *, keep, refresh_metadata, redownload):
-        from ..core import require_download_dir
+        from ..core import ensure_download_dir
         from .runner import ensure_downloaded
 
         return ensure_downloaded(
             identifier,
-            require_download_dir("archive"),
+            ensure_download_dir("archive"),
             keep=keep,
             refresh_metadata=refresh_metadata,
             redownload=redownload,

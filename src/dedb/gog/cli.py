@@ -5,7 +5,7 @@ commands - see dedb.verbs and dedb.gog.backend."""
 
 import click
 
-from ..core import get_download_dir, require_download_dir
+from ..core import ensure_download_dir, get_download_dir
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
 from .downloader import download_and_extract
@@ -57,8 +57,7 @@ def downloadgog(
     Pass --game for a single game, or --all for every owned game
     classified as DOSBox-based (see `lsgog`).
     """
-    download_dir = require_download_dir("gog")
-    download_dir.mkdir(parents=True, exist_ok=True)
+    download_dir = ensure_download_dir("gog")
 
     games = owned_games()
     product_id_by_name = {g.gamename: g.product_id for g in games}
