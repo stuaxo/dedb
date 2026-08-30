@@ -8,8 +8,8 @@ here download that file, extract it, and let it run through DOSBox or
 DOSEMU2 the same way `gog`'s commands do for GOG games.
 
 Unlike GOG, archive.org items aren't "owned" - there's no login and
-nothing to list. Each command takes an item directly, either its bare
-identifier (e.g. `msdos_Electro_Man_1992`) or its full `/details/` URL.
+nothing to list. Address one by `archive://<identifier>`, or paste its
+full `https://archive.org/details/<identifier>` URL.
 
 Each item lives at `<download_dir>/archive/<identifier>/`:
 
@@ -27,10 +27,11 @@ An archive.org DOS item's metadata carries three fields:
 - `emulator_ext` — the extension of the file to download (currently only `zip` is supported)
 - `emulator_start` — the path, relative to that file's root, of the executable to run (e.g. `ElectroM/EM.EXE`)
 
-That's the entire launch recipe: there's no `dosbox.conf` to parse. `importarchive`
+That's the entire launch recipe: there's no `dosbox.conf` to parse. `dedb import`
 takes DOSBox's own defaults (the same ones `importdosbox` falls back to for
 settings a conf doesn't specify) and synthesizes a minimal autoexec from
 `emulator_start` - mount the item's root as `C:`, `cd` into its directory, run it.
+(`dedb dosboxconf archive://<id>` therefore has nothing to show and says so.)
 
 
 ## Configuration
@@ -48,9 +49,9 @@ GOG - see `doc/gog.md`.
 
 ## Commands
 
-archive.org items go through the generic, target-driven commands with an
-`archive://<identifier>` target (a pasted `https://archive.org/details/<id>`
-URL works too):
+archive.org has no commands of its own - it's handled entirely by the generic,
+target-driven commands with an `archive://<identifier>` target (a pasted
+`https://archive.org/details/<id>` URL works too):
 
 ```
 $ dedb download archive://msdos_Electro_Man_1992
@@ -60,17 +61,8 @@ $ dedb import archive://msdos_Electro_Man_1992
 $ dedb rm archive://msdos_Electro_Man_1992
 ```
 
-All four `*archive` commands are **deprecated** aliases for the generic verbs
-(`dedb download|import|run|rm archive://<id>`). They still work, still accept a
-bare identifier or a full archive.org item URL, and print a warning; they will
-be removed in a later release.
-
-| Command           | Replacement                          |
-|--------------------|--------------------------------------|
-| `downloadarchive` | `dedb download archive://<id>`       |
-| `importarchive`   | `dedb import archive://<id>`         |
-| `runarchive`      | `dedb run archive://<id>`            |
-| `rmarchive`       | `dedb rm archive://<id>`             |
+(The old `downloadarchive` / `importarchive` / `runarchive` / `rmarchive`
+commands have been removed.)
 
 
 ### Download

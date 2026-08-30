@@ -60,22 +60,17 @@ plus a bare id is exactly `<scheme>://<id>`, and `--profile <slug>` is
 3. Keep `backend.py` import-light - do runner/importer imports inside the
    method bodies. It is imported when the CLI starts.
 
-## Deprecated per-backend commands
+## Per-backend commands
 
-The old per-backend verbs are deprecated aliases of the generic commands - they
-still work, warn on stderr, and will be removed later:
+The old `run{gog,archive}` / `import{gog,archive}` / `dosboxconfgog` /
+`rm{gog,archive}` / `downloadarchive` verbs have been removed - use the generic
+`dedb run|import|dosboxconf|rm <scheme>://<id>` / `dedb download <scheme>://<id>`
+commands.
 
-| Old                                              | New                          |
-|--------------------------------------------------|------------------------------|
-| `rungog`, `runarchive`                           | `dedb run <scheme>://<id>`   |
-| `importgog`, `importarchive`                     | `dedb import <scheme>://<id>`|
-| `dosboxconfgog`                                  | `dedb dosboxconf gog://<id>` |
-| `rmgog`, `rmarchive`, `downloadarchive`          | `dedb rm` / `dedb download`  |
-
-Kept: `listgog` (lists owned GOG games - no target), `downloadgog` (bulk library
-download), `importdosbox` / `dedb dosboxconf <file>` (operate on raw `.conf`
-paths).
+Two GOG-only commands remain because they have no per-target meaning: `listgog`
+(lists the DOS games you own on GOG) and `downloadgog` (bulk-downloads your whole
+library). `importdosbox` and `dedb dosboxconf <file.conf>` still operate on raw
+`.conf` paths.
 
 Note: `dedb download <scheme>://<id>` is a no-op when the game is already present
-(unless `--redownload` / `--refreshmetadata`), whereas the old `downloadarchive`
-always re-ran extraction.
+(unless `--redownload` / `--refreshmetadata`).

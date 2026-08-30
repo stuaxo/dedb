@@ -43,7 +43,7 @@ def _resolve_targets(
     if not layout.is_downloaded():
         raise click.ClickException(
             f"'{layout.gamename}' hasn't been downloaded yet. "
-            f"Run `dedb downloadgog --game {layout.gamename}` first."
+            f"Run `dedb download gog://{layout.gamename}` first."
         )
 
     profiles = valid_profiles(layout.game)

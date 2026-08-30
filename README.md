@@ -88,9 +88,8 @@ Games live under `<download_dir>/gog/` - see Configuration above.
 
 Use the generic commands with a `gog://<gamename>` target: `dedb download`,
 `dedb import`, `dedb run`, `dedb rm`, `dedb dosboxconf` (see Targets above and
-`doc/gog.md`). `listgog` lists your owned DOS games; `downloadgog` bulk-downloads
-your library. `rungog` / `importgog` / `dosboxconfgog` / `rmgog` are deprecated
-aliases.
+`doc/gog.md`). The only GOG-specific commands are `listgog` (lists your owned DOS
+games) and `downloadgog` (bulk-downloads your whole library).
 
 ### Launch profiles
 
@@ -144,8 +143,7 @@ no login required.
 
 Items live under `<download_dir>/archive/` - see Configuration above.
 
-Use the generic commands with an `archive://<identifier>` target (or a pasted
-`https://archive.org/details/<id>` URL): `dedb download`, `dedb import`,
-`dedb run`, `dedb rm` (see Targets above and `doc/archive.md`). All four
-`*archive` commands (`downloadarchive`, `importarchive`, `runarchive`,
-`rmarchive`) are now deprecated aliases.
+archive.org has no commands of its own - use the generic commands with an
+`archive://<identifier>` target (or a pasted `https://archive.org/details/<id>`
+URL): `dedb download`, `dedb import`, `dedb run`, `dedb rm` (see Targets above
+and `doc/archive.md`).

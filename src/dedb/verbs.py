@@ -1,9 +1,7 @@
 """Generic, URL-driven commands: `dedb run|download|import|rm <target>`.
 
 Each resolves a target (see dedb.backends.resolve) to a backend and
-dispatches. Registered onto the root group by dedb.cli. The per-backend
-commands (rungog, downloadarchive, ...) are now deprecating wrappers over
-the _run / _do_import helpers here.
+dispatches. Registered onto the root group by dedb.cli.
 """
 
 import sys
@@ -71,7 +69,7 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
 
 
 def _run(target, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload) -> None:
-    """Shared body of `dedb run` and the deprecated rungog/runarchive."""
+    """Download (if needed) and launch a resolved target; exit non-zero if the emulator does."""
     layout = backend.ensure_downloaded(
         target.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
     )
@@ -81,7 +79,7 @@ def _run(target, backend, *, emulator, extra_args, verbose, keep, refresh_metada
 
 
 def _do_import(target, backend, *, output_dir, force, refreshconf, dumpconf, dumpuserhook) -> None:
-    """Shared body of `dedb import` and the deprecated importgog/importarchive."""
+    """Convert a resolved target to DOSEMU2 config(s), or --dump* them to stdout."""
     if dumpconf or dumpuserhook:
         entries = backend.build(target)
         for i, (label, conf_text, userhook_lines) in enumerate(entries):

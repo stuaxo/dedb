@@ -29,7 +29,7 @@ USERHOOK_NAME = "userhook.bat"
 def load_metadata(layout: GameLayout) -> ArchiveMetadata:
     if not layout.metadata_json.is_file():
         raise click.ClickException(
-            f"No metadata.json for '{layout.identifier}' - run `dedb downloadarchive {layout.identifier}` first."
+            f"No metadata.json for '{layout.identifier}' - run `dedb download archive://{layout.identifier}` first."
         )
     return GameMetadataFile.model_validate_json(layout.metadata_json.read_text()).archive
 
@@ -57,7 +57,7 @@ def build_archive_game(layout: GameLayout) -> tuple[DosemuConfig, list[str]]:
 def import_archive_game(layout: GameLayout, output_dir: Path | None = None, *, force: bool = False) -> None:
     if not layout.is_downloaded():
         raise click.ClickException(
-            f"'{layout.identifier}' hasn't been downloaded yet. Run `dedb downloadarchive {layout.identifier}` first."
+            f"'{layout.identifier}' hasn't been downloaded yet. Run `dedb download archive://{layout.identifier}` first."
         )
 
     output_dir = output_dir or layout.dosemu

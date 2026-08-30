@@ -25,7 +25,7 @@ Set it by editing `~/.config/dedb/dedbconf.toml`:
 download_dir = "/path/to/downloads"
 ```
 
-`rungog --dosbox` runs games' own conf(s) unmodified through a real DOSBox. Which binary it uses is set under `[dosbox]`:
+`dedb run gog://<id> --dosbox` runs a game's own conf(s) unmodified through a real DOSBox. Which binary it uses is set under `[dosbox]`:
 
 ```toml
 [dosbox]
@@ -50,17 +50,15 @@ $ dedb dosboxconf gog://tyrian_2000 --issues
 $ dedb rm gog://tyrian_2000
 ```
 
-| Command        | Status                                                        |
-|----------------|--------------------------------------------------------------- |
-| `listgog`      | Kept - lists the DOS games you own on GOG (no generic form).  |
-| `downloadgog`  | Kept - bulk library download; `--game <id>` for one.         |
-| `rungog`       | **Deprecated** -> `dedb run gog://<id>`                       |
-| `importgog`    | **Deprecated** -> `dedb import gog://<id>`                    |
-| `dosboxconfgog`| **Deprecated** -> `dedb dosboxconf gog://<id>`               |
-| `rmgog`        | **Deprecated** -> `dedb rm gog://<id>`                        |
+Two GOG-specific commands remain (they have no generic-verb equivalent):
 
-Deprecated commands still work (with a warning) and still accept their old
-arguments; they will be removed in a later release.
+| Command       | Purpose                                                        |
+|---------------|---------------------------------------------------------------- |
+| `listgog`     | List the DOS games you own on GOG and how they're classified. |
+| `downloadgog` | Bulk-download your whole DOS library; `--game <id>` for one.   |
+
+`rungog`, `importgog`, `dosboxconfgog` and `rmgog` have been removed - use the
+generic `dedb run|import|dosboxconf|rm gog://<id>` commands above.
 
 
 ### listgog
@@ -101,7 +99,7 @@ This is a good baseline as this runs the unaltered game.
 ```$ dedb run gog://tyrian_2000 --dosemu```
 
 Pick a launch profile with `gog://<id>?profile=<slug>` or `--profile <slug>` -
-see profiles below. (`rungog`/`runarchive` still work as deprecated aliases.)
+see profiles below.
 
 
 ## Profiles

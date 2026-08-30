@@ -171,48 +171,27 @@ def test_rm_dispatches(download_dir, monkeypatch):
     assert seen["root"] == download_dir / "gog"
 
 
-# --- deprecated rungog / runarchive --------------------------------
+# --- the old per-backend verbs are gone -------------------------
 
 
-def test_rungog_warns_on_stderr_and_still_dispatches(download_dir, spy_run):
-    result = CliRunner().invoke(cli, ["rungog", "tyrian_2000", "--dosbox"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "rungog",
+        "importgog",
+        "dosboxconfgog",
+        "rmgog",
+        "runarchive",
+        "downloadarchive",
+        "importarchive",
+        "rmarchive",
+    ],
+)
+def test_removed_per_backend_commands(name):
+    result = CliRunner().invoke(cli, [name, "--help"])
 
-    assert result.exit_code == 0
-    assert "deprecated" in result.stderr
-    assert "deprecated" not in result.stdout
-    assert spy_run["run"]["target"].scheme == "gog"
-    assert spy_run["run"]["target"].identifier == "tyrian_2000"
-
-
-def test_rungog_profile_flag_threads_through(download_dir, spy_run):
-    CliRunner().invoke(cli, ["rungog", "x", "--dosbox", "--profile", "host"])
-
-    assert spy_run["run"]["target"].profile == "host"
-
-
-def test_runarchive_accepts_item_url_and_warns(download_dir, monkeypatch):
-    seen = {}
-    monkeypatch.setattr(
-        "dedb.archive.backend.ArchiveBackend.ensure_downloaded",
-        lambda self, identifier, **kw: seen.update(identifier=identifier) or "LAYOUT",
-    )
-    monkeypatch.setattr(
-        "dedb.archive.backend.ArchiveBackend.run",
-        lambda self, target, layout, **kw: seen.update(target=target) or 0,
-    )
-    result = CliRunner().invoke(
-        cli, ["runarchive", "https://archive.org/details/msdos_Foo", "--dosbox"]
-    )
-
-    assert result.exit_code == 0
-    assert "deprecated" in result.stderr
-    assert seen["identifier"] == "msdos_Foo"
-
-
-def test_downloadgog_is_not_deprecated():
-    result = CliRunner().invoke(cli, ["downloadgog", "--help"])
-
-    assert "deprecated" not in result.output.lower()
+    assert result.exit_code == 2
+    assert "No such command" in result.output
 
 
 # --- -b/--backend component form ----------------------------------
@@ -278,61 +257,6 @@ def test_import_refreshconf_skips_when_not_downloaded(download_dir, monkeypatch)
     assert result.exit_code == 0
     assert "Skipping 'x'" in result.output
     assert not called
-
-
-# --- newly deprecated per-backend commands ----------------------
-
-
-def test_importgog_deprecated_delegates(download_dir, monkeypatch):
-    seen = {}
-    monkeypatch.setattr(
-        "dedb.gog.backend.GogBackend.convert",
-        lambda self, target, **kw: seen.update(identifier=target.identifier, **kw) or Path("/x"),
-    )
-    result = CliRunner().invoke(cli, ["importgog", "tyrian_2000", "-f"])
-
-    assert result.exit_code == 0
-    assert "deprecated" in result.stderr
-    assert seen["identifier"] == "tyrian_2000" and seen["force"] is True
-
-
-def test_rmgog_deprecated_delegates(download_dir, monkeypatch):
-    seen = {}
-    monkeypatch.setattr(
-        "dedb.core.remove_download",
-        lambda root, name, *, assume_yes: seen.update(name=name),
-    )
-    result = CliRunner().invoke(cli, ["rmgog", "tyrian_2000", "-y"])
-
-    assert result.exit_code == 0
-    assert "deprecated" in result.stderr
-    assert seen["name"] == "tyrian_2000"
-
-
-def test_downloadarchive_deprecated_delegates(download_dir, monkeypatch):
-    seen = {}
-    monkeypatch.setattr(
-        "dedb.archive.backend.ArchiveBackend.ensure_downloaded",
-        lambda self, identifier, **kw: seen.update(identifier=identifier),
-    )
-    result = CliRunner().invoke(
-        cli, ["downloadarchive", "https://archive.org/details/msdos_Foo"]
-    )
-
-    assert result.exit_code == 0
-    assert "deprecated" in result.stderr
-    assert seen["identifier"] == "msdos_Foo"
-
-
-def test_dosboxconfgog_deprecated_delegates(download_dir, monkeypatch):
-    monkeypatch.setattr(
-        "dedb.gog.backend.GogBackend.dosbox_sources",
-        lambda self, target: ([], None),
-    )
-    result = CliRunner().invoke(cli, ["dosboxconfgog", "tyrian_2000", "-s"])
-
-    assert result.exit_code == 0
-    assert "deprecated" in result.stderr
 
 
 # --- dedb dosboxconf: file paths vs targets ----------------------

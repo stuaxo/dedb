@@ -108,7 +108,7 @@ def download_and_extract(
         shutil.rmtree(layout.game, ignore_errors=True)
         shutil.rmtree(layout.installer, ignore_errors=True)
         # The converted DOSEMU2 conf(s) are derived from the extracted
-        # files - drop them too so the next `rungog --dosemu` regenerates.
+        # files - drop them too so the next `dedb run gog://<id> --dosemu` regenerates.
         shutil.rmtree(layout.dosemu, ignore_errors=True)
 
     if layout.is_downloaded():

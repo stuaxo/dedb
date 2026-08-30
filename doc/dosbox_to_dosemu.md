@@ -24,10 +24,10 @@ source of truth; `active_workarounds()` flattens them into the pipeline the conv
 runs.
 
 To see which commands a conf needs a shim for *before* converting it, run
-`dedb dosboxconf CONF --issues` (or `dedb dosboxconfgog GAME --issues` for a downloaded
-GOG game). It runs the real shim pipeline, so it always matches what ends up in
-`userhook.bat`. The default output is compact - one `unittest`-style set of workaround
-names per severity band:
+`dedb dosboxconf CONF --issues` (with `CONF` a `.conf` path, or a `gog://<id>`
+target for a downloaded GOG game). It runs the real shim pipeline, so it always
+matches what ends up in `userhook.bat`. The default output is compact - one
+`unittest`-style set of workaround names per severity band:
 
 ```
 [issues]

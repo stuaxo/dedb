@@ -32,7 +32,7 @@ class GogSettings(BaseModel):
 
 
 class DosboxSettings(BaseModel):
-    # Which real DOSBox binary `rungog --dosbox` launches. "default" picks
+    # Which real DOSBox binary `dedb run <target> --dosbox` launches. "default" picks
     # the first installed of dosbox_staging or dosbox. Other recognized
     # values: "dosbox", "dosbox_staging", "dosbox_x", "dosbox_pure" - only
     # "dosbox" and "dosbox_staging" have actually been tested so far. See
