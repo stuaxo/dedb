@@ -1,3 +1,13 @@
+dedb (0.0.5) unstable; urgency=medium
+
+  * Ship a packaged default config; create it on first run.
+  * Never crash on a missing or invalid config - fall back to defaults
+    with a warning.
+  * Harden `rm` and gate download_dir auto-creation to the temp dir.
+  * Derive __version__ from the installed package metadata.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Sun, 30 Aug 2026 22:28:00 +0100
+
 dedb (0.0.4) unstable; urgency=medium
 
   * Grant the build-deb job contents:write so it can create the release.
