@@ -12,9 +12,9 @@ List locally-downloaded games/items, across download backends.
 `$ dedb ls`
 
 By default each game is a bare name, one per line; a name gets a `<scheme>:`
-prefix only when the *same* name exists under more than one backend. Add `-1`
-to always print fully-qualified `<scheme>:<id>` targets (pasteable into `dedb
-run`, `dedb rm`, ...), or `-l` to group by backend under headings.
+prefix only when the *same* name exists under more than one backend. `-1` prints
+bare names only; `-l` prints every entry as a full `<scheme>:<id>` target
+(pasteable into `dedb run`, `dedb rm`, ...).
 
 Filter to specific backends - repeatable and/or comma-separated:
 `$ dedb ls --type=gog --type=archive`

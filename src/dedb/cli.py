@@ -113,53 +113,42 @@ def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     "short",
     is_flag=True,
     default=False,
-    help="Flat list; add a `<scheme>:` prefix only for names owned by more than one backend. (default)",
+    help="Bare name per line; add a `<scheme>:` prefix only for a name owned by >1 backend. (default)",
 )
 @click.option(
     "-1",
-    "as_targets",
+    "names_only",
     is_flag=True,
     default=False,
-    help="Flat list of fully-qualified `<scheme>:<id>` targets - pasteable into `dedb run` etc.",
+    help="Bare names only, one per line (deduplicated).",
 )
 @click.option(
     "-l",
     "--long",
-    "grouped",
+    "qualified",
     is_flag=True,
     default=False,
-    help="Group by backend under `<scheme>/` headings.",
+    help="Every entry as a full `<scheme>:<id>` target - pasteable into `dedb run` etc.",
 )
-def list_downloads(backends: list[str], short: bool, as_targets: bool, grouped: bool) -> None:
-    """List locally-downloaded games/items.
+def list_downloads(backends: list[str], short: bool, names_only: bool, qualified: bool) -> None:
+    """List locally-downloaded games/items, one per line, sorted.
 
-    Default (-s): one name per line, sorted; a name is shown bare unless
-    the same name exists under more than one backend, in which case it is
-    shown as `<scheme>:<id>` for each. -1 always qualifies; -l groups by
-    backend with headings.
+    Default (-s): a bare name, unless the same name exists under more than
+    one backend - then each is shown as `<scheme>:<id>`. -1: bare names
+    only. -l: every entry as `<scheme>:<id>`.
     """
-    if sum([bool(short), as_targets, grouped]) > 1:
+    if sum([bool(short), names_only, qualified]) > 1:
         raise click.UsageError("Choose at most one of -s / -1 / -l.")
 
     games = _downloaded_games(backends)
 
-    if grouped:
-        for i, backend in enumerate(backends):
-            if i:
-                click.echo()
-            click.echo(f"{backend}/")
-            names = sorted((n for n, owners in games.items() if backend in owners), key=str.lower)
-            for name in names:
-                click.echo(f"  {name}")
-            if not names:
-                click.echo("  (none)")
-        return
-
     for name in sorted(games, key=str.lower):
         owners = games[name]
-        qualify = as_targets or len(owners) > 1
-        for backend in owners:
-            click.echo(f"{backend}:{name}" if qualify else name)
+        if names_only:
+            click.echo(name)
+        else:
+            for backend in owners:
+                click.echo(f"{backend}:{name}" if qualified or len(owners) > 1 else name)
 
 
 ROOT_COMMANDS = [list_downloads, *GENERIC_COMMANDS]
