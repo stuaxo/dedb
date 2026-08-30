@@ -81,6 +81,19 @@ def _parse_backends(
     return selected or list(DOWNLOAD_BACKENDS)
 
 
+def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
+    """`{game name: [backends that have it], ...}`, each backend list in the
+    given order."""
+    games: "dict[str, list[str]]" = {}
+    for backend in backends:
+        root = get_download_dir(backend)
+        if root and root.is_dir():
+            for path in root.iterdir():
+                if path.is_dir():
+                    games.setdefault(path.name, []).append(backend)
+    return games
+
+
 @click.command("ls")
 @click.option(
     "--type",
@@ -95,38 +108,58 @@ def _parse_backends(
     ),
 )
 @click.option(
+    "-s",
+    "--short",
+    "short",
+    is_flag=True,
+    default=False,
+    help="Flat list; add a `<scheme>:` prefix only for names owned by more than one backend. (default)",
+)
+@click.option(
     "-1",
     "as_targets",
     is_flag=True,
     default=False,
-    help="Print one `<scheme>:<id>` target per line - pasteable into `dedb run` etc.",
+    help="Flat list of fully-qualified `<scheme>:<id>` targets - pasteable into `dedb run` etc.",
 )
-def list_downloads(backends: list[str], as_targets: bool) -> None:
-    """List locally-downloaded games/items per backend, by name.
+@click.option(
+    "-l",
+    "--long",
+    "grouped",
+    is_flag=True,
+    default=False,
+    help="Group by backend under `<scheme>/` headings.",
+)
+def list_downloads(backends: list[str], short: bool, as_targets: bool, grouped: bool) -> None:
+    """List locally-downloaded games/items.
 
-    Scans <download_dir>/<backend>/ (see Configuration in the README) and
-    lists each downloaded game/item, sorted by name.
+    Default (-s): one name per line, sorted; a name is shown bare unless
+    the same name exists under more than one backend, in which case it is
+    shown as `<scheme>:<id>` for each. -1 always qualifies; -l groups by
+    backend with headings.
     """
-    for i, backend in enumerate(backends):
-        download_dir = get_download_dir(backend)
-        entries = (
-            sorted(p.name for p in download_dir.iterdir() if p.is_dir())
-            if download_dir and download_dir.is_dir()
-            else []
-        )
+    if sum([bool(short), as_targets, grouped]) > 1:
+        raise click.UsageError("Choose at most one of -s / -1 / -l.")
 
-        if as_targets:
-            for name in entries:
-                click.echo(f"{backend}:{name}")
-            continue
+    games = _downloaded_games(backends)
 
-        if i:
-            click.echo()
-        click.echo(f"{backend}/")
-        for name in entries:
-            click.echo(f"  {name}")
-        if not entries:
-            click.echo("  (none)")
+    if grouped:
+        for i, backend in enumerate(backends):
+            if i:
+                click.echo()
+            click.echo(f"{backend}/")
+            names = sorted((n for n, owners in games.items() if backend in owners), key=str.lower)
+            for name in names:
+                click.echo(f"  {name}")
+            if not names:
+                click.echo("  (none)")
+        return
+
+    for name in sorted(games, key=str.lower):
+        owners = games[name]
+        qualify = as_targets or len(owners) > 1
+        for backend in owners:
+            click.echo(f"{backend}:{name}" if qualify else name)
 
 
 ROOT_COMMANDS = [list_downloads, *GENERIC_COMMANDS]

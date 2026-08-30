@@ -8,21 +8,17 @@ DOSEMU2-DOSBOX importer and run games packaged for DOSBOX in DOSEMU2.
 List all the available subcommands.
 `$ dedb`
 
-List locally-downloaded games/items, by name, across download backends.
+List locally-downloaded games/items, across download backends.
 `$ dedb ls`
+
+By default each game is a bare name, one per line; a name gets a `<scheme>:`
+prefix only when the *same* name exists under more than one backend. Add `-1`
+to always print fully-qualified `<scheme>:<id>` targets (pasteable into `dedb
+run`, `dedb rm`, ...), or `-l` to group by backend under headings.
 
 Filter to specific backends - repeatable and/or comma-separated:
 `$ dedb ls --type=gog --type=archive`
 `$ dedb ls --type=archive,gog`
-
-Add `-1` for one `<scheme>:<id>` target per line (pasteable into `dedb run`,
-`dedb rm`, ...):
-
-```
-$ dedb ls -1
-gog:tyrian_2000
-archive:msdos_Electro_Man_1992
-```
 
 
 ### Targets
