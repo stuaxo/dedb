@@ -130,7 +130,7 @@ def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     help="Every entry as a full `<scheme>:<id>` target (pasteable into `dedb run`).",
 )
 def list_downloads(backends: list[str], short: bool, names_only: bool, qualified: bool) -> None:
-    """List downloaded games, one per line, sorted."""
+    """List downloaded games."""
     if sum([bool(short), names_only, qualified]) > 1:
         raise click.UsageError("Choose at most one of -s / -1 / -l.")
 
