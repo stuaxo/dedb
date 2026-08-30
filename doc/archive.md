@@ -55,16 +55,22 @@ URL works too):
 ```
 $ dedb download archive://msdos_Electro_Man_1992
 $ dedb run archive://msdos_Electro_Man_1992 --dosbox
+$ dedb run msdos_Electro_Man_1992 -b archive --dosbox   # -b/--backend form
 $ dedb import archive://msdos_Electro_Man_1992
 $ dedb rm archive://msdos_Electro_Man_1992
 ```
 
-| Command           | Description                                                     |
-|--------------------|-------------------------------------------------------------------|
-| `downloadarchive` | `dedb download archive://<id>` (also accepts a bare id / URL).   |
-| `importarchive`   | Per-item detail. `dedb import archive://<id>` for the common case. |
-| `runarchive`      | **Deprecated** alias for `dedb run archive://<id>`.             |
-| `rmarchive`       | `dedb rm archive://<id>`.                                        |
+All four `*archive` commands are **deprecated** aliases for the generic verbs
+(`dedb download|import|run|rm archive://<id>`). They still work, still accept a
+bare identifier or a full archive.org item URL, and print a warning; they will
+be removed in a later release.
+
+| Command           | Replacement                          |
+|--------------------|--------------------------------------|
+| `downloadarchive` | `dedb download archive://<id>`       |
+| `importarchive`   | `dedb import archive://<id>`         |
+| `runarchive`      | `dedb run archive://<id>`            |
+| `rmarchive`       | `dedb rm archive://<id>`             |
 
 
 ### Download

@@ -2,8 +2,13 @@
 
 A **backend** is a source of DOSBox games addressed by a URL scheme:
 `gog://<gamename>`, `archive://<identifier>`. The generic commands
-(`dedb run|download|import|rm <target>`) resolve a target to a backend and
-dispatch to it.
+(`dedb run|download|import|rm <target>`, and `dedb dosboxconf`) resolve a target
+to a backend and dispatch to it.
+
+Every generic command also accepts the URL's parts as options instead of a
+prefix (the way `psql` takes a URI *or* `-h/-U/-d`): `-b/--backend <scheme>`
+plus a bare id is exactly `<scheme>://<id>`, and `--profile <slug>` is
+`?profile=<slug>`. Passing both a `scheme://` target and `-b` is an error.
 
 ## How resolution works
 
@@ -38,12 +43,14 @@ dispatch to it.
        def layout(self, identifier): ...
        def ensure_downloaded(self, identifier, *, keep, refresh_metadata, redownload): ...
        def run(self, target: Target, layout, *, emulator, extra_args, verbose) -> int: ...
-       def convert(self, target: Target, *, output_dir=None, profile=None, force=False): ...
+       def convert(self, target: Target, *, output_dir=None, force=False): ...
+       def build(self, target: Target): ...   # [(label, dosemu_conf_text, userhook_lines)]
    ```
 
-   `BackendBase` already provides `is_downloaded`, `local_names`, `remove`, and a
-   no-op `identifier_from_url` - override the last only if your backend owns an
-   http(s) URL shape.
+   `BackendBase` already provides `is_downloaded`, `local_names`, `remove`, a
+   no-op `identifier_from_url` (override only if your backend owns an http(s) URL
+   shape), and a `dosbox_sources` that raises "no dosbox.conf" (override if your
+   items ship one, for `dedb dosboxconf`).
 
 2. Add `"dedb.<app>"` to `Settings.apps` (it already needs to be there to
    contribute CLI commands). `dedb.core.get_backends()` auto-imports
@@ -53,9 +60,22 @@ dispatch to it.
 3. Keep `backend.py` import-light - do runner/importer imports inside the
    method bodies. It is imported when the CLI starts.
 
-## Note: `dedb download` vs `download<x>`
+## Deprecated per-backend commands
 
-`dedb download <scheme>://<id>` calls the backend's `ensure_downloaded`, which
-is a no-op when the game is already present (unless `--redownload` /
-`--refreshmetadata`). The older per-backend `downloadgog` / `downloadarchive`
-commands always re-run the extraction step.
+The old per-backend verbs are deprecated aliases of the generic commands - they
+still work, warn on stderr, and will be removed later:
+
+| Old                                              | New                          |
+|--------------------------------------------------|------------------------------|
+| `rungog`, `runarchive`                           | `dedb run <scheme>://<id>`   |
+| `importgog`, `importarchive`                     | `dedb import <scheme>://<id>`|
+| `dosboxconfgog`                                  | `dedb dosboxconf gog://<id>` |
+| `rmgog`, `rmarchive`, `downloadarchive`          | `dedb rm` / `dedb download`  |
+
+Kept: `listgog` (lists owned GOG games - no target), `downloadgog` (bulk library
+download), `importdosbox` / `dedb dosboxconf <file>` (operate on raw `.conf`
+paths).
+
+Note: `dedb download <scheme>://<id>` is a no-op when the game is already present
+(unless `--redownload` / `--refreshmetadata`), whereas the old `downloadarchive`
+always re-ran extraction.

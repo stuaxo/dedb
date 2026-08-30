@@ -87,10 +87,22 @@ class BackendBase:
         """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu"); return the exit code."""
         raise NotImplementedError
 
-    def convert(self, target: "Target", *, output_dir=None, profile: "str | None" = None, force: bool = False):
+    def convert(self, target: "Target", *, output_dir=None, force: bool = False):
         """Convert an already-downloaded ``target`` to DOSEMU2 config(s);
         return the directory they were written to."""
         raise NotImplementedError
+
+    def build(self, target: "Target") -> "list[tuple[str, str, list[str]]]":
+        """Like convert(), but return the content instead of writing it:
+        ``[(label, dosemu_conf_text, userhook_lines), ...]`` - one entry
+        per launch profile (GOG), or a single ("default", ...) entry."""
+        raise NotImplementedError
+
+    def dosbox_sources(self, target: "Target") -> "tuple[list, object]":
+        """The dosbox.conf file(s) for ``target`` and the working directory
+        their relative MOUNTs resolve against, for `dedb dosboxconf`.
+        Backends whose items have no dosbox.conf (archive.org) raise."""
+        raise click.ClickException(f"{self.scheme}:// targets have no dosbox.conf to inspect.")
 
 
 @dataclass(frozen=True)

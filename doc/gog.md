@@ -44,18 +44,23 @@ Most GOG work now goes through the generic, target-driven commands with a
 $ dedb download gog://tyrian_2000
 $ dedb run gog://tyrian_2000 --dosbox
 $ dedb run 'gog://warcraft_orcs_and_humans?profile=server' --dosbox
+$ dedb run tyrian_2000 -b gog --dosbox      # -b/--backend instead of the gog:// prefix
 $ dedb import gog://tyrian_2000
+$ dedb dosboxconf gog://tyrian_2000 --issues
 $ dedb rm gog://tyrian_2000
 ```
 
-| Command        | Description                                                   |
-|----------------|---------------------------------------------------------------|
-| `listgog`      | List DOSBOX games you own on GOG                             |
-| `dosboxconfgog`| View config, autoexec, sound settings, and `--issues`.        |
-| `downloadgog`  | Bulk download; also `--game <id>` for one. `dedb download gog://<id>` for a single game. |
-| `importgog`    | Per-profile detail. `dedb import gog://<id>` for the common case. |
-| `rungog`       | **Deprecated** alias for `dedb run gog://<id>`.               |
-| `rmgog`        | `dedb rm gog://<id>`.                                         |
+| Command        | Status                                                        |
+|----------------|--------------------------------------------------------------- |
+| `listgog`      | Kept - lists the DOS games you own on GOG (no generic form).  |
+| `downloadgog`  | Kept - bulk library download; `--game <id>` for one.         |
+| `rungog`       | **Deprecated** -> `dedb run gog://<id>`                       |
+| `importgog`    | **Deprecated** -> `dedb import gog://<id>`                    |
+| `dosboxconfgog`| **Deprecated** -> `dedb dosboxconf gog://<id>`               |
+| `rmgog`        | **Deprecated** -> `dedb rm gog://<id>`                        |
+
+Deprecated commands still work (with a warning) and still accept their old
+arguments; they will be removed in a later release.
 
 
 ### listgog

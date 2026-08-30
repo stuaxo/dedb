@@ -70,8 +70,26 @@ def importdosbox(
     click.echo(f"Imported {sources} -> '{output_dir}'")
 
 
+def _existing_conf(source: str) -> Path:
+    path = Path(source)
+    if not path.is_file():
+        raise click.BadParameter(
+            f"{source!r} is not an existing dosbox.conf. For a downloaded game, pass a "
+            f"'<scheme>://<id>' target (or a bare id with --backend)."
+        )
+    return path
+
+
 @click.command("dosboxconf")
-@click.argument("conf_files", nargs=-1, required=True, type=CONF_FILE)
+@click.argument("sources", nargs=-1, required=True)
+@click.option(
+    "--backend",
+    "-b",
+    default=None,
+    metavar="SCHEME",
+    help="Treat SOURCES as a single bare id for this backend, instead of dosbox.conf paths.",
+)
+@click.option("--profile", default=None, help="Launch profile, for a gog:// target.")
 @click.option("--autoexec", "-a", is_flag=True, default=False, help="Show the [autoexec] commands.")
 @click.option(
     "--sblaster",
@@ -96,16 +114,43 @@ def importdosbox(
     help="With --issues, also show each autoexec line and what it is rewritten to.",
 )
 def dosboxconf(
-    conf_files: tuple[Path, ...], autoexec: bool, sblaster: bool, gus: bool, issues: bool, verbose: bool
+    sources: tuple[str, ...],
+    backend: str | None,
+    profile: str | None,
+    autoexec: bool,
+    sblaster: bool,
+    gus: bool,
+    issues: bool,
+    verbose: bool,
 ) -> None:
-    """Show aspects of one or more dosbox.conf files, merged in order.
+    """Show aspects of dosbox.conf(s), merged in order.
 
+    SOURCES is one or more dosbox.conf paths, or a single 'gog://<id>'
+    target (or a bare id with --backend) whose resolved conf(s) are shown.
     With none of -a/-s/-g given, those three aspects are shown; --issues
     is always opt-in.
     """
+    if backend is not None or (len(sources) == 1 and "://" in sources[0]):
+        if len(sources) != 1:
+            raise click.UsageError("Pass a single target when using a scheme or --backend.")
+        from ..core import get_backends
+        from ..verbs import _resolve_target
+
+        target = _resolve_target(sources[0], backend, profile=profile)
+        conf_files, working_dir = get_backends()[target.scheme].dosbox_sources(target)
+    else:
+        conf_files = [_existing_conf(source) for source in sources]
+        working_dir = None
+
     click.echo(
         inspect_conf(
-            conf_files, autoexec=autoexec, sblaster=sblaster, gus=gus, issues=issues, verbose=verbose
+            conf_files,
+            autoexec=autoexec,
+            sblaster=sblaster,
+            gus=gus,
+            issues=issues,
+            verbose=verbose,
+            working_dir=working_dir if issues else None,
         )
     )
 

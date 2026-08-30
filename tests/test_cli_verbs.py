@@ -12,6 +12,7 @@ import pytest
 from click.testing import CliRunner
 
 from dedb.cli import cli
+from dedb.dosbox.cli import dosboxconf
 from dedb.settings import Settings
 
 
@@ -212,3 +213,168 @@ def test_downloadgog_is_not_deprecated():
     result = CliRunner().invoke(cli, ["downloadgog", "--help"])
 
     assert "deprecated" not in result.output.lower()
+
+
+# --- -b/--backend component form ----------------------------------
+
+
+def test_backend_option_is_equivalent_to_scheme(download_dir, spy_run):
+    CliRunner().invoke(cli, ["run", "tyrian_2000", "-b", "gog", "--dosbox"])
+
+    assert spy_run["run"]["target"].scheme == "gog"
+    assert spy_run["run"]["target"].identifier == "tyrian_2000"
+
+
+def test_backend_option_conflicts_with_scheme(download_dir, spy_run):
+    result = CliRunner().invoke(cli, ["run", "gog://x", "-b", "gog", "--dosbox"])
+
+    assert result.exit_code == 2
+    assert "not both" in result.output
+
+
+def test_backend_option_unknown_backend(download_dir):
+    result = CliRunner().invoke(cli, ["download", "x", "-b", "nope"])
+
+    assert result.exit_code == 2
+    assert "Unknown backend 'nope'" in result.output
+
+
+# --- import dump / refreshconf -----------------------------------
+
+
+def test_import_dumpconf(download_dir, monkeypatch):
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.build",
+        lambda self, target: [("default", "$_dpmi = (131072)\n", ["@ECHO OFF", "GAME.EXE"])],
+    )
+    result = CliRunner().invoke(cli, ["import", "gog://x", "--dumpconf"])
+
+    assert result.exit_code == 0
+    assert result.output == "$_dpmi = (131072)\n"
+
+
+def test_import_dumpuserhook_multi_profile_labels(download_dir, monkeypatch):
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.build",
+        lambda self, target: [
+            ("default", "cfg1", ["A.EXE"]),
+            ("server", "cfg2", ["B.EXE"]),
+        ],
+    )
+    result = CliRunner().invoke(cli, ["import", "gog://x", "--dumpuserhook"])
+
+    assert "[default]" in result.output and "[server]" in result.output
+    assert "A.EXE" in result.output and "B.EXE" in result.output
+
+
+def test_import_refreshconf_skips_when_not_downloaded(download_dir, monkeypatch):
+    monkeypatch.setattr("dedb.gog.backend.GogBackend.is_downloaded", lambda self, ident: False)
+    called = []
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.convert", lambda self, *a, **k: called.append(1)
+    )
+    result = CliRunner().invoke(cli, ["import", "gog://x", "--refreshconf"])
+
+    assert result.exit_code == 0
+    assert "Skipping 'x'" in result.output
+    assert not called
+
+
+# --- newly deprecated per-backend commands ----------------------
+
+
+def test_importgog_deprecated_delegates(download_dir, monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.convert",
+        lambda self, target, **kw: seen.update(identifier=target.identifier, **kw) or Path("/x"),
+    )
+    result = CliRunner().invoke(cli, ["importgog", "tyrian_2000", "-f"])
+
+    assert result.exit_code == 0
+    assert "deprecated" in result.stderr
+    assert seen["identifier"] == "tyrian_2000" and seen["force"] is True
+
+
+def test_rmgog_deprecated_delegates(download_dir, monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        "dedb.core.remove_download",
+        lambda root, name, *, assume_yes: seen.update(name=name),
+    )
+    result = CliRunner().invoke(cli, ["rmgog", "tyrian_2000", "-y"])
+
+    assert result.exit_code == 0
+    assert "deprecated" in result.stderr
+    assert seen["name"] == "tyrian_2000"
+
+
+def test_downloadarchive_deprecated_delegates(download_dir, monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        "dedb.archive.backend.ArchiveBackend.ensure_downloaded",
+        lambda self, identifier, **kw: seen.update(identifier=identifier),
+    )
+    result = CliRunner().invoke(
+        cli, ["downloadarchive", "https://archive.org/details/msdos_Foo"]
+    )
+
+    assert result.exit_code == 0
+    assert "deprecated" in result.stderr
+    assert seen["identifier"] == "msdos_Foo"
+
+
+def test_dosboxconfgog_deprecated_delegates(download_dir, monkeypatch):
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.dosbox_sources",
+        lambda self, target: ([], None),
+    )
+    result = CliRunner().invoke(cli, ["dosboxconfgog", "tyrian_2000", "-s"])
+
+    assert result.exit_code == 0
+    assert "deprecated" in result.stderr
+
+
+# --- dedb dosboxconf: file paths vs targets ----------------------
+
+
+def test_dosboxconf_missing_file_hints_at_target(tmp_path):
+    result = CliRunner().invoke(dosboxconf, [str(tmp_path / "nope.conf")])
+
+    assert result.exit_code == 2
+    assert "<scheme>://<id>" in result.output
+
+
+def test_dosboxconf_target_mode_uses_backend(tmp_path, monkeypatch):
+    conf = tmp_path / "x.conf"
+    conf.write_text("[sblaster]\nsbtype=sb16\n[autoexec]\ngame.exe\n", encoding="cp437")
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.dosbox_sources", lambda self, target: ([conf], None)
+    )
+
+    result = CliRunner().invoke(dosboxconf, ["gog://tyrian_2000", "-s"])
+
+    assert result.exit_code == 0
+    assert "sbtype=sb16" in result.output
+
+
+def test_dosboxconf_backend_option(tmp_path, monkeypatch):
+    conf = tmp_path / "x.conf"
+    conf.write_text("[gus]\ngus=true\n", encoding="cp437")
+    seen = {}
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.dosbox_sources",
+        lambda self, target: seen.update(identifier=target.identifier) or ([conf], None),
+    )
+
+    result = CliRunner().invoke(dosboxconf, ["tyrian_2000", "-b", "gog", "-g"])
+
+    assert result.exit_code == 0
+    assert seen["identifier"] == "tyrian_2000"
+
+
+def test_dosboxconf_archive_target_has_no_conf():
+    result = CliRunner().invoke(dosboxconf, ["archive://msdos_Foo"])
+
+    assert result.exit_code != 0
+    assert "no dosbox.conf" in result.output

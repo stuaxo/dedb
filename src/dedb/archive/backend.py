@@ -50,11 +50,15 @@ class ArchiveBackend(BackendBase):
         launch = run_dosbox if emulator == "dosbox" else run_dosemu
         return launch(layout, extra_args, verbose)
 
-    def convert(self, target: Target, *, output_dir=None, profile=None, force=False):
-        if profile is not None:
-            raise click.ClickException("archive:// targets don't support --profile.")
+    def convert(self, target: Target, *, output_dir=None, force=False):
         from .importer import import_archive_game
 
         layout = self.layout(target.identifier)
         import_archive_game(layout, output_dir, force=force)
         return output_dir or layout.dosemu
+
+    def build(self, target: Target):
+        from .importer import build_archive_game
+
+        config, userhook_lines = build_archive_game(self.layout(target.identifier))
+        return [("default", config.model_dump_dosemurc(), userhook_lines)]

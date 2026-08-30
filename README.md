@@ -41,7 +41,16 @@ $ dedb rm gog://tyrian_2000
 ```
 
 A bare name (no scheme) only resolves once the game is downloaded and lives
-under exactly one backend; otherwise prefix it with `gog://` / `archive://`.
+under exactly one backend; otherwise prefix it with `gog://` / `archive://`, or
+pass the scheme as an option instead of a prefix (like `psql` taking either a
+URI or separate `-h/-U/-d`):
+
+```
+$ dedb run tyrian_2000 -b gog --profile server --dosbox
+```
+
+`-b/--backend <scheme>` + a bare id is exactly `<scheme>://<id>`; `--profile`
+is the same as `?profile=<slug>`.
 
 To add a backend of your own, see [doc/backends.md](doc/backends.md).
 
@@ -78,8 +87,10 @@ Dependencies:
 Games live under `<download_dir>/gog/` - see Configuration above.
 
 Use the generic commands with a `gog://<gamename>` target: `dedb download`,
-`dedb import`, `dedb run`, `dedb rm` (see Targets above). `listgog` lists your
-owned DOS games. `rungog` is a deprecated alias for `dedb run gog://<id>`.
+`dedb import`, `dedb run`, `dedb rm`, `dedb dosboxconf` (see Targets above and
+`doc/gog.md`). `listgog` lists your owned DOS games; `downloadgog` bulk-downloads
+your library. `rungog` / `importgog` / `dosboxconfgog` / `rmgog` are deprecated
+aliases.
 
 ### Launch profiles
 
@@ -100,9 +111,10 @@ Profiles can provide their own [autoexec], but only the primary autoexec is curr
 expect undefined behaviour using them.
 
 
-`importgog`/`rungog` take `--profile <name-or-slug>` to pick a non-default
-one; `importgog` with no `--profile` converts every valid profile, writing
-the default as `dosemu.conf`/`userhook.bat` and others as
+`dedb run`/`dedb import` take `--profile <name-or-slug>` (or
+`gog://<id>?profile=<slug>`) to pick a non-default one; `dedb import` with no
+`--profile` converts every valid profile, writing the default as
+`dosemu.conf`/`userhook.bat` and others as
 `dosemu_<profile>.conf`/`userhook_<profile>.bat`.
 
 For example, `warcraft_orcs_and_humans` has:
@@ -134,5 +146,6 @@ Items live under `<download_dir>/archive/` - see Configuration above.
 
 Use the generic commands with an `archive://<identifier>` target (or a pasted
 `https://archive.org/details/<id>` URL): `dedb download`, `dedb import`,
-`dedb run`, `dedb rm` (see Targets above and `doc/archive.md`). `runarchive` is
-a deprecated alias for `dedb run archive://<id>`.
+`dedb run`, `dedb rm` (see Targets above and `doc/archive.md`). All four
+`*archive` commands (`downloadarchive`, `importarchive`, `runarchive`,
+`rmarchive`) are now deprecated aliases.

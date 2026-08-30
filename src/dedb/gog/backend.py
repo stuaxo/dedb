@@ -41,9 +41,24 @@ class GogBackend(BackendBase):
         launch = run_dosbox if emulator == "dosbox" else run_dosemu
         return launch(layout, target.profile, extra_args, verbose)
 
-    def convert(self, target: Target, *, output_dir=None, profile=None, force=False):
+    def convert(self, target: Target, *, output_dir=None, force=False):
         from .importer import import_gog_game
 
         layout = self.layout(target.identifier)
-        import_gog_game(layout, output_dir, profile=profile, force=force)
+        import_gog_game(layout, output_dir, profile=target.profile, force=force)
         return output_dir or layout.dosemu
+
+    def build(self, target: Target):
+        from .importer import build_gog_game
+
+        results = build_gog_game(self.layout(target.identifier), profile=target.profile)
+        return [
+            (label, config.model_dump_dosemurc(), userhook_lines)
+            for label, (_conf_files, config, userhook_lines) in results.items()
+        ]
+
+    def dosbox_sources(self, target: Target):
+        from .profiles import get_conf_files, get_working_dir
+
+        game = self.layout(target.identifier).game
+        return get_conf_files(game, target.profile), get_working_dir(game, target.profile)

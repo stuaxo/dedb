@@ -4,14 +4,11 @@ from pathlib import Path
 
 import click
 
-from ..core import get_download_dir, get_settings, remove_download, require_download_dir
+from ..core import get_download_dir, get_settings, require_download_dir
 from ..dosbox.inspector import inspect as inspect_conf
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
 from .downloader import download_and_extract
-from .importer import build_gog_game, import_gog_game
-from .layout import GameLayout
-from .profiles import get_conf_files, get_working_dir
 
 
 @click.command("downloadgog")
@@ -232,39 +229,23 @@ def importgog(
     dumpconf: bool,
     dumpuserhook: bool,
 ) -> None:
-    """Import an already-downloaded GOG game's dosbox launch profile(s) into DOSEMU2 config(s).
+    """Deprecated alias for `dedb import gog://<game_id>` - see that command."""
+    click.echo("warning: `importgog` is deprecated - use `dedb import gog://<id>` instead.", err=True)
 
-    Reuses the same conversion as `importdosbox`. By default, converts
-    every valid launch profile (see doc/gog.md): the default profile's
-    pair is written as dosemu.conf/userhook.bat, others as
-    dosemu_<profile>.conf/userhook_<profile>.bat in the same directory.
-    """
-    layout = GameLayout(require_download_dir("gog"), game_id)
+    from ..backends import resolve
+    from ..core import get_backends
+    from ..verbs import _do_import
 
-    if dumpconf or dumpuserhook:
-        results = build_gog_game(layout, profile=profile)
-        for i, (label, (_conf_files, target, userhook_lines)) in enumerate(results.items()):
-            if i:
-                click.echo()
-            click.echo(f"[{label}]")
-            if dumpconf:
-                click.echo(target.model_dump_dosemurc(), nl=False)
-            if dumpuserhook:
-                click.echo("\n".join(userhook_lines))
-        return
-
-    if refreshconf:
-        if not layout.is_downloaded():
-            click.echo(f"Skipping '{game_id}' (not downloaded)")
-            return
-        force = True
-
-    results = import_gog_game(layout, output_dir, profile=profile, force=force)
-
-    target_dir = output_dir or layout.dosemu
-    for label, conf_files in results.items():
-        sources = ", ".join(str(f) for f in conf_files)
-        click.echo(f"[{label}] Imported {sources} -> '{target_dir}'")
+    target = resolve(f"gog://{game_id}", profile=profile)
+    _do_import(
+        target,
+        get_backends()["gog"],
+        output_dir=output_dir,
+        force=force,
+        refreshconf=refreshconf,
+        dumpconf=dumpconf,
+        dumpuserhook=dumpuserhook,
+    )
 
 
 @click.command("rungog")
@@ -315,12 +296,11 @@ def rungog(
     redownload: bool,
     verbose: bool,
 ) -> None:
-    """Run a GOG game in DOSBox or DOSEMU2.
+    """Deprecated alias for `dedb run gog://<game_id>` - see that command.
 
-    Deprecated alias for `dedb run gog://<game_id>` - see that command.
     Anything after a `--` is passed straight through to the emulator.
     """
-    click.echo("warning: `rungog` is deprecated - use `dedb run gog://<game_id>` instead.", err=True)
+    click.echo("warning: `rungog` is deprecated - use `dedb run gog://<id>` instead.", err=True)
 
     from ..backends import resolve
     from ..core import get_backends
@@ -379,17 +359,16 @@ def dosboxconfgog(
     issues: bool,
     verbose: bool,
 ) -> None:
-    """Show aspects of an already-downloaded GOG game's resolved dosbox conf(s).
+    """Deprecated alias for `dedb dosboxconf gog://<game_id>` - see that command."""
+    click.echo(
+        "warning: `dosboxconfgog` is deprecated - use `dedb dosboxconf gog://<id>` instead.", err=True
+    )
 
-    Resolves the same conf(s) `rungog --dosbox` would use for the given
-    --profile (default: the primary profile). With none of -a/-s/-g given,
-    those three aspects are shown; --issues is always opt-in.
-    """
-    layout = GameLayout(require_download_dir("gog"), game_id)
-    conf_files = get_conf_files(layout.game, profile)
-    # The issues report resolves MOUNT against the same working directory
-    # `rungog --dosbox` would launch from, so it shows the real LREDIR.
-    working_dir = get_working_dir(layout.game, profile) if issues else None
+    from ..backends import resolve
+    from ..core import get_backends
+
+    target = resolve(f"gog://{game_id}", profile=profile)
+    conf_files, working_dir = get_backends()["gog"].dosbox_sources(target)
     click.echo(
         inspect_conf(
             conf_files,
@@ -398,7 +377,7 @@ def dosboxconfgog(
             gus=gus,
             issues=issues,
             verbose=verbose,
-            working_dir=working_dir,
+            working_dir=working_dir if issues else None,
         )
     )
 
@@ -407,15 +386,12 @@ def dosboxconfgog(
 @click.argument("game_id")
 @click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting for confirmation.")
 def rmgog(game_id: str, yes: bool) -> None:
-    """Delete a downloaded GOG game.
+    """Deprecated alias for `dedb rm gog://<game_id>` - see that command."""
+    click.echo("warning: `rmgog` is deprecated - use `dedb rm gog://<id>` instead.", err=True)
 
-    Removes its whole directory under <download_dir>/gog/ - the
-    innoextract output, every converted DOSEMU2 config, and the cached
-    metadata.json. The globally-cached GOG dependency metadata is kept;
-    use `downloadgog --refreshmetadata` to re-fetch that. Doesn't touch
-    your GOG library - `downloadgog --game GAME_ID` re-fetches it.
-    """
-    remove_download(require_download_dir("gog"), game_id, assume_yes=yes)
+    from ..core import get_backends
+
+    get_backends()["gog"].remove(game_id, assume_yes=yes)
 
 
 commands = [downloadgog, listgog, importgog, rungog, dosboxconfgog, rmgog]
