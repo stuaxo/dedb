@@ -12,6 +12,22 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _isolate_dedb_config(tmp_path_factory, monkeypatch):
+    """Point settings at a throwaway config dir and clear the cache, so the
+    suite never reads or writes the real ~/.config/dedb (load_settings now
+    creates the file on first run)."""
+    from dedb import core, settings
+
+    cfg_dir = tmp_path_factory.mktemp("dedbconf")
+    settings_path = cfg_dir / "dedbconf.toml"
+    monkeypatch.setattr(settings, "CONFIG_DIR", cfg_dir)
+    monkeypatch.setattr(settings, "SETTINGS_PATH", settings_path)
+    monkeypatch.setattr(core, "SETTINGS_PATH", settings_path)
+    core.get_settings.cache_clear()  # real lru_cache here; tests patch it later
+    yield
+
+
 @pytest.fixture
 def base_profile_conf() -> str:
     """A base hardware profile, standing in for a game's primary
