@@ -62,6 +62,26 @@ def test_a_valid_file_is_respected(tmp_path):
     assert result.dosbox.dosbox == "dosbox_x"
 
 
+def test_download_dir_expands_a_leading_tilde(monkeypatch, tmp_path):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    settings.SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    settings.SETTINGS_PATH.write_text('download_dir = "~/downloads"\n')
+
+    result = load_settings()
+
+    assert result.download_dir == tmp_path / "downloads"
+
+
+def test_download_dir_expands_env_vars(monkeypatch, tmp_path):
+    monkeypatch.setenv("DEDB_TEST_ROOT", str(tmp_path))
+    settings.SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    settings.SETTINGS_PATH.write_text('download_dir = "$DEDB_TEST_ROOT/downloads"\n')
+
+    result = load_settings()
+
+    assert result.download_dir == tmp_path / "downloads"
+
+
 def test_an_unwritable_config_dir_does_not_raise(capsys, monkeypatch, tmp_path):
     blocker = tmp_path / "not-a-dir"
     blocker.write_text("")
