@@ -84,13 +84,14 @@ def _profile_file_slug(layout: GameLayout, profile: str | None) -> str | None:
 
 
 def ensure_converted(layout: GameLayout, profile: str | None = None) -> Path:
-    """Convert layout's requested launch profile to a DOSEMU2 config if
-    that hasn't already been done, returning the resulting conf path.
-    profile=None picks the default profile."""
-    conf_path = layout.dosemu_conf_for(_profile_file_slug(layout, profile))
-    if not conf_path.is_file():
-        import_gog_game(layout, profile=profile, force=True)
-    return conf_path
+    """(Re)generate layout's DOSEMU2 config(s) for the requested launch
+    profile, returning the resulting conf path. profile=None picks the
+    default profile. Runs on every launch - the conversion is
+    deterministic and cheap, and doing it each time keeps the config in
+    step with the installed dedb instead of lingering from whatever
+    version first downloaded the game."""
+    import_gog_game(layout, profile=profile, force=True)
+    return layout.dosemu_conf_for(_profile_file_slug(layout, profile))
 
 
 def run_dosbox(

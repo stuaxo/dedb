@@ -39,10 +39,12 @@ def ensure_downloaded(
 
 
 def ensure_converted(layout: GameLayout) -> Path:
-    """Convert layout to a DOSEMU2 config if that hasn't already been
-    done, returning the resulting conf path."""
-    if not layout.is_converted():
-        import_archive_game(layout, force=True)
+    """(Re)generate layout's DOSEMU2 config + userhook, returning the conf
+    path. Runs on every launch - the conversion is deterministic and
+    cheap, and doing it each time keeps the config in step with the
+    installed dedb instead of lingering from whatever version first
+    downloaded the item."""
+    import_archive_game(layout, force=True)
     return layout.dosemu_conf
 
 
