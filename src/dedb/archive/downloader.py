@@ -1,4 +1,4 @@
-"""Download and extract archive.org items. See `GameLayout` for the
+"""Download and extract archive.org items. See `ArchiveLayout` for the
 on-disk layout."""
 
 import zipfile

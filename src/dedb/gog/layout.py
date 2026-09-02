@@ -18,7 +18,7 @@ from ..core.layout import LayoutPaths
 
 
 @dataclass(frozen=True)
-class GameLayout(LayoutPaths):
+class GogLayout(LayoutPaths):
     download_dir: Path
     gamename: str
 

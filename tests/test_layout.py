@@ -7,8 +7,8 @@ from pathlib import Path
 import click
 import pytest
 
-from dedb.archive.layout import GameLayout as ArchiveLayout
-from dedb.gog.layout import GameLayout as GogLayout
+from dedb.archive.layout import ArchiveLayout
+from dedb.gog.layout import GogLayout
 
 
 def test_shared_paths_hang_off_the_item_dir(tmp_path):

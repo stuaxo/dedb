@@ -1,9 +1,10 @@
-"""Filesystem-layout properties shared by every backend's ``GameLayout``.
+"""Filesystem-layout properties shared by every backend's layout class
+(``GogLayout``, ``ArchiveLayout``).
 
 Each downloaded game/item lives under ``<download_dir>/<scheme>/<key>/``.
 `LayoutPaths` builds the common paths off ``self.dir``; each backend's
-`layout.GameLayout` is a frozen dataclass that mixes this in, declares its
-own id field (and ``download_dir``), and adds any source-specific paths.
+layout is a frozen dataclass that mixes this in, declares its own id
+field (and ``download_dir``), and adds any source-specific paths.
 """
 
 import shutil

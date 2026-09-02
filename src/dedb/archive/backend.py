@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import click
 
 from ..core import BackendBase, Target, register_backend
-from .layout import GameLayout
+from .layout import ArchiveLayout
 
 
 @register_backend("archive")
@@ -15,7 +15,7 @@ from .layout import GameLayout
 class ArchiveBackend(BackendBase):
     scheme: str = "archive"
     supports_profile: bool = False
-    layout_cls = GameLayout
+    layout_cls = ArchiveLayout
 
     def identifier_from_url(self, url: str):
         from .client import _ITEM_URL_RE

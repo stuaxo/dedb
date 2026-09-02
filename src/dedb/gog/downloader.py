@@ -1,5 +1,5 @@
 """Download + extract one GOG game (`GogDownloader`) and the helpers that
-support it. See GameLayout for the on-disk directory structure."""
+support it. See GogLayout for the on-disk directory structure."""
 
 import shutil
 import subprocess
@@ -12,7 +12,7 @@ from ..dosbox.parser import parse_dosbox_confs
 from ..shims.autoexec import resolve_mounts
 from .client import FETCH_ERRORS, owned_games
 from .gameinfo import parse_profiles
-from .layout import GameLayout
+from .layout import GogLayout
 from .metadata import get_metadata
 from .models import GameMetadataFile
 from .profiles import legacy_find_confs, resolve_conf_files, resolve_working_dir, valid_profiles
@@ -23,7 +23,7 @@ def find_installer_exe(installer_dir: Path) -> Path | None:
     return matches[0] if matches else None
 
 
-def local_dosbox_status(layout: GameLayout) -> str | None:
+def local_dosbox_status(layout: GogLayout) -> str | None:
     """Check an extracted game's files for a DOSBox bundle. Authoritative
     when available, since these are the actual installer contents. Returns
     None if the game hasn't been extracted locally yet."""
@@ -35,7 +35,7 @@ def local_dosbox_status(layout: GameLayout) -> str | None:
     return "none"
 
 
-def merge_support_save_data(layout: GameLayout) -> None:
+def merge_support_save_data(layout: GogLayout) -> None:
     """GOG's installer natively lays game/__support/save/* onto the install
     root itself, via its InnoSetup [Code] script - innoextract can't
     execute that script, so we merge those files onto the game root here
@@ -53,7 +53,7 @@ def merge_support_save_data(layout: GameLayout) -> None:
         shutil.copyfile(src, dest)
 
 
-def create_missing_mount_dirs(layout: GameLayout) -> None:
+def create_missing_mount_dirs(layout: GogLayout) -> None:
     """GOG's installer natively creates any directory a game's autoexec
     MOUNTs (e.g. Dungeon Keeper's cloud-save overlay target) via its
     InnoSetup [Code] script - innoextract can't execute that script, so we
@@ -92,7 +92,7 @@ class GogDownloader(Downloader):
         self._product_ids = product_ids
         self.merge_save = merge_save
 
-    def _prepare(self, layout: GameLayout, *, refresh: bool) -> str:
+    def _prepare(self, layout: GogLayout, *, refresh: bool) -> str:
         if self._product_ids is not None:
             product_id = self._product_ids.get(layout.name)
         else:
@@ -103,7 +103,7 @@ class GogDownloader(Downloader):
             raise click.ClickException(f"'{layout.name}' not found in your GOG library")
         return product_id
 
-    def _fetch(self, layout: GameLayout, product_id: str) -> bool:
+    def _fetch(self, layout: GogLayout, product_id: str) -> bool:
         # lgogdownloader always nests its output under a game-id directory of
         # its own; download into a holding dir and flatten that into installer/.
         holding_dir = layout.dir / ".installer_download"
@@ -141,16 +141,16 @@ class GogDownloader(Downloader):
             return False
         return True
 
-    def _extract(self, layout: GameLayout, product_id: str) -> None:
+    def _extract(self, layout: GogLayout, product_id: str) -> None:
         installer_exe = find_installer_exe(layout.installer)
         subprocess.run(["innoextract", "-d", str(layout.game), str(installer_exe)], check=True)
 
-    def _post_extract(self, layout: GameLayout) -> None:
+    def _post_extract(self, layout: GogLayout) -> None:
         if self.merge_save:
             merge_support_save_data(layout)
         create_missing_mount_dirs(layout)
 
-    def _write_metadata(self, layout: GameLayout, product_id: str, *, refresh: bool) -> None:
+    def _write_metadata(self, layout: GogLayout, product_id: str, *, refresh: bool) -> None:
         """metadata.json records the dependency/classification info plus the
         launch profiles parsed from the extracted goggame-*.info."""
         try:
@@ -162,5 +162,5 @@ class GogDownloader(Downloader):
         metadata_file = GameMetadataFile(gog=metadata.model_copy(update={"profiles": profiles}))
         layout.metadata_json.write_text(metadata_file.model_dump_json(indent=2))
 
-    def _rm_staging(self, layout: GameLayout) -> None:
+    def _rm_staging(self, layout: GogLayout) -> None:
         layout.rm_installer()

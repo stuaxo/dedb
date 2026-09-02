@@ -4,9 +4,9 @@ only when it is missing), so a config never lingers from an older dedb.
 """
 
 from dedb.archive import runner as archive_runner
-from dedb.archive.layout import GameLayout as ArchiveLayout
+from dedb.archive.layout import ArchiveLayout
 from dedb.gog import runner as gog_runner
-from dedb.gog.layout import GameLayout as GogLayout
+from dedb.gog.layout import GogLayout
 
 
 def test_archive_ensure_converted_reconverts_even_when_already_converted(tmp_path, monkeypatch):

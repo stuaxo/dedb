@@ -11,7 +11,7 @@ from ..core import long_target
 from ..dosbox.converter import build as build_dosbox
 from ..dosbox.converter import convert as convert_dosbox
 from ..dosbox.models import DosemuConfig
-from .layout import GameLayout
+from .layout import GogLayout
 from .profiles import (
     default_profile,
     legacy_find_confs,
@@ -35,7 +35,7 @@ def _userhook_filename(slug: str | None) -> str:
 
 
 def _resolve_targets(
-    layout: GameLayout, profile: str | None
+    layout: GogLayout, profile: str | None
 ) -> tuple[bool, list[tuple[str, list[Path], Path]]]:
     """Figure out which profile(s) to process. Returns (is_legacy_fallback,
     [(label, conf_files, working_dir), ...]), label being "default" or a
@@ -69,7 +69,7 @@ def _resolve_targets(
 
 
 def import_gog_game(
-    layout: GameLayout,
+    layout: GogLayout,
     output_dir: Path | None = None,
     *,
     profile: str | None = None,
@@ -110,7 +110,7 @@ def import_gog_game(
 
 
 def build_gog_game(
-    layout: GameLayout, *, profile: str | None = None
+    layout: GogLayout, *, profile: str | None = None
 ) -> dict[str, tuple[list[Path], DosemuConfig, list[str]]]:
     """Like import_gog_game, but only computes the DOSEMU2 config/userhook
     content for each profile in scope, without writing anything to disk.
