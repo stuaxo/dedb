@@ -25,7 +25,7 @@ from .backends import (
 from .downloader import Downloader
 from .layout import LayoutPaths
 from .metadata_cache import JsonMetadataCache, OfflineError
-from .runner import DOSBOX_BINARIES, resolve_dosbox_binary
+from .runner import DOSBOX_BINARIES, launch, launch_dosemu, resolve_dosbox_binary
 from .settings import (
     CONFIG_DIR,
     SETTINGS_PATH,
@@ -50,6 +50,8 @@ __all__ = [
     "get_backends",
     "get_download_dir",
     "get_settings",
+    "launch",
+    "launch_dosemu",
     "load_settings",
     "long_target",
     "register_backend",
