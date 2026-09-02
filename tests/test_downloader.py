@@ -21,6 +21,8 @@ class FakeDownloader(Downloader):
 
     def _fetch(self, layout, ctx):
         self.calls.append(("fetch", ctx))
+        layout.staging.mkdir(parents=True, exist_ok=True)
+        (layout.staging / "pkg").write_text("x")
         return self.fetch_result
 
     def _extract(self, layout, ctx):
@@ -33,9 +35,6 @@ class FakeDownloader(Downloader):
     def _write_metadata(self, layout, ctx, *, refresh):
         self.calls.append(("write_metadata", refresh))
         layout.metadata_json.write_text("{}")
-
-    def _rm_staging(self, layout):
-        self.calls.append("rm_staging")
 
 
 @pytest.fixture
@@ -60,16 +59,16 @@ def test_fresh_download_runs_the_whole_pipeline(layout):
         ("extract", "CTX"),
         "post_extract",
         ("write_metadata", False),
-        "rm_staging",
     ]
     assert layout.is_downloaded()
     assert layout.metadata_json.is_file()
+    assert not layout.staging.exists()  # cleaned up
 
 
-def test_keep_skips_the_staging_cleanup(layout):
+def test_keep_leaves_the_staging_dir(layout):
     dl = FakeDownloader()
     dl.ensure(layout, keep=True, refresh_metadata=False, redownload=False)
-    assert "rm_staging" not in dl.calls
+    assert layout.staging.is_dir()
 
 
 def test_a_fetch_that_returns_false_aborts_before_extract(layout):
@@ -116,14 +115,13 @@ def test_redownload_clears_the_old_copy_then_re_runs_the_pipeline(layout):
     dl.ensure(layout, keep=False, refresh_metadata=False, redownload=True)
 
     assert dl.calls == [
-        "rm_staging",  # from the cleanup block
         ("prepare", False),
         ("fetch", "CTX"),
         ("extract", "CTX"),
         "post_extract",
         ("write_metadata", False),
-        "rm_staging",
     ]
     assert not layout.dosemu_conf.is_file()  # stale config cleared
+    assert not layout.staging.exists()  # re-fetched, then cleaned up again
     assert (layout.game / "GAME.EXE").is_file()
     assert not (layout.game / "old.exe").is_file()  # old game files gone

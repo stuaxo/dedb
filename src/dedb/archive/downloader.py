@@ -64,6 +64,3 @@ class ArchiveDownloader(Downloader):
         layout.metadata_json.write_text(
             GameMetadataFile(archive=metadata).model_dump_json(indent=2)
         )
-
-    def _rm_staging(self, layout) -> None:
-        layout.rm_download()

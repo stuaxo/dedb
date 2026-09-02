@@ -49,6 +49,13 @@ class LayoutPaths:
     def dosemu_local(self) -> Path:
         return self.dir / "dosemu_local"
 
+    @property
+    def staging(self) -> Path:
+        """The single download-staging dir - the fetched installer/archive,
+        removed after extraction unless ``--keep``. Each backend's layout
+        names it (``installer/`` for GOG, ``download/`` for archive.org)."""
+        raise NotImplementedError
+
     def is_downloaded(self) -> bool:
         return self.game.is_dir() and any(self.game.iterdir())
 
@@ -102,3 +109,7 @@ class LayoutPaths:
     def rm_dosemu(self) -> None:
         """Delete the generated DOSEMU2 config(s), so the next launch regenerates them."""
         self._safe_rmtree(self.dosemu)
+
+    def rm_staging(self) -> None:
+        """Delete the download-staging dir (see ``staging``)."""
+        self._safe_rmtree(self.staging)

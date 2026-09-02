@@ -28,11 +28,10 @@ class GogLayout(LayoutPaths):
 
     @property
     def installer(self) -> Path:
+        """The extracted GOG installer (setup_*.exe etc.) - `staging`."""
         return self.dir / "installer"
 
-    def rm_installer(self) -> None:
-        """Delete the downloaded installer (setup_*.exe etc.)."""
-        self._safe_rmtree(self.installer)
+    staging = installer
 
     # The one place the per-profile file-naming rule lives: the default
     # profile's pair is unsuffixed, every other profile's is

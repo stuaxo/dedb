@@ -24,7 +24,7 @@ class Downloader:
         if redownload and layout.is_downloaded():
             print(f"Removing existing download: {layout.name}")
             layout.rm_game()
-            self._rm_staging(layout)
+            layout.rm_staging()
             layout.rm_dosemu()  # derived from the extracted files; regenerated on the next --dosemu run
 
         if layout.is_downloaded():
@@ -50,7 +50,7 @@ class Downloader:
         self._write_metadata(layout, ctx, refresh=refresh_metadata)
 
         if not keep:
-            self._rm_staging(layout)
+            layout.rm_staging()
 
     # --- hooks -----------------------------------------------------------
 
@@ -74,8 +74,4 @@ class Downloader:
 
     def _write_metadata(self, layout, ctx, *, refresh: bool) -> None:
         """Write ``layout.metadata_json``."""
-        raise NotImplementedError
-
-    def _rm_staging(self, layout) -> None:
-        """Delete the download staging dir (``installer/`` / ``download/``)."""
         raise NotImplementedError

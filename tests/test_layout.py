@@ -44,6 +44,13 @@ def test_require_downloaded_points_at_the_download_command(tmp_path):
     layout.require_downloaded("archive")  # now a no-op
 
 
+def test_staging_is_each_backend_s_own_fetch_dir(tmp_path):
+    gog = GogLayout(tmp_path, "doom")
+    archive = ArchiveLayout(tmp_path, "msdos_doom")
+    assert gog.staging == gog.installer == gog.dir / "installer"
+    assert archive.staging == archive.download == archive.dir / "download"
+
+
 def test_gog_profile_suffixed_paths(tmp_path):
     layout = GogLayout(tmp_path, "doom")
     assert layout.installer == layout.dir / "installer"
@@ -73,7 +80,7 @@ def test_rm_methods_delete_only_their_own_subtree(tmp_path):
         d.mkdir(parents=True)
         (d / "f").write_text("x")
 
-    layout.rm_installer()
+    layout.rm_staging()
     assert not layout.installer.exists()
     assert layout.game.is_dir() and layout.dosemu.is_dir()
 
