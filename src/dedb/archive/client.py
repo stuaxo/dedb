@@ -12,12 +12,13 @@ import urllib.parse
 from internetarchive import get_item, search_items
 from requests.exceptions import RequestException
 
+from ..core.client import BaseClient
 from .models import ArchiveFavorite, ArchiveItemInfo
 
 DOWNLOAD_URL = "https://archive.org/download/{identifier}/{filename}"
 
 # archive.org DOS software collections; a favorited DOS game is in both
-# "fav-<user>" and one of these, which is how favorite_items() filters.
+# "fav-<user>" and one of these, which is how get_list() filters.
 MSDOS_COLLECTIONS = ("softwarelibrary_msdos", "softwarelibrary_msdos_games")
 
 # What the internetarchive calls raise on a network/server failure.
@@ -60,40 +61,50 @@ def _pick_archive(candidates: list[str], meta: dict) -> str:
     return candidates[0]
 
 
-def favorite_items(username: str, *, dos_only: bool = True) -> list[ArchiveFavorite]:
-    """List a user's archive.org favorites (the ``fav-<username>`` collection), title-sorted.
+class ArchiveClient(BaseClient):
+    def has_default_list(self) -> bool:
+        return False
 
-    :param dos_only: if True, only items also in a DOS software collection.
-    :raises LookupError: archive.org reports no such user, or no favorites.
-    :raises requests.exceptions.RequestException: network failure.
-    """
-    query = f"collection:fav-{username}"
-    if dos_only:
-        query += " AND collection:(" + " OR ".join(MSDOS_COLLECTIONS) + ")"
+    def get_list(
+        self, name: str | None = None, *, dos_only: bool = True, **kwargs
+    ) -> list[ArchiveFavorite]:
+        """List a user's archive.org favorites (the ``fav-<username>`` collection), title-sorted.
 
-    def _year(doc: dict) -> str | None:
-        value = _scalar(doc.get("year"))
-        return str(value) if value is not None else None
+        :param dos_only: if True, only items also in a DOS software collection.
+        :raises ValueError: if name (username) is not provided.
+        :raises LookupError: archive.org reports no such user, or no favorites.
+        :raises requests.exceptions.RequestException: network failure.
+        """
+        if name is None:
+            raise ValueError("username is required for archive.org favorites")
 
-    results = search_items(
-        query,
-        fields=["identifier", "title", "year"],
-        sorts=["titleSorter asc"],
-    )
-    favorites = [
-        ArchiveFavorite(
-            identifier=doc["identifier"],
-            title=_scalar(doc.get("title")),
-            year=_year(doc),
+        query = f"collection:fav-{name}"
+        if dos_only:
+            query += " AND collection:(" + " OR ".join(MSDOS_COLLECTIONS) + ")"
+
+        def _year(doc: dict) -> str | None:
+            value = _scalar(doc.get("year"))
+            return str(value) if value is not None else None
+
+        results = search_items(
+            query,
+            fields=["identifier", "title", "year"],
+            sorts=["titleSorter asc"],
         )
-        for doc in results
-        if doc.get("identifier")
-    ]
-    if not favorites:
-        hint = " (does this user have any favorited MS-DOS items?)" if dos_only else ""
-        raise LookupError(f"No favorites found for archive.org user '{username}'{hint}")
+        favorites = [
+            ArchiveFavorite(
+                identifier=doc["identifier"],
+                title=_scalar(doc.get("title")),
+                year=_year(doc),
+            )
+            for doc in results
+            if doc.get("identifier")
+        ]
+        if not favorites:
+            hint = " (does this user have any favorited MS-DOS items?)" if dos_only else ""
+            raise LookupError(f"No favorites found for archive.org user '{name}'{hint}")
 
-    return favorites
+        return favorites
 
 
 def fetch_item(identifier: str) -> ArchiveItemInfo:

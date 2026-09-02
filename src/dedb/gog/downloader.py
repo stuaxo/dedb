@@ -10,7 +10,7 @@ import click
 from ..core import Downloader
 from ..dosbox.parser import parse_dosbox_confs
 from ..shims.autoexec import resolve_mounts
-from .client import FETCH_ERRORS, owned_games
+from .client import FETCH_ERRORS, GOGClient
 from .gameinfo import parse_profiles
 from .layout import GogLayout
 from .metadata import get_metadata
@@ -96,8 +96,9 @@ class GogDownloader(Downloader):
         if self._product_ids is not None:
             product_id = self._product_ids.get(layout.name)
         else:
+            client = GOGClient()
             product_id = next(
-                (g.product_id for g in owned_games() if g.gamename == layout.name), None
+                (g.product_id for g in client.get_list() if g.gamename == layout.name), None
             )
         if product_id is None:
             raise click.ClickException(f"'{layout.name}' not found in your GOG library")

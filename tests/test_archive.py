@@ -21,7 +21,7 @@ from internetarchive.item import Item
 
 from dedb.archive import client as archive_client
 from dedb.archive import downloader
-from dedb.archive.client import _pick_archive, favorite_items, fetch_item
+from dedb.archive.client import ArchiveClient, _pick_archive, fetch_item
 from dedb.archive.downloader import ArchiveDownloader, _extract_zip
 from dedb.archive.importer import autoexec_commands
 from dedb.archive.models import ArchiveFavorite, ArchiveMetadata
@@ -233,7 +233,7 @@ def test_prepare_rejects_a_non_zip_archive(tmp_path, stub_metadata):
         _prepare(tmp_path)
 
 
-# --- favorite_items: query building + doc -> model mapping --------------
+# --- ArchiveClient.get_list: query building + doc -> model mapping --------------
 
 
 @pytest.fixture
@@ -253,14 +253,14 @@ def stub_search(monkeypatch):
 
 @pytest.mark.parametrize("dos_only", [True, False])
 def test_favorite_items_filters_to_dos_collections_only_when_asked(stub_search, dos_only):
-    favorite_items("bob", dos_only=dos_only)
+    ArchiveClient().get_list("bob", dos_only=dos_only)
 
     assert "collection:fav-bob" in stub_search["query"]
     assert ("softwarelibrary_msdos" in stub_search["query"]) is dos_only
 
 
 def test_favorite_items_maps_real_docs_and_stringifies_the_year(stub_search):
-    first, *_ = favorite_items("bob")
+    first, *_ = ArchiveClient().get_list("bob")
 
     assert first == ArchiveFavorite(
         identifier="msdos_100000_Pyramid_1988", title="$100,000 Pyramid", year="1988"
@@ -273,4 +273,4 @@ def test_favorite_items_raises_lookup_error_when_the_search_is_empty(monkeypatch
         archive_client, "search_items", lambda query, *, fields=None, sorts=None: iter([])
     )
     with pytest.raises(LookupError):
-        favorite_items("nobody")
+        ArchiveClient().get_list("nobody")
