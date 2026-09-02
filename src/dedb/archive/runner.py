@@ -10,8 +10,7 @@ from pathlib import Path
 
 import click
 
-from ..core import get_settings
-from ..gog.runner import resolve_dosbox_binary
+from ..core import get_settings, resolve_dosbox_binary
 from .importer import autoexec_commands, import_archive_game, load_metadata
 from .layout import ArchiveLayout
 

@@ -37,7 +37,7 @@ class DosboxSettings(BaseModel):
     # the first installed of dosbox_staging or dosbox. Other recognized
     # values: "dosbox", "dosbox_staging", "dosbox_x", "dosbox_pure" - only
     # "dosbox" and "dosbox_staging" have actually been tested so far. See
-    # dedb.gog.runner.resolve_dosbox_binary.
+    # dedb.core.runner.resolve_dosbox_binary.
     dosbox: str = "default"
 
 
