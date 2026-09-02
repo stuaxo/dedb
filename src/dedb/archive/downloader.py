@@ -7,8 +7,8 @@ from pathlib import Path
 import click
 from internetarchive import download as ia_download
 
+from ..core import Downloader
 from .client import FETCH_ERRORS, NotDosItemError
-from .layout import GameLayout
 from .metadata import get_metadata
 from .models import ArchiveMetadata, GameMetadataFile
 
@@ -27,15 +27,10 @@ def _safe_extract(zip_path: Path, dest: Path) -> None:
         zf.extractall(dest)
 
 
-def _download(identifier: str, filename: str, dest_dir: Path) -> None:
-    """Fetch one file from an item into dest_dir (flat), retrying
-    transient failures."""
+def _fetch_file(identifier: str, filename: str, dest_dir: Path) -> None:
+    """Fetch one file from an item into dest_dir (flat), retrying transient failures."""
     errors = ia_download(
-        identifier,
-        files=[filename],
-        destdir=str(dest_dir),
-        no_directory=True,
-        retries=3,
+        identifier, files=[filename], destdir=str(dest_dir), no_directory=True, retries=3
     )
     if errors:
         raise click.ClickException(
@@ -43,66 +38,40 @@ def _download(identifier: str, filename: str, dest_dir: Path) -> None:
         )
 
 
-def _write_metadata_file(layout: GameLayout, metadata: ArchiveMetadata) -> None:
-    metadata_file = GameMetadataFile(archive=metadata)
-    layout.metadata_json.write_text(metadata_file.model_dump_json(indent=2))
+class ArchiveDownloader(Downloader):
+    def _prepare(self, layout, *, refresh: bool) -> ArchiveMetadata:
+        try:
+            metadata = get_metadata(layout.name, refresh=refresh)
+        except NotDosItemError as exc:
+            raise click.ClickException(str(exc)) from exc
+        except (LookupError, *FETCH_ERRORS) as exc:
+            raise click.ClickException(
+                f"Could not fetch archive.org metadata for '{layout.name}': {exc}"
+            ) from exc
 
+        if metadata.emulator.lower() != "dosbox":
+            raise click.ClickException(
+                f"'{layout.name}' is an archive.org '{metadata.emulator}' item, "
+                "not DOSBox - not supported."
+            )
+        if metadata.emulator_ext != "zip":
+            raise click.ClickException(
+                f"'{layout.name}' ships a .{metadata.emulator_ext} archive - "
+                "only .zip items are supported so far."
+            )
+        return metadata
 
-def _get_metadata_or_die(identifier: str, *, refresh: bool) -> ArchiveMetadata:
-    try:
-        return get_metadata(identifier, refresh=refresh)
-    except NotDosItemError as exc:
-        raise click.ClickException(str(exc)) from exc
-    except (LookupError, *FETCH_ERRORS) as exc:
-        raise click.ClickException(
-            f"Could not fetch archive.org metadata for '{identifier}': {exc}"
-        ) from exc
+    def _fetch(self, layout, metadata: ArchiveMetadata) -> None:
+        layout.download.mkdir(parents=True, exist_ok=True)
+        _fetch_file(layout.name, metadata.download_filename, layout.download)
 
+    def _extract(self, layout, metadata: ArchiveMetadata) -> None:
+        _safe_extract(layout.download / metadata.download_filename, layout.game)
 
-def download_and_extract(
-    identifier: str,
-    download_dir: Path,
-    *,
-    keep: bool = False,
-    refresh: bool = False,
-    redownload: bool = False,
-) -> None:
-    layout = GameLayout(download_dir, identifier)
-
-    if redownload and layout.is_downloaded():
-        print(f"Removing existing download: {identifier}")
-        layout.rm_game()
-        layout.rm_download()
-        layout.rm_dosemu()  # derived from the extracted files; the next --dosemu run regenerates it
-
-    if layout.is_downloaded():
-        print(f"Skipping: {identifier} (already downloaded)")
-        if refresh or not layout.metadata_json.is_file():
-            _write_metadata_file(layout, _get_metadata_or_die(identifier, refresh=refresh))
-        return
-
-    metadata = _get_metadata_or_die(identifier, refresh=refresh)
-    if metadata.emulator.lower() != "dosbox":
-        raise click.ClickException(
-            f"'{identifier}' is an archive.org '{metadata.emulator}' item, not DOSBox - not supported."
-        )
-    if metadata.emulator_ext != "zip":
-        raise click.ClickException(
-            f"'{identifier}' ships a .{metadata.emulator_ext} archive - only .zip items are supported so far."
+    def _write_metadata(self, layout, metadata: ArchiveMetadata, *, refresh: bool) -> None:
+        layout.metadata_json.write_text(
+            GameMetadataFile(archive=metadata).model_dump_json(indent=2)
         )
 
-    layout.dir.mkdir(parents=True, exist_ok=True)
-    layout.download.mkdir(parents=True, exist_ok=True)
-    archive_path = layout.download / metadata.download_filename
-
-    print(f"Downloading: {identifier}")
-    _download(identifier, metadata.download_filename, layout.download)
-
-    print(f"Extracting: {identifier}")
-    layout.game.mkdir(parents=True, exist_ok=True)
-    _safe_extract(archive_path, layout.game)
-
-    _write_metadata_file(layout, metadata)
-
-    if not keep:
+    def _rm_staging(self, layout) -> None:
         layout.rm_download()

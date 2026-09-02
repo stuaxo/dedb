@@ -11,8 +11,6 @@ from pathlib import Path
 import click
 
 from ..core import get_settings
-from .client import owned_games
-from .downloader import download_and_extract
 from .importer import import_gog_game
 from .layout import GameLayout
 from .profiles import (
@@ -54,35 +52,6 @@ def resolve_dosbox_binary(choice: str) -> str:
         valid = ", ".join(["default", *DOSBOX_BINARIES])
         raise click.ClickException(f'Unknown [dosbox] dosbox = "{choice}". Valid options: {valid}')
     return DOSBOX_BINARIES[choice]
-
-
-def ensure_downloaded(
-    gamename: str,
-    download_dir: Path,
-    *,
-    keep: bool,
-    refresh_metadata: bool = False,
-    redownload: bool = False,
-) -> GameLayout:
-    """Download and extract gamename if it isn't already, returning its layout.
-    --redownload re-fetches it even when already present; --refreshmetadata
-    re-fetches the cached GOG dependency metadata."""
-    layout = GameLayout(download_dir, gamename)
-    if not (redownload or refresh_metadata or not layout.is_downloaded()):
-        return layout
-
-    product_id = next((g.product_id for g in owned_games() if g.gamename == gamename), None)
-    if product_id is None:
-        raise click.ClickException(f"'{gamename}' not found in your GOG library")
-    download_and_extract(
-        gamename,
-        product_id,
-        download_dir,
-        keep=keep,
-        refresh=refresh_metadata,
-        redownload=redownload,
-    )
-    return layout
 
 
 def _profile_file_slug(layout: GameLayout, profile: str | None) -> str | None:

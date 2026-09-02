@@ -12,30 +12,8 @@ import click
 
 from ..core import get_settings
 from ..gog.runner import resolve_dosbox_binary
-from .downloader import download_and_extract
 from .importer import autoexec_commands, import_archive_game, load_metadata
 from .layout import GameLayout
-
-
-def ensure_downloaded(
-    identifier: str,
-    download_dir: Path,
-    *,
-    keep: bool = False,
-    refresh_metadata: bool = False,
-    redownload: bool = False,
-) -> GameLayout:
-    """Download + extract the item if needed; return its layout.
-
-    :param redownload: re-fetch even if already present.
-    :param refresh_metadata: re-fetch the cached item metadata.
-    """
-    layout = GameLayout(download_dir, identifier)
-    if redownload or refresh_metadata or not layout.is_downloaded():
-        download_and_extract(
-            identifier, download_dir, keep=keep, refresh=refresh_metadata, redownload=redownload
-        )
-    return layout
 
 
 def ensure_converted(layout: GameLayout) -> Path:

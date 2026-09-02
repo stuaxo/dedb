@@ -22,6 +22,11 @@ class LayoutPaths:
     download_dir: Path
 
     @property
+    def name(self) -> str:
+        """The game/item id - the last component of ``dir``."""
+        return self.dir.name
+
+    @property
     def game(self) -> Path:
         return self.dir / "game"
 

@@ -22,7 +22,7 @@ from internetarchive.item import Item
 from dedb.archive import client as archive_client
 from dedb.archive import downloader
 from dedb.archive.client import _pick_archive, favorite_items, fetch_item
-from dedb.archive.downloader import _safe_extract, download_and_extract
+from dedb.archive.downloader import ArchiveDownloader, _safe_extract
 from dedb.archive.importer import autoexec_commands
 from dedb.archive.models import ArchiveFavorite, ArchiveMetadata
 
@@ -149,14 +149,14 @@ def test_safe_extract_refuses_a_member_that_escapes_dest(tmp_path):
     assert not (tmp_path / "escaped.txt").exists()
 
 
-# --- download_and_extract: item-type guards --------------------------
+# --- ArchiveDownloader._prepare: item-type guards --------------------
 
 
 @pytest.fixture
 def stub_metadata(stub_get_item, monkeypatch):
-    """Route downloader.get_metadata through the real fetch_item against the
-    captured item (so the ArchiveMetadata is shaped by real code), with
-    metadata overrides applied first."""
+    """Route ArchiveDownloader's get_metadata through the real fetch_item
+    against the captured item (so the ArchiveMetadata is shaped by real
+    code), with metadata overrides applied first."""
 
     def _install(*, metadata=None, extra_files=()):
         stub_get_item(metadata=metadata, extra_files=extra_files)
@@ -171,22 +171,31 @@ def stub_metadata(stub_get_item, monkeypatch):
     return _install
 
 
-def test_download_and_extract_rejects_a_non_dosbox_item(tmp_path, stub_metadata):
+def _prepare(tmp_path):
+    from dedb.archive.layout import GameLayout
+
+    return ArchiveDownloader()._prepare(GameLayout(tmp_path, DOS_ITEM_ID), refresh=False)
+
+
+def test_prepare_returns_the_resolved_metadata(tmp_path, stub_metadata):
+    stub_metadata()
+    assert _prepare(tmp_path).download_filename == "Electro_Man_1992.zip"
+
+
+def test_prepare_rejects_a_non_dosbox_item(tmp_path, stub_metadata):
     stub_metadata(metadata={"emulator": "scummvm"})
-
     with pytest.raises(click.ClickException, match="not DOSBox"):
-        download_and_extract(DOS_ITEM_ID, tmp_path)
+        _prepare(tmp_path)
 
 
-def test_download_and_extract_rejects_a_non_zip_archive(tmp_path, stub_metadata):
+def test_prepare_rejects_a_non_zip_archive(tmp_path, stub_metadata):
     # A real .7z-shipping item: the metadata's ext matches a real file.
     stub_metadata(
         metadata={"emulator_ext": "7z"},
         extra_files=[{"name": "Electro_Man_1992.7z", "format": "7z"}],
     )
-
     with pytest.raises(click.ClickException, match=r"only \.zip"):
-        download_and_extract(DOS_ITEM_ID, tmp_path)
+        _prepare(tmp_path)
 
 
 # --- favorite_items: query building + doc -> model mapping --------------

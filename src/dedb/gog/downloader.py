@@ -1,13 +1,16 @@
-"""Per-game download/extract orchestration. See GameLayout for the
-on-disk directory structure each game gets."""
+"""Download + extract one GOG game (`GogDownloader`) and the helpers that
+support it. See GameLayout for the on-disk directory structure."""
 
 import shutil
 import subprocess
 from pathlib import Path
 
+import click
+
+from ..core import Downloader
 from ..dosbox.parser import parse_dosbox_confs
 from ..shims.autoexec import resolve_mounts
-from .client import FETCH_ERRORS
+from .client import FETCH_ERRORS, owned_games
 from .gameinfo import parse_profiles
 from .layout import GameLayout
 from .metadata import get_metadata
@@ -78,97 +81,86 @@ def create_missing_mount_dirs(layout: GameLayout) -> None:
                 mount.host_path.mkdir(parents=True, exist_ok=True)
 
 
-def _write_metadata_file(layout: GameLayout, product_id: str, *, refresh: bool = False) -> None:
-    """Writes metadata.json once the game is extracted, so its launch
-    profiles (from goggame-*.info) can be recorded alongside the
-    dependency/classification info."""
-    if layout.metadata_json.is_file() and not refresh:
-        return
-    try:
-        metadata = get_metadata(layout.gamename, product_id, refresh=refresh)
-    except FETCH_ERRORS as exc:
-        print(f"Could not fetch metadata for {layout.gamename}: {exc}")
-        return
-    profiles = parse_profiles(layout.game)
-    metadata_file = GameMetadataFile(gog=metadata.model_copy(update={"profiles": profiles}))
-    layout.metadata_json.write_text(metadata_file.model_dump_json(indent=2))
+class GogDownloader(Downloader):
+    """`--merge-save/--no-merge-save` rides on the instance; pass
+    `product_ids` (a `{gamename: product_id}` map) to skip a per-game GOG
+    library lookup during a bulk `downloadgog`."""
 
+    def __init__(
+        self, *, product_ids: dict[str, str] | None = None, merge_save: bool = True
+    ) -> None:
+        self._product_ids = product_ids
+        self.merge_save = merge_save
 
-def download_and_extract(
-    gamename: str,
-    product_id: str,
-    download_dir: Path,
-    *,
-    keep: bool,
-    refresh: bool = False,
-    redownload: bool = False,
-    merge_save: bool = True,
-) -> None:
-    layout = GameLayout(download_dir, gamename)
+    def _prepare(self, layout: GameLayout, *, refresh: bool) -> str:
+        if self._product_ids is not None:
+            product_id = self._product_ids.get(layout.name)
+        else:
+            product_id = next(
+                (g.product_id for g in owned_games() if g.gamename == layout.name), None
+            )
+        if product_id is None:
+            raise click.ClickException(f"'{layout.name}' not found in your GOG library")
+        return product_id
 
-    if redownload and layout.is_downloaded():
-        print(f"Removing existing download: {gamename}")
-        layout.rm_game()
-        layout.rm_installer()
-        layout.rm_dosemu()  # derived from the extracted files; the next --dosemu run regenerates it
+    def _fetch(self, layout: GameLayout, product_id: str) -> bool:
+        # lgogdownloader always nests its output under a game-id directory of
+        # its own; download into a holding dir and flatten that into installer/.
+        holding_dir = layout.dir / ".installer_download"
+        holding_dir.mkdir(parents=True, exist_ok=True)
+        # --include installers: without this, lgogdownloader also pulls bonus
+        # content (soundtracks, wallpapers, ...), which can dwarf the installer.
+        subprocess.run(
+            [
+                "lgogdownloader",
+                "--download",
+                "--game",
+                f"^{layout.name}$",
+                "--platform",
+                "w",
+                "--include",
+                "installers",
+            ],
+            cwd=holding_dir,
+            check=True,
+        )
 
-    if layout.is_downloaded():
-        print(f"Skipping: {gamename} (already downloaded)")
-        if merge_save:
+        downloaded_dir = holding_dir / layout.name
+        if not downloaded_dir.is_dir():
+            shutil.rmtree(holding_dir, ignore_errors=True)
+            print(f"No game found matching '{layout.name}' in your GOG library - skipping")
+            return False
+
+        layout.installer.mkdir(parents=True, exist_ok=True)
+        for item in downloaded_dir.iterdir():
+            shutil.move(str(item), layout.installer / item.name)
+        shutil.rmtree(holding_dir, ignore_errors=True)
+
+        if find_installer_exe(layout.installer) is None:
+            print(f"No .exe found in {layout.installer}")
+            return False
+        return True
+
+    def _extract(self, layout: GameLayout, product_id: str) -> None:
+        installer_exe = find_installer_exe(layout.installer)
+        subprocess.run(["innoextract", "-d", str(layout.game), str(installer_exe)], check=True)
+
+    def _post_extract(self, layout: GameLayout) -> None:
+        if self.merge_save:
             merge_support_save_data(layout)
         create_missing_mount_dirs(layout)
-        _write_metadata_file(layout, product_id, refresh=refresh)
-        return
 
-    layout.dir.mkdir(parents=True, exist_ok=True)
+    def _write_metadata(self, layout: GameLayout, product_id: str, *, refresh: bool) -> None:
+        """metadata.json records the dependency/classification info plus the
+        launch profiles parsed from the extracted goggame-*.info."""
+        try:
+            metadata = get_metadata(layout.name, product_id, refresh=refresh)
+        except FETCH_ERRORS as exc:
+            print(f"Could not fetch metadata for {layout.name}: {exc}")
+            return
+        profiles = parse_profiles(layout.game)
+        metadata_file = GameMetadataFile(gog=metadata.model_copy(update={"profiles": profiles}))
+        layout.metadata_json.write_text(metadata_file.model_dump_json(indent=2))
 
-    print(f"Downloading: {gamename}")
-    # lgogdownloader always nests its output under a game-id directory of
-    # its own; download into a holding dir and flatten that into installer/.
-    holding_dir = layout.dir / ".installer_download"
-    holding_dir.mkdir(parents=True, exist_ok=True)
-    # --include installers: without this, lgogdownloader also pulls bonus
-    # content (soundtracks, wallpapers, ...), which can dwarf the installer
-    # itself and isn't needed to run the game.
-    subprocess.run(
-        [
-            "lgogdownloader",
-            "--download",
-            "--game",
-            f"^{gamename}$",
-            "--platform",
-            "w",
-            "--include",
-            "installers",
-        ],
-        cwd=holding_dir,
-        check=True,
-    )
-
-    downloaded_dir = holding_dir / gamename
-    if not downloaded_dir.is_dir():
-        shutil.rmtree(holding_dir, ignore_errors=True)
-        print(f"No game found matching '{gamename}' in your GOG library - skipping")
-        return
-
-    layout.installer.mkdir(parents=True, exist_ok=True)
-    for item in downloaded_dir.iterdir():
-        shutil.move(str(item), layout.installer / item.name)
-    shutil.rmtree(holding_dir, ignore_errors=True)
-
-    installer_exe = find_installer_exe(layout.installer)
-    if installer_exe is None:
-        print(f"No .exe found in {layout.installer}")
-        return
-
-    print(f"Extracting: {gamename}")
-    layout.game.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["innoextract", "-d", str(layout.game), str(installer_exe)], check=True)
-
-    if merge_save:
-        merge_support_save_data(layout)
-    create_missing_mount_dirs(layout)
-    _write_metadata_file(layout, product_id, refresh=refresh)
-
-    if not keep:
+    def _rm_staging(self, layout: GameLayout) -> None:
         layout.rm_installer()
