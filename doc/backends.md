@@ -32,6 +32,7 @@ profile).
    from dataclasses import dataclass
    from ..backends import BackendBase, Target, register_backend
 
+
    @register_backend("myscheme")
    @dataclass(frozen=True)
    class MyBackend(BackendBase):
@@ -42,7 +43,7 @@ profile).
        def ensure_downloaded(self, identifier, *, keep, refresh_metadata, redownload): ...
        def run(self, target: Target, layout, *, emulator, extra_args, verbose) -> int: ...
        def convert(self, target: Target, *, output_dir=None, force=False): ...
-       def build(self, target: Target): ...   # [(label, dosemu_conf_text, userhook_lines)]
+       def build(self, target: Target): ...  # [(label, dosemu_conf_text, userhook_lines)]
    ```
 
    `BackendBase` provides `is_downloaded`, `local_names` and `remove`. Override

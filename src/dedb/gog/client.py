@@ -51,7 +51,10 @@ def owned_games(*, verbose: bool = False, offline: bool = False) -> list[OwnedGa
         raw = json.loads(OWNED_GAMES_CACHE_PATH.read_text())
         return [OwnedGame.model_validate(g) for g in raw]
 
-    _log_connecting("lgogdownloader --list=json --platform w (contacts gog.com to refresh login/library)", verbose=verbose)
+    _log_connecting(
+        "lgogdownloader --list=json --platform w (contacts gog.com to refresh login/library)",
+        verbose=verbose,
+    )
     result = subprocess.run(
         ["lgogdownloader", "--list=json", "--platform", "w"],
         capture_output=True,

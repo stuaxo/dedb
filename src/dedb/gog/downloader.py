@@ -59,7 +59,10 @@ def create_missing_mount_dirs(layout: GameLayout) -> None:
     profiles = valid_profiles(layout.game)
     if profiles:
         confs_by_working_dir = [
-            (resolve_conf_files(layout.game, profile), resolve_working_dir(layout.game, profile) or layout.game)
+            (
+                resolve_conf_files(layout.game, profile),
+                resolve_working_dir(layout.game, profile) or layout.game,
+            )
             for profile in profiles
         ]
     else:

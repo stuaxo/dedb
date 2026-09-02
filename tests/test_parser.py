@@ -96,7 +96,9 @@ def test_merge_keeps_keys_only_the_base_sets(write_conf, base_profile_conf, vari
     assert config["dosbox"]["memsize"] == "16"
 
 
-def test_merge_concatenates_autoexec_in_file_order(write_conf, base_profile_conf, variant_profile_conf):
+def test_merge_concatenates_autoexec_in_file_order(
+    write_conf, base_profile_conf, variant_profile_conf
+):
     base = write_conf(base_profile_conf)
     variant = write_conf(variant_profile_conf)
 

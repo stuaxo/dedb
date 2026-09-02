@@ -22,8 +22,7 @@ def assert_validation_aliases_are_structural(model_cls: type[BaseModel]) -> None
     for name, field in model_cls.model_fields.items():
         alias = field.validation_alias
         assert isinstance(alias, AliasPath), (
-            f"{model_cls.__name__}.{name} has no AliasPath validation_alias "
-            "to check"
+            f"{model_cls.__name__}.{name} has no AliasPath validation_alias to check"
         )
         assert alias.path[-1] == name, (
             f"{model_cls.__name__}.{name}'s validation_alias locates "

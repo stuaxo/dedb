@@ -118,7 +118,9 @@ def save_archive_favorites_user(username: str) -> None:
     if not SETTINGS_PATH.is_file():
         _write_default_settings()
 
-    lines = SETTINGS_PATH.read_text(encoding="utf-8").splitlines() if SETTINGS_PATH.is_file() else []
+    lines = (
+        SETTINGS_PATH.read_text(encoding="utf-8").splitlines() if SETTINGS_PATH.is_file() else []
+    )
     # json.dumps yields a double-quoted string with the same escaping a
     # TOML basic string uses for the characters that can appear here.
     new_line = f"favorites_user = {json.dumps(username)}"

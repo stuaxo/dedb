@@ -60,7 +60,7 @@ def mount_lredir_shim(working_dir: Path) -> SinglelineShim:
             return f"REM {line}"
 
         host_path = (working_dir / dos_path.replace("\\", "/")).resolve()
-        return f'{prefix}LREDIR -f {drive.rstrip(":").upper()}: {host_path}'
+        return f"{prefix}LREDIR -f {drive.rstrip(':').upper()}: {host_path}"
 
     return shim
 
@@ -281,7 +281,11 @@ def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> l
             if rewritten != line:
                 issues.append(
                     AutoexecIssue(
-                        workaround.name, workaround.severity, workaround.summary, original, rewritten
+                        workaround.name,
+                        workaround.severity,
+                        workaround.summary,
+                        original,
+                        rewritten,
                     )
                 )
             line = rewritten

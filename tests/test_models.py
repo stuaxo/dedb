@@ -48,11 +48,13 @@ def test_right_model_aliases_only_add_the_prefix(model_cls, prefix):
     ],
 )
 def test_bool_string_coercion_for_multiple_fields(raw: str, expected: bool):
-    config = DosboxConfig.model_validate({
-        "sdl": {"fullscreen": raw},
-        "gus": {"gus": raw},
-        "speaker": {"pcspeaker": raw},
-    })
+    config = DosboxConfig.model_validate(
+        {
+            "sdl": {"fullscreen": raw},
+            "gus": {"gus": raw},
+            "speaker": {"pcspeaker": raw},
+        }
+    )
 
     assert config.fullscreen is expected
     assert config.gus is expected
@@ -151,21 +153,15 @@ def test_dosbox_to_dosemu_carries_fullscreen_through_unchanged():
 
 
 def test_dosbox_to_dosemu_translates_speaker_and_serial_and_joystick():
-    target = dosbox_to_dosemu(DosboxConfig(
-        pcspeaker=True,
-        serial1="dummy",
-        joysticktype="none"
-    ))
+    target = dosbox_to_dosemu(DosboxConfig(pcspeaker=True, serial1="dummy", joysticktype="none"))
 
     assert target.speaker == "emulated"
     assert target.com1 == ""
     assert target.joystick == ""
 
-    target_alt = dosbox_to_dosemu(DosboxConfig(
-        pcspeaker=False,
-        serial1="directserial",
-        joysticktype="auto"
-    ))
+    target_alt = dosbox_to_dosemu(
+        DosboxConfig(pcspeaker=False, serial1="directserial", joysticktype="auto")
+    )
 
     assert target_alt.speaker == ""
     assert target_alt.com1 == ""  # Always returns empty for now
@@ -201,7 +197,9 @@ def default_dosemu_kwargs():
 
 
 @pytest.mark.parametrize(("fullscreen", "rendered"), [(True, "on"), (False, "off")])
-def test_model_dump_dosemurc_renders_fullscreen_as_on_off(fullscreen: bool, rendered: str, default_dosemu_kwargs):
+def test_model_dump_dosemurc_renders_fullscreen_as_on_off(
+    fullscreen: bool, rendered: str, default_dosemu_kwargs
+):
     kwargs = default_dosemu_kwargs.copy()
     kwargs["X_fullscreen"] = fullscreen
     target = DosemuConfig(**kwargs)

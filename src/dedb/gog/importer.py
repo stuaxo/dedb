@@ -69,7 +69,11 @@ def _resolve_targets(
 
 
 def import_gog_game(
-    layout: GameLayout, output_dir: Path | None = None, *, profile: str | None = None, force: bool = False
+    layout: GameLayout,
+    output_dir: Path | None = None,
+    *,
+    profile: str | None = None,
+    force: bool = False,
 ) -> dict[str, list[Path]]:
     """Convert layout's DOSBox launch profile(s) into DOSEMU2 config(s)
     under output_dir (defaults to layout.dosemu). With profile=None,

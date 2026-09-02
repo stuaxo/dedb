@@ -121,11 +121,15 @@ def remove_download(download_root: Path, name: str, *, assume_yes: bool) -> None
     """
     root = download_root.resolve()
     if len(root.parts) < _MIN_SAFE_ROOT_PARTS:
-        raise click.ClickException(f"Refusing to touch '{root}' - download_dir looks misconfigured.")
+        raise click.ClickException(
+            f"Refusing to touch '{root}' - download_dir looks misconfigured."
+        )
 
     target = (download_root / name).resolve()
     if target.parent != root:
-        raise click.ClickException(f"Refusing to remove '{name}' - not a single item under {download_root}")
+        raise click.ClickException(
+            f"Refusing to remove '{name}' - not a single item under {download_root}"
+        )
 
     if not target.exists():
         click.echo(f"Nothing to remove for '{name}' ({target} doesn't exist)")

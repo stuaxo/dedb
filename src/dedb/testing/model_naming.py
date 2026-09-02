@@ -7,8 +7,12 @@ def assert_validation_aliases_are_structural(model_cls):
     This ensures aliases only locate values in a nested structure, without renaming."""
     for name, field in model_cls.model_fields.items():
         if field.validation_alias is not None:
-            assert isinstance(field.validation_alias, AliasPath), f"Field {name} validation_alias must be an AliasPath"
-            assert field.validation_alias.path[-1] == name, f"Field {name} validation_alias must end with its own name"
+            assert isinstance(field.validation_alias, AliasPath), (
+                f"Field {name} validation_alias must be an AliasPath"
+            )
+            assert field.validation_alias.path[-1] == name, (
+                f"Field {name} validation_alias must end with its own name"
+            )
 
 
 def assert_serialization_aliases_add_only_prefix(model_cls, prefix):

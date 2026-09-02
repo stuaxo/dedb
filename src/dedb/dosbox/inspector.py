@@ -50,7 +50,9 @@ def _format_issues(issues: Sequence[AutoexecIssue], *, verbose: bool = False) ->
 
         if not verbose:
             lines.append(SEVERITY_HEADING[severity])
-            lines.extend(safe_repr(name, short=True) for name in sorted({i.workaround for i in in_band}))
+            lines.extend(
+                safe_repr(name, short=True) for name in sorted({i.workaround for i in in_band})
+            )
             continue
 
         lines.append(f"{severity.value} ({SEVERITY_BLURB[severity]}):")
@@ -89,7 +91,9 @@ def inspect(
 
     blocks = []
     if issues:
-        blocks.append(_format_issues(diagnose_autoexec(autoexec_commands, working_dir), verbose=verbose))
+        blocks.append(
+            _format_issues(diagnose_autoexec(autoexec_commands, working_dir), verbose=verbose)
+        )
     if autoexec:
         blocks.append(_format_autoexec(autoexec_commands))
     if sblaster:

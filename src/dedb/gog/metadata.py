@@ -32,13 +32,21 @@ class MetadataCache:
         if self._entries is None:
             if self.path.is_file():
                 raw = json.loads(self.path.read_text())
-                self._entries = {name: GogMetadata.model_validate(entry) for name, entry in raw.items()}
+                self._entries = {
+                    name: GogMetadata.model_validate(entry) for name, entry in raw.items()
+                }
             else:
                 self._entries = {}
         return self._entries
 
     def get(
-        self, gamename: str, product_id: str, *, refresh: bool = False, offline: bool = False, verbose: bool = False
+        self,
+        gamename: str,
+        product_id: str,
+        *,
+        refresh: bool = False,
+        offline: bool = False,
+        verbose: bool = False,
     ) -> GogMetadata:
         """Return cached dependency metadata for a game, fetching it from
         GOG and caching it if this is the first time we've seen it, or if
@@ -48,7 +56,9 @@ class MetadataCache:
         if not refresh and gamename in entries:
             return entries[gamename]
         if offline:
-            raise OfflineError(f"No cached GOG metadata for '{gamename}' - run once without --offline first.")
+            raise OfflineError(
+                f"No cached GOG metadata for '{gamename}' - run once without --offline first."
+            )
 
         dependencies = fetch_dependencies(product_id, verbose=verbose)
         entries[gamename] = GogMetadata(
@@ -71,6 +81,13 @@ _default_cache = MetadataCache()
 
 
 def get_metadata(
-    gamename: str, product_id: str, *, refresh: bool = False, offline: bool = False, verbose: bool = False
+    gamename: str,
+    product_id: str,
+    *,
+    refresh: bool = False,
+    offline: bool = False,
+    verbose: bool = False,
 ) -> GogMetadata:
-    return _default_cache.get(gamename, product_id, refresh=refresh, offline=offline, verbose=verbose)
+    return _default_cache.get(
+        gamename, product_id, refresh=refresh, offline=offline, verbose=verbose
+    )

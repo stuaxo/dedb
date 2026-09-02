@@ -23,7 +23,9 @@ MSDOS_COLLECTIONS = ("softwarelibrary_msdos", "softwarelibrary_msdos_games")
 # What the internetarchive calls raise on a network/server failure.
 FETCH_ERRORS = (RequestException,)
 
-_ITEM_URL_RE = re.compile(r"^https?://(?:www\.)?archive\.org/(?:details|download|metadata)/([^/?#]+)")
+_ITEM_URL_RE = re.compile(
+    r"^https?://(?:www\.)?archive\.org/(?:details|download|metadata)/([^/?#]+)"
+)
 
 
 class NotDosItemError(LookupError):
@@ -106,7 +108,9 @@ def fetch_item(identifier: str) -> ArchiveItemInfo:
     emulator = _scalar(meta.get("emulator"))
     emulator_start = _scalar(meta.get("emulator_start"))
     if not emulator or not emulator_start:
-        raise NotDosItemError(f"'{identifier}' has no DOS emulator metadata - is it a DOS software item?")
+        raise NotDosItemError(
+            f"'{identifier}' has no DOS emulator metadata - is it a DOS software item?"
+        )
 
     ext = (_scalar(meta.get("emulator_ext")) or "zip").lower()
     candidates = [f["name"] for f in item.files if f.get("name", "").lower().endswith(f".{ext}")]
@@ -122,5 +126,7 @@ def fetch_item(identifier: str) -> ArchiveItemInfo:
         emulator_ext=ext,
         emulator_start=emulator_start,
         download_filename=filename,
-        download_url=DOWNLOAD_URL.format(identifier=identifier, filename=urllib.parse.quote(filename)),
+        download_url=DOWNLOAD_URL.format(
+            identifier=identifier, filename=urllib.parse.quote(filename)
+        ),
     )

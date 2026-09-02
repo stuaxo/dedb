@@ -53,7 +53,9 @@ def resolve_conf_files(extracted_dir: Path, profile: GogProfile) -> list[Path]:
     for basename in profile.conf_files:
         matches = list(extracted_dir.rglob(basename))
         if not matches:
-            raise click.ClickException(f"Could not locate conf file '{basename}' under {extracted_dir}")
+            raise click.ClickException(
+                f"Could not locate conf file '{basename}' under {extracted_dir}"
+            )
         resolved.append(matches[0])
     return resolved
 
