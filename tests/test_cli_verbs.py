@@ -5,9 +5,9 @@ These cover the CLI wiring only - option surface, dispatch, output, exit
 codes. Target *resolution* (schemes, bare names, "did you mean") is
 tested in test_backends.
 
-Seam: patch the backend *class* method (instances are frozen dataclasses).
-resolve()/BackendBase use function-local `from dedb.core import ...`, so
-patch `dedb.core.<name>`.
+Seam: patch the backend *class* method (instances are frozen dataclasses),
+and patch core helpers at their origin module -
+`dedb.core.settings.get_settings`, `dedb.core.downloads.remove_download`.
 """
 
 from pathlib import Path
@@ -24,7 +24,7 @@ from dedb.dosbox.cli import dosboxconf
 @pytest.fixture
 def download_dir(tmp_path, monkeypatch):
     """Point dedb at a real (empty) download_dir so require_download_dir works."""
-    monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=tmp_path))
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
     return tmp_path
 
 
@@ -80,7 +80,7 @@ def test_run_requires_exactly_one_emulator(download_dir, spy_run):
 
 def test_run_accepts_a_bare_local_name(tmp_path, monkeypatch, spy_run):
     (tmp_path / "gog" / "alpha").mkdir(parents=True)
-    monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=tmp_path))
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
 
     result = CliRunner().invoke(cli, ["run", "alpha", "--dosemu"])
 
@@ -144,7 +144,7 @@ def test_import_refreshconf_reconverts_a_downloaded_archive_item(download_dir, m
 def test_rm_dispatches(download_dir, monkeypatch):
     seen = {}
     monkeypatch.setattr(
-        "dedb.core.remove_download",
+        "dedb.core.downloads.remove_download",
         lambda layout, *, assume_yes: seen.update(dir=layout.dir, assume_yes=assume_yes),
     )
     result = CliRunner().invoke(cli, ["rm", "gog://x", "-y"])

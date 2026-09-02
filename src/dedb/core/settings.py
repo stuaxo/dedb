@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import sys
+from functools import lru_cache
 from importlib.resources import files
 from pathlib import Path
 
@@ -164,6 +165,15 @@ def load_settings() -> Settings:
         # ValidationError.
         print(f"dedb: ignoring invalid {SETTINGS_PATH} ({exc}); using defaults", file=sys.stderr)
         return Settings()
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """The process-wide settings, loaded once. Tests that need a different
+    config either point this at a throwaway file (conftest) or patch
+    ``dedb.core.settings.get_settings`` directly; call ``.cache_clear()``
+    after changing the file."""
+    return load_settings()
 
 
 def save_archive_favorites_user(username: str) -> None:

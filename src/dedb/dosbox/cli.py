@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 
+from ..core import get_backends, resolve_game
 from .converter import build as build_config
 from .converter import convert as convert_config
 from .inspector import inspect as inspect_conf
@@ -141,8 +142,6 @@ def dosboxconf(
     if backend is not None or (len(sources) == 1 and "://" in sources[0]):
         if len(sources) != 1:
             raise click.UsageError("Pass a single game when using a scheme or --backend.")
-        from ..core import get_backends, resolve_game
-
         game = resolve_game(sources[0], backend, profile=profile)
         conf_files, working_dir = get_backends()[game.scheme].dosbox_sources(game)
     else:
