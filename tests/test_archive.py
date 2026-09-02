@@ -126,6 +126,51 @@ def test_autoexec_commands(emulator_start, expected):
     assert autoexec_commands(emulator_start) == expected
 
 
+# --- import_archive_game: writing the DOSEMU2 config pair -------------
+
+
+def _downloaded_item(tmp_path: Path) -> "object":
+    from dedb.archive.layout import ArchiveLayout
+    from dedb.archive.models import GameMetadataFile
+
+    layout = ArchiveLayout(tmp_path, DOS_ITEM_ID)
+    layout.game.mkdir(parents=True)
+    (layout.game / "EM.EXE").write_text("MZ")  # is_downloaded() -> True
+    metadata = ArchiveMetadata(
+        identifier=DOS_ITEM_ID,
+        emulator="dosbox",
+        emulator_ext="zip",
+        emulator_start="ElectroM/EM.EXE",
+        download_filename="x.zip",
+        download_url="https://archive.org/download/x/x.zip",
+        fetched_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    layout.metadata_json.write_text(GameMetadataFile(archive=metadata).model_dump_json())
+    return layout
+
+
+def test_import_archive_game_writes_the_conf_and_userhook(tmp_path):
+    from dedb.archive.importer import import_archive_game
+
+    layout = _downloaded_item(tmp_path)
+    import_archive_game(layout)
+
+    assert (layout.dosemu / "dosemu.conf").is_file()
+    userhook = (layout.dosemu / "userhook.bat").read_text(encoding="cp437")
+    assert "EM.EXE" in userhook
+
+
+def test_import_archive_game_refuses_to_overwrite_without_force(tmp_path):
+    from dedb.archive.importer import import_archive_game
+
+    layout = _downloaded_item(tmp_path)
+    layout.dosemu.mkdir(parents=True)
+
+    with pytest.raises(click.ClickException, match="already exists"):
+        import_archive_game(layout)
+    import_archive_game(layout, force=True)  # force overwrites
+
+
 # --- _safe_extract: the zip-slip guard --------------------------------
 
 

@@ -28,6 +28,38 @@ def build(
     return target, autoexec_shims(autoexec_commands, working_dir)
 
 
+def write_outputs(
+    output_dir: Path,
+    target: DosemuConfig,
+    userhook_lines: Sequence[str],
+    *,
+    dosemu_filename: str = "dosemu.conf",
+    userhook_filename: str = "userhook.bat",
+    force: bool = False,
+) -> None:
+    """Write an already-built (dosemu_config, userhook_lines) pair into
+    output_dir as dosemu.conf + userhook.bat. Refuses a pre-existing
+    output_dir unless force. dosemu_filename/userhook_filename let a
+    caller write more than one converted pair into the same output_dir
+    (e.g. one per GOG launch profile - see dedb.gog.importer). Shared by
+    convert() and the gog/archive importers."""
+    if output_dir.exists() and not force:
+        raise click.ClickException(
+            f"Output directory '{output_dir}' already exists. Use --force to overwrite."
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    (output_dir / dosemu_filename).write_text(target.model_dump_dosemurc())
+
+    # Shims patch commands known to misbehave under DOSEMU2 - real DOSBox
+    # (launched via -conf, not through this file) never sees them.
+    # cp437 so DOS renders any box-drawing/extended characters (ASCII-art
+    # menus etc.) correctly - matches how parser.py reads the source confs.
+    with (output_dir / userhook_filename).open("w", encoding="cp437") as f:
+        for command in userhook_lines:
+            f.write(f"{command}\n")
+
+
 def convert(
     input_files: Sequence[Path],
     output_dir: Path,
@@ -42,22 +74,12 @@ def convert(
     let a caller write more than one converted pair into the same
     output_dir (e.g. one per GOG launch profile - see dedb.gog.profiles).
     See build() for working_dir."""
-    if output_dir.exists() and not force:
-        raise click.ClickException(
-            f"Output directory '{output_dir}' already exists. Use --force to overwrite."
-        )
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     target, userhook_lines = build(input_files, working_dir)
-
-    dosemu_conf_path = output_dir / dosemu_filename
-    dosemu_conf_path.write_text(target.model_dump_dosemurc())
-
-    userhook_path = output_dir / userhook_filename
-    # Shims patch commands known to misbehave under DOSEMU2 - real DOSBox
-    # (launched via -conf, not through this file) never sees them.
-    # cp437 so DOS renders any box-drawing/extended characters (ASCII-art
-    # menus etc.) correctly - matches how parser.py reads the source confs.
-    with userhook_path.open("w", encoding="cp437") as f:
-        for command in userhook_lines:
-            f.write(f"{command}\n")
+    write_outputs(
+        output_dir,
+        target,
+        userhook_lines,
+        dosemu_filename=dosemu_filename,
+        userhook_filename=userhook_filename,
+        force=force,
+    )
