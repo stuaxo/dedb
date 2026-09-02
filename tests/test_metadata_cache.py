@@ -1,11 +1,11 @@
-"""Tests for dedb.core.metadata_cache.JsonMetadataCache - the generic that
+"""Tests for dedb.core.metadata_cache.MetadataCache - the generic that
 dedb.gog.metadata and dedb.archive.metadata are thin wrappers over.
 """
 
 import pytest
 from pydantic import BaseModel
 
-from dedb.core.metadata_cache import JsonMetadataCache, OfflineError
+from dedb.core.metadata_cache import MetadataCache, OfflineError
 
 
 class Meta(BaseModel):
@@ -21,7 +21,7 @@ def cache(tmp_path):
         calls.append((key, bump, verbose))
         return Meta(key=key, n=len(calls) + bump)
 
-    c = JsonMetadataCache(tmp_path / "cache.json", Meta, fetch)
+    c = MetadataCache(tmp_path / "cache.json", Meta, fetch)
     c.calls = calls  # type: ignore[attr-defined]
     return c
 
@@ -58,7 +58,7 @@ def test_entries_survive_a_new_cache_over_the_same_file(cache, tmp_path):
     cache.get("a")
     cache.get("b", 5)
 
-    reopened = JsonMetadataCache(
+    reopened = MetadataCache(
         tmp_path / "cache.json", Meta, lambda *a, **k: pytest.fail("no fetch")
     )
     assert reopened.get("a") == Meta(key="a", n=1)

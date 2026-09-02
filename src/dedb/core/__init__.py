@@ -13,7 +13,7 @@ and never reach into a sibling app or ``settings.json`` directly.
     layout          LayoutPaths - the per-download directory tree
     downloader      the download+extract template
     runner          the emulator-launch helpers
-    metadata_cache  JsonMetadataCache
+    metadata_cache  MetadataCache
 """
 
 from ._registry import register_backend
@@ -21,7 +21,7 @@ from .backends import BackendBase, resolve, resolve_game
 from .downloader import Downloader
 from .downloads import ensure_download_dir, remove_download, require_download_dir
 from .layout import LayoutPaths
-from .metadata_cache import JsonMetadataCache, OfflineError
+from .metadata_cache import MetadataCache, OfflineError
 from .refs import Target, long_target, short_target
 from .registry import get_apps, get_backends
 from .runner import launch, launch_dosemu
@@ -39,7 +39,7 @@ __all__ = [
     "SETTINGS_PATH",
     "BackendBase",
     "Downloader",
-    "JsonMetadataCache",
+    "MetadataCache",
     "LayoutPaths",
     "OfflineError",
     "Settings",
