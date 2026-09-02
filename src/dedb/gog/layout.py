@@ -30,6 +30,10 @@ class GameLayout(LayoutPaths):
     def installer(self) -> Path:
         return self.dir / "installer"
 
+    def rm_installer(self) -> None:
+        """Delete the downloaded installer (setup_*.exe etc.)."""
+        self._safe_rmtree(self.installer)
+
     def dosemu_conf_for(self, slug: str | None) -> Path:
         return self.dosemu / (f"dosemu_{slug}.conf" if slug else "dosemu.conf")
 

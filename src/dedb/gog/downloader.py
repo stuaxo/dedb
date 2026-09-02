@@ -108,11 +108,9 @@ def download_and_extract(
 
     if redownload and layout.is_downloaded():
         print(f"Removing existing download: {gamename}")
-        shutil.rmtree(layout.game, ignore_errors=True)
-        shutil.rmtree(layout.installer, ignore_errors=True)
-        # The converted DOSEMU2 conf(s) are derived from the extracted
-        # files - drop them too so the next `dedb run gog://<id> --dosemu` regenerates.
-        shutil.rmtree(layout.dosemu, ignore_errors=True)
+        layout.rm_game()
+        layout.rm_installer()
+        layout.rm_dosemu()  # derived from the extracted files; the next --dosemu run regenerates it
 
     if layout.is_downloaded():
         print(f"Skipping: {gamename} (already downloaded)")
@@ -173,4 +171,4 @@ def download_and_extract(
     _write_metadata_file(layout, product_id, refresh=refresh)
 
     if not keep:
-        shutil.rmtree(layout.installer, ignore_errors=True)
+        layout.rm_installer()

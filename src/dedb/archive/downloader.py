@@ -1,7 +1,6 @@
 """Download and extract archive.org items. See `GameLayout` for the
 on-disk layout."""
 
-import shutil
 import zipfile
 from pathlib import Path
 
@@ -72,11 +71,9 @@ def download_and_extract(
 
     if redownload and layout.is_downloaded():
         print(f"Removing existing download: {identifier}")
-        shutil.rmtree(layout.game, ignore_errors=True)
-        shutil.rmtree(layout.download, ignore_errors=True)
-        # Derived from the extracted files - drop it so the next --dosemu
-        # run regenerates it.
-        shutil.rmtree(layout.dosemu, ignore_errors=True)
+        layout.rm_game()
+        layout.rm_download()
+        layout.rm_dosemu()  # derived from the extracted files; the next --dosemu run regenerates it
 
     if layout.is_downloaded():
         print(f"Skipping: {identifier} (already downloaded)")
@@ -108,4 +105,4 @@ def download_and_extract(
     _write_metadata_file(layout, metadata)
 
     if not keep:
-        shutil.rmtree(layout.download, ignore_errors=True)
+        layout.rm_download()

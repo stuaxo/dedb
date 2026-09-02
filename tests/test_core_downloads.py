@@ -1,8 +1,9 @@
 """Tests for dedb.core.remove_download and ensure_download_dir.
 
-remove_download takes its root as an argument, so nothing needs patching.
-ensure_download_dir reads settings.download_dir, so patch
-dedb.core.get_settings; the temp-dir gate patches tempfile.gettempdir.
+remove_download takes a GameLayout; the removal safety checks it relies on
+(`LayoutPaths._safe_rmtree`) are tested in test_layout. ensure_download_dir
+reads settings.download_dir, so patch dedb.core.get_settings; the temp-dir
+gate patches tempfile.gettempdir.
 """
 
 from pathlib import Path
@@ -12,6 +13,7 @@ import pytest
 
 from dedb.core import ensure_download_dir, remove_download
 from dedb.core.settings import Settings
+from dedb.gog.layout import GameLayout
 
 # --- remove_download -------------------------------------------------------
 
@@ -26,44 +28,29 @@ def gog_root(tmp_path: Path) -> Path:
 
 
 def test_removes_a_single_item(gog_root: Path):
-    remove_download(gog_root, "doom", assume_yes=True)
+    remove_download(GameLayout(gog_root, "doom"), assume_yes=True)
     assert not (gog_root / "doom").exists()
     assert gog_root.is_dir()  # only the item goes, not the root
 
 
 def test_missing_item_is_a_no_op(gog_root: Path, capsys):
-    remove_download(gog_root, "quake", assume_yes=True)
+    remove_download(GameLayout(gog_root, "quake"), assume_yes=True)
     assert "Nothing to remove" in capsys.readouterr().out
 
 
 def test_missing_download_dir_is_a_no_op(tmp_path: Path, capsys):
-    remove_download(tmp_path / "downloads" / "gog", "doom", assume_yes=True)
+    remove_download(GameLayout(tmp_path / "downloads" / "gog", "doom"), assume_yes=True)
     assert "Nothing to remove" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("name", ["..", "../gog", "doom/sub", "", "."])
-def test_refuses_anything_but_a_direct_child(gog_root: Path, name: str):
+def test_propagates_a_safety_refusal(gog_root: Path):
     with pytest.raises(click.ClickException, match="Refusing"):
-        remove_download(gog_root, name, assume_yes=True)
-
-
-def test_refuses_a_symlink_pointing_outside_the_root(gog_root: Path, tmp_path: Path):
-    outside = tmp_path / "precious"
-    outside.mkdir()
-    (gog_root / "link").symlink_to(outside)
-    with pytest.raises(click.ClickException, match="Refusing"):
-        remove_download(gog_root, "link", assume_yes=True)
-    assert outside.is_dir()
-
-
-def test_refuses_a_shallow_root(tmp_path: Path):
-    with pytest.raises(click.ClickException, match="misconfigured"):
-        remove_download(Path("/gog"), "doom", assume_yes=True)
+        remove_download(GameLayout(gog_root, "doom/sub"), assume_yes=True)
 
 
 def test_removes_a_stray_file_child(gog_root: Path):
     (gog_root / "notes.txt").write_text("x")
-    remove_download(gog_root, "notes.txt", assume_yes=True)
+    remove_download(GameLayout(gog_root, "notes.txt"), assume_yes=True)
     assert not (gog_root / "notes.txt").exists()
 
 

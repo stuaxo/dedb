@@ -6,7 +6,6 @@ metadata-cache building blocks (re-exported here from submodules).
 Apps import from `dedb.core`, never from each other or `settings.json`.
 """
 
-import shutil
 import tempfile
 from collections import OrderedDict
 from functools import lru_cache
@@ -161,41 +160,19 @@ def ensure_download_dir(app_name: str) -> Path:
     )
 
 
-# A resolved download root with fewer parts than this - '/', '/home', a
-# bare drive - is almost certainly a misconfigured download_dir, not
-# somewhere we should be running rmtree beneath.
-_MIN_SAFE_ROOT_PARTS = 3
-
-
-def remove_download(download_root: Path, name: str, *, assume_yes: bool) -> None:
-    """Delete one downloaded game/item's directory tree, after confirming.
-
-    Refuses anything that doesn't resolve to a single child of the root.
-    """
-    root = download_root.resolve()
-    if len(root.parts) < _MIN_SAFE_ROOT_PARTS:
-        raise click.ClickException(
-            f"Refusing to touch '{root}' - download_dir looks misconfigured."
-        )
-
-    target = (download_root / name).resolve()
-    if target.parent != root:
-        raise click.ClickException(
-            f"Refusing to remove '{name}' - not a single item under {download_root}"
-        )
-
-    if not target.exists():
-        click.echo(f"Nothing to remove for '{name}' ({target} doesn't exist)")
+def remove_download(layout: LayoutPaths, *, assume_yes: bool) -> None:
+    """Shared implementation of `dedb rm`: delete a downloaded game/item's
+    whole directory tree, after confirming. The safety checks live in
+    `LayoutPaths._safe_rmtree`."""
+    if not layout.dir.exists():
+        click.echo(f"Nothing to remove for '{layout.dir.name}' ({layout.dir} doesn't exist)")
         return
-
     if not assume_yes:
-        click.confirm(f"Remove '{name}' and everything under {target}?", abort=True)
-
+        click.confirm(f"Remove '{layout.dir.name}' and everything under {layout.dir}?", abort=True)
     try:
-        if target.is_dir():
-            shutil.rmtree(target)
-        else:
-            target.unlink()
+        layout.rm()
     except OSError as exc:
-        raise click.ClickException(f"Could not remove '{name}' ({target}): {exc}") from exc
-    click.echo(f"Removed '{name}' ({target})")
+        raise click.ClickException(
+            f"Could not remove '{layout.dir.name}' ({layout.dir}): {exc}"
+        ) from exc
+    click.echo(f"Removed '{layout.dir.name}' ({layout.dir})")

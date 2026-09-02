@@ -29,6 +29,10 @@ class GameLayout(LayoutPaths):
     def download(self) -> Path:
         return self.dir / "download"
 
+    def rm_download(self) -> None:
+        """Delete the fetched .zip."""
+        self._safe_rmtree(self.download)
+
     @property
     def userhook(self) -> Path:
         return self.dosemu / "userhook.bat"
