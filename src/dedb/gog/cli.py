@@ -5,7 +5,7 @@ commands - see dedb.dedb.verbs and dedb.gog.backend."""
 
 import click
 
-from ..core import ensure_download_dir, get_download_dir
+from ..core import ensure_download_dir, get_settings
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
 from .downloader import GogDownloader
@@ -152,7 +152,7 @@ def lsgog(
     if dos_only or not names_only:
         status = classify_owned_games(
             games,
-            get_download_dir("gog"),
+            get_settings().download_dir_for("gog"),
             refresh=refresh_metadata,
             verbose=verbose,
             offline=offline,

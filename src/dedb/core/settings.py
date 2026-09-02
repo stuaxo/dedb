@@ -81,19 +81,24 @@ class ArchiveSettings(BaseModel):
     favorites_user: str | None = None
 
 
+# Loaded ahead of the configured `apps`: the cross-cutting commands
+# (run/download/import/rm/ls) every install needs. Not listed in the
+# default `apps` because it is never optional - see Settings.app_paths.
+_BUILTIN_APPS = ("dedb.dedb",)
+
+
 class Settings(BaseModel):
     # dotted module paths, each expected to expose a `cli.commands` list -
-    # mirrors Django's INSTALLED_APPS.
-    # `dedb.dedb` (the cross-cutting commands) is always loaded first - see
-    # dedb.core.get_apps - so it isn't listed here.
+    # mirrors Django's INSTALLED_APPS. `dedb.dedb` is prepended by
+    # app_paths(), so it isn't listed here.
     apps: list[str] = [
         "dedb.dosbox",
         "dedb.gog",
         "dedb.archive",
     ]
     # Shared downloads root - each app gets its own namespaced subdirectory
-    # under it (<download_dir>/gog/, <download_dir>/archive/, ...), resolved
-    # by dedb.core.require_download_dir/get_download_dir.
+    # under it (<download_dir>/gog/, <download_dir>/archive/, ...), via
+    # Settings.download_dir_for.
     download_dir: Path | None = None
     dosbox: DosboxSettings = DosboxSettings()
     archive: ArchiveSettings = ArchiveSettings()
@@ -107,6 +112,21 @@ class Settings(BaseModel):
         if isinstance(value, str):
             return os.path.expanduser(os.path.expandvars(value))
         return value
+
+    def app_paths(self) -> list[str]:
+        """Dotted app-module paths to load: the builtins first, then the
+        configured `apps` in order, de-duplicated."""
+        seen = dict.fromkeys(_BUILTIN_APPS)
+        for dotted_path in self.apps:
+            seen.setdefault(dotted_path)
+        return list(seen)
+
+    def download_dir_for(self, scheme: str) -> Path | None:
+        """``<download_dir>/<scheme>`` - the app's namespaced downloads
+        subdir - or None when [download_dir] isn't configured. Doesn't
+        touch the filesystem; see dedb.core.require_download_dir /
+        ensure_download_dir for the resolve-and-check operations."""
+        return None if self.download_dir is None else self.download_dir / scheme
 
 
 def default_settings_text() -> str:

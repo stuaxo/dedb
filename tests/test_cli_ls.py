@@ -1,14 +1,15 @@
 """Tests for the `dedb ls` command.
 
 `ls` builds on each backend's `local_names()`, which reads
-<download_dir>/<scheme>/ via `dedb.core.get_download_dir` - tests patch it
-there (BackendBase.local_names imports it function-locally from the package).
+<download_dir>/<scheme>/ via `Settings.download_dir_for` - tests point
+`dedb.core.get_settings` at a Settings with a tmp download_dir.
 """
 
 import pytest
 from click.testing import CliRunner
 
 from dedb.cli import cli
+from dedb.core.settings import Settings
 
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def downloads(tmp_path, monkeypatch):
     root = tmp_path / "downloads"
     for path in ("gog/alpha_game", "gog/beta_game", "archive/msdos_Zzt"):
         (root / path).mkdir(parents=True)
-    monkeypatch.setattr("dedb.core.get_download_dir", lambda scheme: root / scheme)
+    monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=root))
     return root
 
 
