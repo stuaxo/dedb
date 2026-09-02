@@ -90,14 +90,13 @@ see profiles below.
 
 ## Profiles
 
-GOG DOSBOX based games can multiple `dosbox*.conf` files, these are
-alternate launch modes (e.g. to add netplay).
+GOG DOSBOX-based games can ship several `dosbox*.conf` files - these are
+alternate launch profiles (e.g. to add netplay), not pieces to merge.
 
-GOG stores metadata in `goggame-*.info` files,, these contain "modes" and each has
-a `playTask`.
-
-Some playTasks are launch parameters for DOSBOX, from these we create launch profiles.
-Non DOSBOX modes are for GOG specific tools such as `GOGDOSConfig.exe` which we ignore.
+GOG records them in `goggame-*.info`, whose `playTasks` are the launch
+options its own installer would have made shortcuts for. Each conf-
+referencing playTask becomes one launch profile. Non-DOSBox playTasks are
+GOG-specific tools such as `GOGDOSConfig.exe`, which we ignore.
 
 
 ### Example Profile: warcraft_orcs_and_humans
@@ -115,5 +114,7 @@ Games are downloaded to `<download_dir>/gog/<game_id>/`:
 
 - `installer/` — deleted after conversion unless `--keep`
 - `game/` — extracted install
-- `metadata.json` — cached GOG metadata and launch profiles
+- `metadata.json` — the shared metadata envelope (`dedb.core.metadata_file`): identity,
+  classification and launch profiles at the top level, the raw GOG metadata (playTasks included)
+  under `source`
 - `dosemu/` — generated `dosemu.conf`/`userhook.bat`

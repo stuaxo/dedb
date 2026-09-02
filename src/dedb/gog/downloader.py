@@ -3,19 +3,25 @@ support it. See GogLayout for the on-disk directory structure."""
 
 import shutil
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
 
-from ..core import Downloader
+from ..core import Downloader, GameMetadataFile
 from ..dosbox.parser import parse_dosbox_confs
 from ..shims.autoexec import resolve_mounts
 from .client import FETCH_ERRORS, GOGClient
 from .gameinfo import parse_profiles
 from .layout import GogLayout
 from .metadata import get_metadata
-from .models import GameMetadataFile
-from .profiles import legacy_find_confs, resolve_conf_files, resolve_working_dir, valid_profiles
+from .profiles import (
+    launch_profiles,
+    legacy_find_confs,
+    resolve_conf_files,
+    resolve_working_dir,
+    valid_profiles,
+)
 
 
 def find_installer_exe(installer_dir: Path) -> Path | None:
@@ -138,13 +144,21 @@ class GogDownloader(Downloader):
         create_missing_mount_dirs(layout)
 
     def _write_metadata(self, layout: GogLayout, product_id: str, *, refresh: bool) -> None:
-        """metadata.json records the dependency/classification info plus the
-        launch profiles parsed from the extracted goggame-*.info."""
+        """metadata.json records the dependency/classification info and the
+        launch profiles, with the raw GogMetadata (playTasks included)
+        kept under ``source``."""
         try:
             metadata = get_metadata(layout.name, product_id, refresh=refresh)
         except FETCH_ERRORS as exc:
             print(f"Could not fetch metadata for {layout.name}: {exc}")
             return
         profiles = parse_profiles(layout.game)
-        metadata_file = GameMetadataFile(gog=metadata.model_copy(update={"profiles": profiles}))
-        layout.metadata_json.write_text(metadata_file.model_dump_json(indent=2))
+        envelope = GameMetadataFile(
+            scheme="gog",
+            identifier=layout.name,
+            classification=metadata.classification,
+            downloaded_at=datetime.now(timezone.utc),
+            launch_profiles=launch_profiles(layout.game),
+            source=metadata.model_copy(update={"profiles": profiles}).model_dump(mode="json"),
+        )
+        layout.metadata_json.write_text(envelope.model_dump_json(indent=2))

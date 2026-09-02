@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlparse
 import click
 
 from . import downloads, settings
+from .local import LocalGame
 from .refs import Target, long_target
 from .registry import get_backends
 
@@ -57,6 +58,16 @@ class BackendBase:
         if root is None or not root.is_dir():
             return []
         return sorted(p.name for p in root.iterdir() if p.is_dir())
+
+    def local_game(self, identifier: str) -> LocalGame:
+        """Assemble the :class:`LocalGame` for one downloaded id: its
+        identity, the fields recorded in ``metadata.json``, its launch
+        modes and whether it has been converted. Backend-specific."""
+        raise NotImplementedError
+
+    def iter_local_games(self) -> "list[LocalGame]":
+        """A :class:`LocalGame` for every download under this backend."""
+        return [self.local_game(name) for name in self.local_names()]
 
     def remove(self, identifier: str, *, assume_yes: bool) -> None:
         downloads.remove_download(self.layout(identifier), assume_yes=assume_yes)

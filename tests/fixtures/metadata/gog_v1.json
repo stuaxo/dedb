@@ -1,0 +1,29 @@
+{
+  "gog": {
+    "gamename": "sample_dos_game",
+    "product_id": "1234567890",
+    "dependencies": ["DOSBox074_2CS"],
+    "classification": "dosbox",
+    "fetched_at": "2024-03-01T12:00:00Z",
+    "profiles": [
+      {
+        "name": "Play",
+        "category": "game",
+        "is_primary": true,
+        "path": "DOSBOX/dosbox.exe",
+        "arguments": "-conf dosbox_game.conf -conf dosbox_game_single.conf -noconsole -c exit",
+        "working_dir": "DOSBOX",
+        "conf_files": ["dosbox_game.conf", "dosbox_game_single.conf"]
+      },
+      {
+        "name": "Multiplayer Host",
+        "category": "game",
+        "is_primary": false,
+        "path": "DOSBOX/dosbox.exe",
+        "arguments": "-conf dosbox_game.conf -conf dosbox_game_server.conf -noconsole -c exit",
+        "working_dir": "DOSBOX",
+        "conf_files": ["dosbox_game.conf", "dosbox_game_server.conf"]
+      }
+    ]
+  }
+}

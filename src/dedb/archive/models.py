@@ -38,9 +38,3 @@ class ArchiveFavorite(BaseModel):
     def target(self) -> str:
         """`archive:<identifier>`."""
         return short_target("archive", self.identifier)
-
-
-class GameMetadataFile(BaseModel):
-    """Schema of downloads/<identifier>/metadata.json, namespaced by source."""
-
-    archive: ArchiveMetadata

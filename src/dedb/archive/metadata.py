@@ -7,11 +7,11 @@ downloaded ones), so a lookup never repeats unless ``refresh=True``.
 from datetime import datetime, timezone
 
 from ..core.metadata_cache import MetadataCache
-from ..core.settings import CONFIG_DIR
+from ..core.settings import scheme_config_path
 from .client import fetch_item
 from .models import ArchiveMetadata
 
-CACHE_PATH = CONFIG_DIR / "archive" / "metadata_cache.json"
+CACHE_PATH = scheme_config_path("archive", "metadata_cache.json")
 
 
 def _fetch(identifier: str) -> ArchiveMetadata:

@@ -2,14 +2,15 @@
 on-disk layout."""
 
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
 
-from ..core import Downloader
+from ..core import Downloader, GameMetadataFile, LaunchProfile
 from .client import FETCH_ERRORS, ArchiveClient, NotDosItemError
 from .metadata import get_metadata
-from .models import ArchiveMetadata, GameMetadataFile
+from .models import ArchiveMetadata
 
 
 def _extract_zip(zip_path: Path, dest: Path) -> None:
@@ -49,6 +50,15 @@ class ArchiveDownloader(Downloader):
         _extract_zip(layout.download / metadata.download_filename, layout.game)
 
     def _write_metadata(self, layout, metadata: ArchiveMetadata, *, refresh: bool) -> None:
-        layout.metadata_json.write_text(
-            GameMetadataFile(archive=metadata).model_dump_json(indent=2)
+        emulator = metadata.emulator.lower()
+        envelope = GameMetadataFile(
+            scheme="archive",
+            identifier=layout.name,
+            title=metadata.title,
+            year=metadata.year,
+            classification="dosbox" if emulator == "dosbox" else emulator,
+            downloaded_at=datetime.now(timezone.utc),
+            launch_profiles=[LaunchProfile(slug=None, name="default", is_default=True)],
+            source=metadata.model_dump(mode="json"),
         )
+        layout.metadata_json.write_text(envelope.model_dump_json(indent=2))

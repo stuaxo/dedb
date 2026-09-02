@@ -9,13 +9,13 @@ from pathlib import Path
 
 import click
 
-from ..core import long_target
+from ..core import GameMetadataFile, long_target
 from ..dosbox.converter import build as build_dosbox_defaults
 from ..dosbox.converter import write_outputs
 from ..dosbox.models import DosemuConfig
 from ..shims.autoexec import autoexec_shims
 from .layout import ArchiveLayout
-from .models import ArchiveMetadata, GameMetadataFile
+from .models import ArchiveMetadata
 
 
 def load_metadata(layout: ArchiveLayout) -> ArchiveMetadata:
@@ -24,7 +24,8 @@ def load_metadata(layout: ArchiveLayout) -> ArchiveMetadata:
             f"No metadata.json for '{layout.identifier}' - run "
             f"`dedb download {long_target('archive', layout.identifier)}` first."
         )
-    return GameMetadataFile.model_validate_json(layout.metadata_json.read_text()).archive
+    envelope = GameMetadataFile.read(layout.metadata_json)
+    return ArchiveMetadata.model_validate(envelope.source)
 
 
 def autoexec_commands(emulator_start: str) -> list[str]:

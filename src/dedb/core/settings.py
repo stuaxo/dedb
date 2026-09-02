@@ -34,6 +34,13 @@ SETTINGS_PATH = CONFIG_DIR / "dedbconf.toml"
 DEFAULT_SETTINGS_RESOURCE = "dedbconf.default.toml"
 
 
+def scheme_config_path(scheme: str, filename: str) -> Path:
+    """``<CONFIG_DIR>/<scheme>/<filename>`` - a backend's private cache
+    file (owned-games list, metadata cache, ...), kept out of the shared
+    dedbconf.toml."""
+    return CONFIG_DIR / scheme / filename
+
+
 # Logical [dosbox] dosbox= choice -> the executable name to run. Only
 # "dosbox" and "dosbox_staging" are actually tested; "dosbox_x" /
 # "dosbox_pure" are here for people who want to try them. "default"
