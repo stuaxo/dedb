@@ -22,13 +22,13 @@ from .profiles import (
 )
 
 
-def _resolve_targets(
-    layout: GogLayout, profile: str | None
-) -> tuple[bool, list[tuple[str, list[Path], Path]]]:
-    """Figure out which profile(s) to process. Returns (is_legacy_fallback,
-    [(label, conf_files, working_dir), ...]), label being "default" or a
-    slug. Raises if the game isn't downloaded, or a requested profile
-    doesn't exist."""
+def _resolve_targets(layout: GogLayout, profile: str | None) -> list[tuple[str, list[Path], Path]]:
+    """Figure out which profile(s) to process: ``[(label, conf_files,
+    working_dir), ...]``, label being "default" or a slug. A game with no
+    usable goggame-*.info falls back to a single ("default", every
+    dosbox*.conf, ...) entry - the same shape, so callers don't special-case
+    it. Raises if the game isn't downloaded, or a requested profile doesn't
+    exist."""
     layout.require_downloaded("gog")
 
     profiles = valid_profiles(layout.game)
@@ -39,7 +39,7 @@ def _resolve_targets(
         conf_files = legacy_find_confs(layout.game)
         if not conf_files:
             raise click.ClickException(f"No dosbox*.conf found under {layout.game}")
-        return True, [("default", conf_files, conf_files[0].parent)]
+        return [("default", conf_files, conf_files[0].parent)]
 
     targets = [select_profile(layout.game, profile)] if profile is not None else profiles
     default = default_profile(profiles)
@@ -49,7 +49,7 @@ def _resolve_targets(
         conf_files = resolve_conf_files(layout.game, p)
         working_dir = resolve_working_dir(layout.game, p) or conf_files[0].parent
         resolved.append((label, conf_files, working_dir))
-    return False, resolved
+    return resolved
 
 
 def import_gog_game(
@@ -68,12 +68,7 @@ def import_gog_game(
     {label: conf_files_used}, label being "default" or a slug.
     """
     output_dir = output_dir or layout.dosemu
-    is_legacy, targets = _resolve_targets(layout, profile)
-
-    if is_legacy:
-        label, conf_files, working_dir = targets[0]
-        convert_dosbox(conf_files, output_dir, force=force, working_dir=working_dir)
-        return {label: conf_files}
+    targets = _resolve_targets(layout, profile)
 
     if output_dir.exists() and not force:
         raise click.ClickException(f"'{output_dir}' already exists. Use --force to overwrite.")
@@ -100,7 +95,7 @@ def build_gog_game(
     content for each profile in scope, without writing anything to disk.
     Returns {label: (conf_files_used, dosemu_config, userhook_lines)}.
     """
-    _is_legacy, targets = _resolve_targets(layout, profile)
+    targets = _resolve_targets(layout, profile)
     results: dict[str, tuple[list[Path], DosemuConfig, list[str]]] = {}
     for label, conf_files, working_dir in targets:
         target, userhook_lines = build_dosbox(conf_files, working_dir)
