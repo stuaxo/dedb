@@ -1,4 +1,4 @@
-"""Tests for dedb.backends: the backend registry and target resolution.
+"""Tests for dedb.core.backends: the backend registry and target resolution.
 
 resolve() and BackendBase reach into dedb.core with *function-local*
 imports, so tests patch the origin `dedb.core.<name>`, not a re-imported
@@ -12,8 +12,7 @@ import pytest
 
 from dedb.archive.backend import ArchiveBackend
 from dedb.archive.models import ArchiveFavorite
-from dedb.backends import Target, long_target, resolve, short_target
-from dedb.core import get_backends
+from dedb.core import Target, get_backends, long_target, resolve, short_target
 from dedb.gog.backend import GogBackend
 from dedb.gog.models import OwnedGame
 

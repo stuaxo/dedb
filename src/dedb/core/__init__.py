@@ -1,9 +1,9 @@
-"""Core dedb infrastructure: the settings instance, the app registry
-built from it, and the shared downloads-root helper every app's cli.py
-uses instead of managing its own download_dir setting. Anything that
-needs settings or the list of installed apps (cli.py, an app's own cli
-module, ...) should go through here rather than loading settings.json
-or importing another app's cli module directly.
+"""The framework every dedb "app" (dosbox, gog, archive, ...) plugs into:
+settings, the app/backend registry built from them, the download-root
+helpers, plus the `BackendBase` contract and the `Target` / layout /
+metadata-cache building blocks (re-exported here from submodules).
+
+Apps import from `dedb.core`, never from each other or `settings.json`.
 """
 
 import shutil
@@ -15,7 +15,47 @@ from pathlib import Path
 
 import click
 
-from .settings import SETTINGS_PATH, Settings, load_settings
+from .backends import (
+    BackendBase,
+    Target,
+    long_target,
+    register_backend,
+    resolve,
+    short_target,
+)
+from .layout import LayoutPaths
+from .metadata_cache import JsonMetadataCache, OfflineError
+from .settings import (
+    CONFIG_DIR,
+    SETTINGS_PATH,
+    Settings,
+    load_settings,
+    save_archive_favorites_user,
+)
+
+__all__ = [
+    "CONFIG_DIR",
+    "SETTINGS_PATH",
+    "BackendBase",
+    "JsonMetadataCache",
+    "LayoutPaths",
+    "OfflineError",
+    "Settings",
+    "Target",
+    "ensure_download_dir",
+    "get_apps",
+    "get_backends",
+    "get_download_dir",
+    "get_settings",
+    "load_settings",
+    "long_target",
+    "register_backend",
+    "remove_download",
+    "require_download_dir",
+    "resolve",
+    "save_archive_favorites_user",
+    "short_target",
+]
 
 
 @lru_cache(maxsize=1)
@@ -36,7 +76,7 @@ def get_apps() -> "OrderedDict[str, list[click.Command]]":
 
 def get_backends() -> "OrderedDict[str, object]":
     """Import each app's optional `backend` module (which self-registers via
-    dedb.backends.register_backend) and return the registry, keyed by scheme
+    dedb.core.register_backend) and return the registry, keyed by scheme
     (== app short name) in Settings.apps order. Apps without a backend module
     (e.g. dedb.dosbox) are skipped."""
     from .backends import _REGISTRY

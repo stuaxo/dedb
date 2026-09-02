@@ -1,6 +1,6 @@
 """GOG backend: `gog://<gamename>` targets.
 
-Registered into dedb.backends; imported by dedb.core.get_backends(). Every
+Registered into the dedb.core registry; imported by dedb.core.get_backends(). Every
 method delegates to this package's existing runner/importer/layout - the
 imports are function-local to keep dedb.core -> dedb.gog.backend import-light
 and cycle-free.
@@ -8,7 +8,7 @@ and cycle-free.
 
 from dataclasses import dataclass
 
-from ..backends import BackendBase, Target, register_backend
+from ..core import BackendBase, Target, register_backend
 
 
 @register_backend("gog")

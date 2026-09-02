@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-from ..backends import long_target
+from ..core import long_target
 from ..dosbox.converter import build as build_dosbox_defaults
 from ..dosbox.models import DosemuConfig
 from ..shims.autoexec import autoexec_shims

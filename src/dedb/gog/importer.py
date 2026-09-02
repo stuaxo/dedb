@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from ..backends import long_target
+from ..core import long_target
 from ..dosbox.converter import build as build_dosbox
 from ..dosbox.converter import convert as convert_dosbox
 from ..dosbox.models import DosemuConfig

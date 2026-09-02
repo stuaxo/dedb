@@ -13,8 +13,10 @@ import urllib.error
 import urllib.request
 import zlib
 
-from ..metadata_cache import OfflineError  # re-exported: owned_games() and lsgog/classify use it
-from ..settings import CONFIG_DIR
+from ..core.metadata_cache import (
+    OfflineError,
+)  # re-exported: owned_games() and lsgog/classify use it
+from ..core.settings import CONFIG_DIR
 from .models import OwnedGame
 
 __all__ = [

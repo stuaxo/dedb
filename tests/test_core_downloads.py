@@ -11,7 +11,7 @@ import click
 import pytest
 
 from dedb.core import ensure_download_dir, remove_download
-from dedb.settings import Settings
+from dedb.core.settings import Settings
 
 # --- remove_download -------------------------------------------------------
 

@@ -1,6 +1,6 @@
 """Generic commands that name a game by URL: `dedb run|download|import|rm`.
 
-Each resolves the GAME argument (see dedb.backends.resolve) to a backend
+Each resolves the GAME argument (see dedb.core.resolve) to a backend
 and dispatches. Registered onto the root group by dedb.cli.
 """
 
@@ -9,8 +9,7 @@ from pathlib import Path
 
 import click
 
-from .backends import long_target, resolve
-from .core import get_backends
+from .core import get_backends, long_target, resolve
 
 
 def _backend_option(func):

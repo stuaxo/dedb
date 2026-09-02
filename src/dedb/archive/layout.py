@@ -1,4 +1,4 @@
-"""``<download_dir>/archive/<identifier>/`` layout - see `dedb.layout.LayoutPaths`.
+"""``<download_dir>/archive/<identifier>/`` layout - see `dedb.core.layout.LayoutPaths`.
 
     download/          the fetched .zip - deleted unless --keep
     metadata.json      cached item metadata (see dedb.archive.models)
@@ -13,7 +13,7 @@ one launch mode).
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..layout import LayoutPaths
+from ..core.layout import LayoutPaths
 
 
 @dataclass(frozen=True)

@@ -6,8 +6,7 @@ the root group; --help groups them per app, Django manage.py style.
 
 import click
 
-from .backends import short_target
-from .core import get_apps, get_backends, get_download_dir
+from .core import get_apps, get_backends, get_download_dir, short_target
 from .verbs import GENERIC_COMMANDS
 
 # Download backends - e.g. gog, archive - these contribute a url scheme,

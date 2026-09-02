@@ -11,7 +11,7 @@ Each backend is a small frozen-dataclass class registered with
 
 This module deliberately imports nothing from ``dedb`` at module level - the
 backend classes and ``resolve()`` reach into ``dedb.core`` (and each backend's
-own runner/importer) with function-local imports, so importing ``dedb.backends``
+own runner/importer) with function-local imports, so importing ``dedb.core.backends``
 stays cycle-free and cheap.
 """
 
@@ -76,7 +76,7 @@ class BackendBase:
     def local_names(self) -> "list[str]":
         """Names of everything downloaded under this backend, for bare-name
         target resolution."""
-        from .core import get_download_dir
+        from . import get_download_dir
 
         root = get_download_dir(self.scheme)
         if root is None or not root.is_dir():
@@ -84,7 +84,7 @@ class BackendBase:
         return sorted(p.name for p in root.iterdir() if p.is_dir())
 
     def remove(self, identifier: str, *, assume_yes: bool) -> None:
-        from .core import remove_download, require_download_dir
+        from . import remove_download, require_download_dir
 
         remove_download(require_download_dir(self.scheme), identifier, assume_yes=assume_yes)
 
@@ -171,7 +171,7 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
     ``?profile=`` in the URL. Raises ``click.ClickException`` if nothing
     resolves.
     """
-    from .core import get_backends
+    from . import get_backends
 
     registry = get_backends()
     parsed = urlparse(value)

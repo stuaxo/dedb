@@ -6,8 +6,8 @@ downloaded ones), so a lookup never repeats unless ``refresh=True``.
 
 from datetime import datetime, timezone
 
-from ..metadata_cache import JsonMetadataCache
-from ..settings import CONFIG_DIR
+from ..core.metadata_cache import JsonMetadataCache
+from ..core.settings import CONFIG_DIR
 from .client import fetch_item
 from .models import ArchiveMetadata
 

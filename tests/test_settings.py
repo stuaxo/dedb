@@ -1,4 +1,4 @@
-"""Tests for dedb.settings.load_settings.
+"""Tests for dedb.core.settings.load_settings.
 
 The autouse _isolate_dedb_config fixture (conftest) already points
 settings.SETTINGS_PATH / CONFIG_DIR at a throwaway dir, so these just
@@ -6,8 +6,8 @@ call load_settings() and inspect the result and the file it writes.
 Reach SETTINGS_PATH through the module - the fixture patches it there.
 """
 
-from dedb import settings
-from dedb.settings import Settings, load_settings, save_archive_favorites_user
+from dedb.core import settings
+from dedb.core.settings import Settings, load_settings, save_archive_favorites_user
 
 
 def test_missing_file_is_created_from_the_packaged_default():

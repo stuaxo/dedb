@@ -1,4 +1,4 @@
-"""``<download_dir>/gog/<gamename>/`` layout - see `dedb.layout.LayoutPaths`.
+"""``<download_dir>/gog/<gamename>/`` layout - see `dedb.core.layout.LayoutPaths`.
 
     installer/         setup_*.exe etc. - kept only with --keep
     metadata.json      cached GOG dependency metadata, under a "gog" key
@@ -14,7 +14,7 @@ userhook_<slug>.bat.
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..layout import LayoutPaths
+from ..core.layout import LayoutPaths
 
 
 @dataclass(frozen=True)

@@ -15,10 +15,10 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from dedb.backends import Target
 from dedb.cli import cli
+from dedb.core import Target
+from dedb.core.settings import Settings
 from dedb.dosbox.cli import dosboxconf
-from dedb.settings import Settings
 
 
 @pytest.fixture
