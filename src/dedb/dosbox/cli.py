@@ -142,7 +142,7 @@ def dosboxconf(
         if len(sources) != 1:
             raise click.UsageError("Pass a single game when using a scheme or --backend.")
         from ..core import get_backends
-        from ..verbs import _resolve_game
+        from ..dedb.verbs import _resolve_game
 
         game = _resolve_game(sources[0], backend, profile=profile)
         conf_files, working_dir = get_backends()[game.scheme].dosbox_sources(game)

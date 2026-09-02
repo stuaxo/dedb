@@ -58,16 +58,29 @@ __all__ = [
 ]
 
 
+# Always loaded first, ahead of Settings.apps: the cross-cutting commands
+# (run/download/import/rm/ls) that every install needs.
+_BUILTIN_APPS = ("dedb.dedb",)
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return load_settings()
 
 
-def get_apps() -> "OrderedDict[str, list[click.Command]]":
-    """Resolve Settings.apps into each app's contributed click commands,
-    keyed by short app name (`dedb.dosbox` -> `dosbox`) in settings order."""
-    apps: OrderedDict[str, list[click.Command]] = OrderedDict()
+def _app_paths() -> list[str]:
+    seen = dict.fromkeys(_BUILTIN_APPS)
     for dotted_path in get_settings().apps:
+        seen.setdefault(dotted_path)
+    return list(seen)
+
+
+def get_apps() -> "OrderedDict[str, list[click.Command]]":
+    """Resolve the installed apps into each one's contributed click commands,
+    keyed by short app name (`dedb.dosbox` -> `dosbox`). `dedb.dedb` first,
+    then Settings.apps in order."""
+    apps: OrderedDict[str, list[click.Command]] = OrderedDict()
+    for dotted_path in _app_paths():
         module = import_module(f"{dotted_path}.cli")
         short_name = dotted_path.rsplit(".", 1)[-1]
         apps[short_name] = module.commands
@@ -81,7 +94,7 @@ def get_backends() -> "OrderedDict[str, object]":
     (e.g. dedb.dosbox) are skipped."""
     from .backends import _REGISTRY
 
-    for dotted_path in get_settings().apps:
+    for dotted_path in _app_paths():
         try:
             import_module(f"{dotted_path}.backend")
         except ModuleNotFoundError as exc:
@@ -91,7 +104,7 @@ def get_backends() -> "OrderedDict[str, object]":
                 raise
 
     backends: OrderedDict[str, object] = OrderedDict()
-    for dotted_path in get_settings().apps:
+    for dotted_path in _app_paths():
         short_name = dotted_path.rsplit(".", 1)[-1]
         if short_name in _REGISTRY:
             backends[short_name] = _REGISTRY[short_name]

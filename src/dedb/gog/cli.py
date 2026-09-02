@@ -1,7 +1,7 @@
 """Click commands contributed by the gog app: `downloadgog` (library
 download) and `lsgog` (owned-games list), both acting on your GOG
 library. Single games are named `gog://<id>` and driven by the generic
-commands - see dedb.verbs and dedb.gog.backend."""
+commands - see dedb.dedb.verbs and dedb.gog.backend."""
 
 import click
 

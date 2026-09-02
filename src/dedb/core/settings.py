@@ -50,6 +50,8 @@ class ArchiveSettings(BaseModel):
 class Settings(BaseModel):
     # dotted module paths, each expected to expose a `cli.commands` list -
     # mirrors Django's INSTALLED_APPS.
+    # `dedb.dedb` (the cross-cutting commands) is always loaded first - see
+    # dedb.core.get_apps - so it isn't listed here.
     apps: list[str] = [
         "dedb.dosbox",
         "dedb.gog",
