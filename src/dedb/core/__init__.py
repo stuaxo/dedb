@@ -11,6 +11,8 @@ and never reach into a sibling app or ``settings.json`` directly.
     backends        BackendBase + resolve() / resolve_game()
     downloads       the <download_dir> resolve/create ops + `dedb rm`
     layout          LayoutPaths - the per-download directory tree
+    local           LocalGame / LaunchMode - the downloaded-program model
+    metadata_file   GameMetadataFile - the metadata.json envelope
     downloader      the download+extract template
     runner          the emulator-launch helpers
     metadata_cache  MetadataCache
@@ -21,7 +23,9 @@ from .backends import BackendBase, resolve, resolve_game
 from .downloader import Downloader
 from .downloads import ensure_download_dir, remove_download, require_download_dir
 from .layout import LayoutPaths
+from .local import LaunchMode, LocalGame
 from .metadata_cache import MetadataCache, OfflineError
+from .metadata_file import GameMetadataFile
 from .refs import Target, long_target, short_target
 from .registry import get_apps, get_backends
 from .runner import launch, launch_dosemu
@@ -32,6 +36,7 @@ from .settings import (
     get_settings,
     load_settings,
     save_archive_favorites_user,
+    scheme_config_path,
 )
 
 __all__ = [
@@ -39,7 +44,10 @@ __all__ = [
     "SETTINGS_PATH",
     "BackendBase",
     "Downloader",
+    "GameMetadataFile",
+    "LaunchMode",
     "LayoutPaths",
+    "LocalGame",
     "MetadataCache",
     "OfflineError",
     "Settings",
@@ -58,5 +66,6 @@ __all__ = [
     "resolve",
     "resolve_game",
     "save_archive_favorites_user",
+    "scheme_config_path",
     "short_target",
 ]

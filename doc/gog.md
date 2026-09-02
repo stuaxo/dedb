@@ -115,5 +115,7 @@ Games are downloaded to `<download_dir>/gog/<game_id>/`:
 
 - `installer/` — deleted after conversion unless `--keep`
 - `game/` — extracted install
-- `metadata.json` — cached GOG metadata and launch profiles
+- `metadata.json` — the shared metadata envelope (`dedb.core.metadata_file`): identity,
+  classification and launch modes at the top level, the raw GOG metadata (profiles included)
+  under `source`
 - `dosemu/` — generated `dosemu.conf`/`userhook.bat`

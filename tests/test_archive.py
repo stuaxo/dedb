@@ -131,7 +131,7 @@ def test_autoexec_commands(emulator_start, expected):
 
 def _downloaded_item(tmp_path: Path) -> "object":
     from dedb.archive.layout import ArchiveLayout
-    from dedb.archive.models import GameMetadataFile
+    from dedb.core import GameMetadataFile
 
     layout = ArchiveLayout(tmp_path, DOS_ITEM_ID)
     layout.game.mkdir(parents=True)
@@ -145,7 +145,13 @@ def _downloaded_item(tmp_path: Path) -> "object":
         download_url="https://archive.org/download/x/x.zip",
         fetched_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
     )
-    layout.metadata_json.write_text(GameMetadataFile(archive=metadata).model_dump_json())
+    layout.metadata_json.write_text(
+        GameMetadataFile(
+            scheme="archive",
+            identifier=DOS_ITEM_ID,
+            source=metadata.model_dump(mode="json"),
+        ).model_dump_json()
+    )
     return layout
 
 

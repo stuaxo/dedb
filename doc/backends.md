@@ -51,12 +51,19 @@ profile).
        def run(self, target: Target, layout, *, emulator, extra_args, verbose) -> int: ...
        def convert(self, target: Target, *, output_dir=None, force=False): ...
        def build(self, target: Target): ...  # [(label, dosemu_conf_text, userhook_lines)]
+       def local_game(self, identifier: str): ...  # -> dedb.core.LocalGame
    ```
 
-   `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `remove` and
-   `ensure_downloaded` (which drives your `Downloader`). Override
-   `identifier_from_url` if the backend has its own URL form, and `dosbox_sources`
-   if its games ship a `dosbox.conf`.
+   `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `remove`,
+   `ensure_downloaded` (which drives your `Downloader`) and `iter_local_games`.
+   Override `identifier_from_url` if the backend has its own URL form, and
+   `dosbox_sources` if its games ship a `dosbox.conf`.
+
+   `local_game(identifier)` assembles a `dedb.core.LocalGame` (identity, title,
+   classification, launch modes, converted?) from the download's `metadata.json`
+   (via `dedb.core.GameMetadataFile.read_or_none`) and its layout - this is what
+   `dedb ls` lists. Your `Downloader._write_metadata` writes that envelope: common
+   fields at the top level, your own metadata model dumped into `source`.
 
 3. Add `"dedb.<app>"` to `Settings.apps`. `get_backends()` imports
    `dedb.<app>.backend`; `dedb ls` and `DOWNLOAD_BACKENDS` pick it up.

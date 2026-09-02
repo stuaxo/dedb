@@ -5,7 +5,7 @@ backend), plus the generic `run` / `download` / `import` / `rm` from
 
 import click
 
-from ..core import get_backends, short_target
+from ..core import LocalGame, get_backends, short_target
 from .verbs import GENERIC_COMMANDS
 
 # Registered backends, each with a namespaced <download_dir>/<scheme>/ tree.
@@ -36,16 +36,25 @@ def _parse_backends(
     return selected or list(DOWNLOAD_BACKENDS)
 
 
-def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
-    """`{game name: [backends that have it], ...}`, each backend list in the
-    given order. Uses each backend's own `local_names()` - the same view of
-    "what's downloaded" that `dedb run`'s bare-name resolution uses."""
+def _local_games(backends: list[str]) -> "list[LocalGame]":
+    """Every downloaded game under the given backends, in backend order
+    then name order. `iter_local_games()` builds on the same `local_names()`
+    view that `dedb run`'s bare-name resolution uses."""
     registry = get_backends()
-    games: dict[str, list[str]] = {}
+    games: list[LocalGame] = []
     for scheme in backends:
-        for name in registry[scheme].local_names():
-            games.setdefault(name, []).append(scheme)
+        games.extend(
+            sorted(registry[scheme].iter_local_games(), key=lambda g: g.identifier.lower())
+        )
     return games
+
+
+def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
+    """`{identifier: [schemes that have it], ...}` for name qualification."""
+    owners: dict[str, list[str]] = {}
+    for game in games:
+        owners.setdefault(game.identifier, []).append(game.scheme)
+    return owners
 
 
 @click.command("ls")
@@ -83,21 +92,42 @@ def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     default=False,
     help="Every entry as a full `<scheme>:<id>` target (pasteable into `dedb run`).",
 )
-def list_downloads(backends: list[str], short: bool, names_only: bool, qualified: bool) -> None:
+@click.option(
+    "-v",
+    "--verbose",
+    "verbose",
+    is_flag=True,
+    default=False,
+    help="Columns: target, title, classification, converted?, launch modes.",
+)
+def list_downloads(
+    backends: list[str], short: bool, names_only: bool, qualified: bool, verbose: bool
+) -> None:
     """List downloaded games."""
-    if sum([bool(short), names_only, qualified]) > 1:
-        raise click.UsageError("Choose at most one of -s / -1 / -l.")
+    if sum([bool(short), names_only, qualified, verbose]) > 1:
+        raise click.UsageError("Choose at most one of -s / -1 / -l / -v.")
 
-    games = _downloaded_games(backends)
+    games = _local_games(backends)
+    owners = _owners(games)
 
-    for name in sorted(games, key=str.lower):
-        owners = games[name]
+    if verbose:
+        for game in sorted(games, key=lambda g: (g.identifier.lower(), g.scheme)):
+            modes = len(game.launch_modes)
+            click.echo(
+                f"{game.target:<48} {(game.title or ''):<28} "
+                f"{(game.classification or '-'):<9} "
+                f"{'converted' if game.converted else '-':<9} "
+                f"{modes} mode{'' if modes == 1 else 's'}"
+            )
+        return
+
+    for name in sorted(owners, key=str.lower):
         if names_only:
             click.echo(name)
-        else:
-            for backend in owners:
-                qualify = qualified or len(owners) > 1
-                click.echo(short_target(backend, name) if qualify else name)
+            continue
+        for scheme in owners[name]:
+            qualify = qualified or len(owners[name]) > 1
+            click.echo(short_target(scheme, name) if qualify else name)
 
 
 commands = [list_downloads, *GENERIC_COMMANDS]

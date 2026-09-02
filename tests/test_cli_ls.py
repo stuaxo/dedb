@@ -80,3 +80,24 @@ def test_ls_rejects_conflicting_modes(downloads):
 
     assert result.exit_code == 2
     assert "at most one" in result.output
+
+
+def test_ls_verbose_shows_a_column_row_per_download(downloads):
+    result = CliRunner().invoke(cli, ["ls", "-v"])
+
+    assert result.exit_code == 0
+    lines = result.output.splitlines()
+    assert [line.split()[0] for line in lines] == [
+        "gog:alpha_game",
+        "gog:beta_game",
+        "archive:msdos_Zzt",
+    ]
+    # a bare download with no metadata.json still lists, as a thin row
+    assert all("1 mode" in line for line in lines)
+
+
+def test_ls_verbose_conflicts_with_other_modes(downloads):
+    result = CliRunner().invoke(cli, ["ls", "-v", "-l"])
+
+    assert result.exit_code == 2
+    assert "at most one" in result.output

@@ -18,7 +18,7 @@ from ..core.client import BaseClient
 from ..core.metadata_cache import (
     OfflineError,
 )  # re-exported: GOGClient and lsgog/classify use it
-from ..core.settings import CONFIG_DIR
+from ..core.settings import scheme_config_path
 from .models import GOGGame
 
 __all__ = [
@@ -39,7 +39,7 @@ FETCH_ERRORS = (urllib.error.URLError, LookupError, zlib.error, json.JSONDecodeE
 # Cache of the last GOGClient.get_list() result, so --offline has something to read
 # instead of calling lgogdownloader (which always contacts GOG, even with
 # its own --use-cache, to check login status).
-OWNED_GAMES_CACHE_PATH = CONFIG_DIR / "gog" / "owned_games_cache.json"
+OWNED_GAMES_CACHE_PATH = scheme_config_path("gog", "owned_games_cache.json")
 
 
 def _log_connecting(url: str, *, verbose: bool) -> None:

@@ -24,6 +24,29 @@ class GogBackend(BackendBase):
 
         return GogDownloader()
 
+    def local_game(self, identifier: str):
+        from ..core import GameMetadataFile, LaunchMode, LocalGame
+        from .profiles import launch_modes
+
+        layout = self.layout(identifier)
+        envelope = GameMetadataFile.read_or_none(layout.metadata_json)
+
+        if envelope and envelope.launch_modes:
+            modes = envelope.launch_modes
+        elif layout.is_downloaded():
+            modes = launch_modes(layout.game)  # migrated/legacy file: re-derive
+        else:
+            modes = [LaunchMode(slug=None, name="default", is_default=True)]
+
+        return LocalGame(
+            scheme="gog",
+            identifier=identifier,
+            classification=(envelope.classification if envelope else None),
+            downloaded_at=(envelope.downloaded_at if envelope else None),
+            launch_modes=modes,
+            converted=layout.is_converted(),
+        )
+
     def _import(self, layout, target: Target, output_dir, *, force):
         from .importer import import_gog_game
 

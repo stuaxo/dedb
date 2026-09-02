@@ -37,8 +37,9 @@ class GogProfile(BaseModel):
 class GogMetadata(BaseModel):
     """What we know about a GOG product: its runtime dependencies (cached
     globally, so games we decide not to download aren't re-fetched on
-    every run) and, once downloaded, its launch profiles. Copied into
-    each downloaded game's metadata.json."""
+    every run) and, once downloaded, its launch profiles. Dumped into the
+    ``source`` of each downloaded game's metadata.json (see
+    ``dedb.core.metadata_file.GameMetadataFile``)."""
 
     gamename: str
     product_id: str
@@ -46,10 +47,3 @@ class GogMetadata(BaseModel):
     classification: str
     fetched_at: datetime
     profiles: list[GogProfile] = []
-
-
-class GameMetadataFile(BaseModel):
-    """Schema of downloads/<game_id>/metadata.json. Namespaced by source
-    so other kinds of per-game data can live alongside "gog" later."""
-
-    gog: GogMetadata

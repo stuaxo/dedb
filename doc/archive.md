@@ -17,7 +17,8 @@ Each item lives at `<download_dir>/archive/<identifier>/`:
 
 - `download/` — the fetched .zip, deleted after extraction unless `--keep`
 - `game/` — extracted files
-- `metadata.json` — cached archive.org item metadata
+- `metadata.json` — the shared metadata envelope (`dedb.core.metadata_file`); the raw
+  archive.org item metadata is under `source`
 - `dosemu/` — generated `dosemu.conf`/`userhook.bat`
 
 

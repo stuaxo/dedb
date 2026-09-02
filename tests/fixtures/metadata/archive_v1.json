@@ -1,0 +1,13 @@
+{
+  "archive": {
+    "identifier": "msdos_Sample_Game_1991",
+    "title": "Sample Game (1991)",
+    "year": "1991",
+    "emulator": "dosbox",
+    "emulator_ext": "zip",
+    "emulator_start": "SAMPLE/GAME.EXE",
+    "download_filename": "Sample_Game_1991.zip",
+    "download_url": "https://archive.org/download/msdos_Sample_Game_1991/Sample_Game_1991.zip",
+    "fetched_at": "2024-03-01T12:00:00Z"
+  }
+}

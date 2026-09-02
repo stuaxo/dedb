@@ -27,6 +27,30 @@ class ArchiveBackend(BackendBase):
 
         return ArchiveDownloader()
 
+    def local_game(self, identifier: str):
+        from ..core import GameMetadataFile, LaunchMode, LocalGame
+
+        layout = self.layout(identifier)
+        envelope = GameMetadataFile.read_or_none(layout.metadata_json)
+
+        title = year = classification = None
+        if envelope:
+            title = envelope.title or envelope.source.get("title")
+            year = envelope.year or envelope.source.get("year")
+            emulator = str(envelope.source.get("emulator", "")).lower()
+            classification = envelope.classification or ("dosbox" if emulator == "dosbox" else None)
+
+        return LocalGame(
+            scheme="archive",
+            identifier=identifier,
+            title=title,
+            year=year,
+            classification=classification,
+            downloaded_at=(envelope.downloaded_at if envelope else None),
+            launch_modes=[LaunchMode(slug=None, name="default", is_default=True)],
+            converted=layout.is_converted(),
+        )
+
     def _import(self, layout, target: Target, output_dir, *, force):
         from .importer import import_archive_game
 
