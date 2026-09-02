@@ -7,9 +7,11 @@ such item records, in its own metadata, which file to run - the tools
 here download that file, extract it, and let it run through DOSBox or
 DOSEMU2 the same way `gog`'s commands do for GOG games.
 
-Unlike GOG, archive.org items aren't "owned" - there's no login and
-nothing to list. Address one by `archive://<identifier>`, or paste its
-full `https://archive.org/details/<identifier>` URL.
+Unlike GOG, archive.org items aren't "owned" - there's no login. Address
+one by `archive://<identifier>`, or paste its full
+`https://archive.org/details/<identifier>` URL. `dedb lsarchive` can
+list an archive.org user's public favorites as a starting point (see
+Commands below).
 
 Each item lives at `<download_dir>/archive/<identifier>/`:
 
@@ -45,6 +47,16 @@ download_dir = "/path/to/downloads"
 `dedb run archive://<id> --dosbox` uses the same `[dosbox]` binary selection as
 GOG - see `doc/gog.md`.
 
+`[archive]` holds one archive-specific setting, `favorites_user` - the
+archive.org screen name `dedb lsarchive` lists favorites for:
+
+```toml
+[archive]
+favorites_user = "your-archive-org-username"
+```
+
+When it's unset, `lsarchive` prompts for the name and offers to save it here.
+
 
 ## Commands
 
@@ -61,6 +73,23 @@ $ dedb rm archive://msdos_Electro_Man_1992
 
 `dedb run` downloads the game and, for `--dosemu`, converts it, if that hasn't
 happened yet.
+
+
+### List a user's favorites
+
+```
+$ dedb lsarchive                       # the configured favorites_user, MS-DOS items only
+$ dedb lsarchive --user someone        # a different archive.org user
+$ dedb lsarchive --all                 # include non-DOS favorites
+$ dedb lsarchive -1                    # bare `archive:<id>` lines
+```
+
+archive.org files every account's favorites under a `fav-<username>`
+collection; `lsarchive` queries it through the public advancedsearch
+API (no login) and, by default, intersects it with archive.org's
+`softwarelibrary_msdos` / `softwarelibrary_msdos_games` collections so
+only DOS items show. Feed the output straight into `dedb download` or
+`dedb run`.
 
 
 ### Run in DOSBox

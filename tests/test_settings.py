@@ -62,6 +62,13 @@ def test_a_valid_file_is_respected(tmp_path):
     assert result.dosbox.dosbox == "dosbox_x"
 
 
+def test_archive_favorites_user_defaults_to_none_and_is_read_when_set():
+    assert load_settings().archive.favorites_user is None
+
+    settings.SETTINGS_PATH.write_text('[archive]\nfavorites_user = "someone"\n')
+    assert load_settings().archive.favorites_user == "someone"
+
+
 def test_download_dir_expands_a_leading_tilde(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
     settings.SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
