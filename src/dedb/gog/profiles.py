@@ -19,7 +19,7 @@ from pathlib import Path
 
 import click
 
-from ..core import LaunchMode
+from ..core import LaunchProfile
 from .gameinfo import parse_profiles
 from .models import GogProfile
 
@@ -45,18 +45,18 @@ def profile_slug(profile: GogProfile) -> str:
     return slug or "profile"
 
 
-def launch_modes(extracted_dir: Path) -> list[LaunchMode]:
-    """The game's launch modes for `LocalGame` / `metadata.json` - one per
-    valid profile, or a single default mode for a game with no usable
+def launch_profiles(extracted_dir: Path) -> list[LaunchProfile]:
+    """The game's launch profiles for `LocalGame` / `metadata.json` - one
+    per valid profile, or a single default one for a game with no usable
     goggame-*.info. Mirrors the default-profile-is-unsuffixed rule in
     `GogLayout` (see `dosemu_conf_for`)."""
     profiles = valid_profiles(extracted_dir)
     if not profiles:
-        return [LaunchMode(slug=None, name="default", is_default=True)]
+        return [LaunchProfile(slug=None, name="default", is_default=True)]
 
     default = default_profile(profiles)
     return [
-        LaunchMode(
+        LaunchProfile(
             slug=None if p is default else profile_slug(p),
             name=p.name or profile_slug(p),
             is_default=p is default,

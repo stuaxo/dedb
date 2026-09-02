@@ -98,7 +98,7 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     "verbose",
     is_flag=True,
     default=False,
-    help="Columns: target, title, classification, converted?, launch modes.",
+    help="Columns: target, title, classification, converted?, launch profiles.",
 )
 def list_downloads(
     backends: list[str], short: bool, names_only: bool, qualified: bool, verbose: bool
@@ -112,12 +112,12 @@ def list_downloads(
 
     if verbose:
         for game in sorted(games, key=lambda g: (g.identifier.lower(), g.scheme)):
-            modes = len(game.launch_modes)
+            n = len(game.launch_profiles)
             click.echo(
                 f"{game.target:<48} {(game.title or ''):<28} "
                 f"{(game.classification or '-'):<9} "
                 f"{'converted' if game.converted else '-':<9} "
-                f"{modes} mode{'' if modes == 1 else 's'}"
+                f"{n} profile{'' if n == 1 else 's'}"
             )
         return
 

@@ -6,8 +6,8 @@
     dosemu/            dosemu.conf + userhook.bat, once converted
     dosemu_local/      DOSEMU2's own bootstrap/local dir
 
-Mirrors `dedb.gog.layout.GogLayout` without launch profiles (an item has
-one launch mode).
+Mirrors `dedb.gog.layout.GogLayout` without per-profile file naming (an
+item has a single launch profile).
 """
 
 from dataclasses import dataclass

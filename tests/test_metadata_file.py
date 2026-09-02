@@ -32,9 +32,9 @@ def test_reads_a_v1_gog_file_lifting_common_fields_and_keeping_the_blob(tmp_path
     assert envelope.identifier == "sample_dos_game"
     assert envelope.classification == "dosbox"
     assert envelope.downloaded_at is not None  # from the blob's fetched_at
-    # launch_modes stay empty on a migrated file - the backend re-derives
+    # launch_profiles stay empty on a migrated file - the backend re-derives
     # them from the extracted goggame-*.info.
-    assert envelope.launch_modes == []
+    assert envelope.launch_profiles == []
     # the whole v1 blob is preserved untouched under source
     assert envelope.source["product_id"] == "1234567890"
     assert [p["name"] for p in envelope.source["profiles"]] == ["Play", "Multiplayer Host"]

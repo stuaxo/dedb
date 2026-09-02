@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from ..core import Downloader, GameMetadataFile, LaunchMode
+from ..core import Downloader, GameMetadataFile, LaunchProfile
 from .client import FETCH_ERRORS, ArchiveClient, NotDosItemError
 from .metadata import get_metadata
 from .models import ArchiveMetadata
@@ -58,7 +58,7 @@ class ArchiveDownloader(Downloader):
             year=metadata.year,
             classification="dosbox" if emulator == "dosbox" else emulator,
             downloaded_at=datetime.now(timezone.utc),
-            launch_modes=[LaunchMode(slug=None, name="default", is_default=True)],
+            launch_profiles=[LaunchProfile(slug=None, name="default", is_default=True)],
             source=metadata.model_dump(mode="json"),
         )
         layout.metadata_json.write_text(envelope.model_dump_json(indent=2))

@@ -16,7 +16,7 @@ from .gameinfo import parse_profiles
 from .layout import GogLayout
 from .metadata import get_metadata
 from .profiles import (
-    launch_modes,
+    launch_profiles,
     legacy_find_confs,
     resolve_conf_files,
     resolve_working_dir,
@@ -145,8 +145,8 @@ class GogDownloader(Downloader):
 
     def _write_metadata(self, layout: GogLayout, product_id: str, *, refresh: bool) -> None:
         """metadata.json records the dependency/classification info and the
-        launch modes, with the raw GogMetadata (profiles included) kept
-        under ``source``."""
+        launch profiles, with the raw GogMetadata (playTasks included)
+        kept under ``source``."""
         try:
             metadata = get_metadata(layout.name, product_id, refresh=refresh)
         except FETCH_ERRORS as exc:
@@ -158,7 +158,7 @@ class GogDownloader(Downloader):
             identifier=layout.name,
             classification=metadata.classification,
             downloaded_at=datetime.now(timezone.utc),
-            launch_modes=launch_modes(layout.game),
+            launch_profiles=launch_profiles(layout.game),
             source=metadata.model_copy(update={"profiles": profiles}).model_dump(mode="json"),
         )
         layout.metadata_json.write_text(envelope.model_dump_json(indent=2))

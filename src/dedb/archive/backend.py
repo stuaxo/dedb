@@ -28,7 +28,7 @@ class ArchiveBackend(BackendBase):
         return ArchiveDownloader()
 
     def local_game(self, identifier: str):
-        from ..core import GameMetadataFile, LaunchMode, LocalGame
+        from ..core import GameMetadataFile, LaunchProfile, LocalGame
 
         layout = self.layout(identifier)
         envelope = GameMetadataFile.read_or_none(layout.metadata_json)
@@ -47,7 +47,7 @@ class ArchiveBackend(BackendBase):
             year=year,
             classification=classification,
             downloaded_at=(envelope.downloaded_at if envelope else None),
-            launch_modes=[LaunchMode(slug=None, name="default", is_default=True)],
+            launch_profiles=[LaunchProfile(slug=None, name="default", is_default=True)],
             converted=layout.is_converted(),
         )
 

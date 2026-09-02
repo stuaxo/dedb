@@ -1,7 +1,7 @@
 """The schema of ``<download_dir>/<scheme>/<id>/metadata.json`` - one
 versioned envelope shared by every backend.
 
-Common fields (identity, title, classification, launch modes) sit at the
+Common fields (identity, title, classification, launch profiles) sit at the
 top level so ``core`` can read them without touching a backend model; the
 backend's own metadata model is dumped verbatim into ``source`` and stays
 opaque here.
@@ -18,7 +18,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from .local import LaunchMode
+from .local import LaunchProfile
 
 CURRENT_SCHEMA = 2
 
@@ -31,7 +31,7 @@ class GameMetadataFile(BaseModel):
     year: str | None = None
     classification: str | None = None
     downloaded_at: datetime | None = None
-    launch_modes: list[LaunchMode] = []
+    launch_profiles: list[LaunchProfile] = []
     # The backend's own metadata model, dumped with model_dump(mode="json").
     # Opaque to core; each backend validates it back into its own model.
     source: dict = {}
@@ -61,7 +61,7 @@ class GameMetadataFile(BaseModel):
         """A v1 file is ``{<scheme>: <backend metadata blob>}`` with no
         ``schema_version``. Lift the fields common to every backend out of
         the blob and keep the whole blob as ``source``; leave
-        ``launch_modes`` empty (the backend re-derives them from the
+        ``launch_profiles`` empty (the backend re-derives them from the
         extracted files)."""
         scheme, blob = next(iter(data.items()))
         return cls.model_validate(
@@ -73,7 +73,7 @@ class GameMetadataFile(BaseModel):
                 "year": blob.get("year"),
                 "classification": blob.get("classification"),
                 "downloaded_at": blob.get("fetched_at"),
-                "launch_modes": [],
+                "launch_profiles": [],
                 "source": blob,
             }
         )

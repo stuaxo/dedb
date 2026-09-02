@@ -93,7 +93,7 @@ def test_ls_verbose_shows_a_column_row_per_download(downloads):
         "archive:msdos_Zzt",
     ]
     # a bare download with no metadata.json still lists, as a thin row
-    assert all("1 mode" in line for line in lines)
+    assert all("1 profile" in line for line in lines)
 
 
 def test_ls_verbose_conflicts_with_other_modes(downloads):

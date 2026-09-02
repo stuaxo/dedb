@@ -60,7 +60,7 @@ profile).
    `dosbox_sources` if its games ship a `dosbox.conf`.
 
    `local_game(identifier)` assembles a `dedb.core.LocalGame` (identity, title,
-   classification, launch modes, converted?) from the download's `metadata.json`
+   classification, launch profiles, converted?) from the download's `metadata.json`
    (via `dedb.core.GameMetadataFile.read_or_none`) and its layout - this is what
    `dedb ls` lists. Your `Downloader._write_metadata` writes that envelope: common
    fields at the top level, your own metadata model dumped into `source`.

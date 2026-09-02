@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from dedb.archive.backend import ArchiveBackend
-from dedb.core import GameMetadataFile, LaunchMode
+from dedb.core import GameMetadataFile, LaunchProfile
 from dedb.core.settings import Settings
 from dedb.gog.backend import GogBackend
 from dedb.gog.layout import GogLayout
@@ -46,7 +46,7 @@ def _gog_download(
     return layout
 
 
-def test_gog_local_game_reads_launch_modes_and_flags_from_metadata(downloads, base_profile_conf):
+def test_gog_local_game_reads_launch_profiles_and_flags_from_metadata(downloads, base_profile_conf):
     layout = _gog_download(
         downloads,
         "sample_dos_game",
@@ -69,9 +69,9 @@ def test_gog_local_game_reads_launch_modes_and_flags_from_metadata(downloads, ba
             identifier="sample_dos_game",
             classification="dosbox",
             downloaded_at=datetime(2024, 1, 2, tzinfo=timezone.utc),
-            launch_modes=[
-                LaunchMode(slug=None, name="Play", is_default=True),
-                LaunchMode(slug="multiplayer_host", name="Multiplayer Host"),
+            launch_profiles=[
+                LaunchProfile(slug=None, name="Play", is_default=True),
+                LaunchProfile(slug="multiplayer_host", name="Multiplayer Host"),
             ],
         ).model_dump_json()
     )
@@ -81,16 +81,14 @@ def test_gog_local_game_reads_launch_modes_and_flags_from_metadata(downloads, ba
     assert game.target == "gog:sample_dos_game"
     assert game.classification == "dosbox"
     assert game.converted is True
-    assert [(m.slug, m.name, m.is_default) for m in game.launch_modes] == [
+    assert [(m.slug, m.name, m.is_default) for m in game.launch_profiles] == [
         (None, "Play", True),
         ("multiplayer_host", "Multiplayer Host", False),
     ]
 
 
-def test_gog_local_game_re_derives_launch_modes_when_metadata_has_none(
-    downloads, base_profile_conf
-):
-    """A migrated v1 file has an empty launch_modes list - fall back to
+def test_gog_local_game_re_derives_profiles_when_metadata_has_none(downloads, base_profile_conf):
+    """A migrated v1 file has an empty launch_profiles list - fall back to
     parsing the extracted goggame-*.info."""
     layout = _gog_download(
         downloads,
@@ -111,8 +109,8 @@ def test_gog_local_game_re_derives_launch_modes_when_metadata_has_none(
 
     game = GogBackend().local_game("sample_dos_game")
 
-    assert [m.name for m in game.launch_modes] == ["Play"]
-    assert game.launch_modes[0].is_default is True
+    assert [m.name for m in game.launch_profiles] == ["Play"]
+    assert game.launch_profiles[0].is_default is True
 
 
 def test_gog_local_game_without_metadata_is_a_thin_entry(downloads):
@@ -123,7 +121,7 @@ def test_gog_local_game_without_metadata_is_a_thin_entry(downloads):
     assert game.identifier == "bare_game"
     assert game.classification is None
     assert game.converted is False
-    assert [m.name for m in game.launch_modes] == ["default"]
+    assert [m.name for m in game.launch_profiles] == ["default"]
 
 
 def test_iter_local_games_covers_every_download(downloads, base_profile_conf):
@@ -150,5 +148,5 @@ def test_archive_local_game_from_a_v1_metadata_file(downloads):
     assert game.title == "Sample Game (1991)"
     assert game.year == "1991"
     assert game.classification == "dosbox"
-    assert [m.name for m in game.launch_modes] == ["default"]
+    assert [m.name for m in game.launch_profiles] == ["default"]
     assert game.converted is False

@@ -18,12 +18,13 @@ from pydantic import BaseModel, ConfigDict
 from .refs import long_target, short_target
 
 
-class LaunchMode(BaseModel):
-    """One way to start a local game.
+class LaunchProfile(BaseModel):
+    """One way to start a local game - the backend-agnostic view of a GOG
+    launch profile (``dedb run ... --profile <slug>``).
 
     GOG games have one per conf-referencing playTask (``Play``,
     ``Multiplayer Host``, ...); archive.org items and profile-less GOG
-    games have a single default mode. This is display / validation
+    games have a single default profile. This is display / validation
     metadata only - the actual conf files and working directory are still
     resolved from the extracted files at launch time (see
     ``dedb.gog.profiles``).
@@ -32,7 +33,8 @@ class LaunchMode(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     # None => the unsuffixed dosemu.conf / userhook.bat pair (the default
-    # profile); otherwise the GogLayout slug (dosemu_<slug>.conf).
+    # profile); otherwise the GogLayout slug (dosemu_<slug>.conf), which
+    # is also what `--profile <slug>` accepts.
     slug: str | None = None
     name: str = "default"
     is_default: bool = False
@@ -51,7 +53,7 @@ class LocalGame(BaseModel):
     # "dosbox" / "scummvm" / "none" / ... - None when it was never recorded.
     classification: str | None = None
     downloaded_at: datetime | None = None
-    launch_modes: list[LaunchMode] = []
+    launch_profiles: list[LaunchProfile] = []
     converted: bool = False  # at least one dosemu.conf has been generated
 
     @property
