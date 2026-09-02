@@ -12,13 +12,14 @@ import sys
 import urllib.error
 import urllib.request
 import zlib
+from pathlib import Path
 
 from ..core.client import BaseClient
 from ..core.metadata_cache import (
     OfflineError,
 )  # re-exported: GOGClient and lsgog/classify use it
 from ..core.settings import CONFIG_DIR
-from .models import OwnedGame
+from .models import GOGGame
 
 __all__ = [
     "FETCH_ERRORS",
@@ -47,12 +48,31 @@ def _log_connecting(url: str, *, verbose: bool) -> None:
 
 
 class GOGClient(BaseClient):
+    default_name = "owned"
+
     def has_default_list(self) -> bool:
         return True
 
+    def download(self, name: str, dest_dir: Path) -> None:
+        """Download one game via lgogdownloader. Raises subprocess.CalledProcessError on failure."""
+        subprocess.run(
+            [
+                "lgogdownloader",
+                "--download",
+                "--game",
+                f"^{name}$",
+                "--platform",
+                "w",
+                "--include",
+                "installers",
+            ],
+            cwd=dest_dir,
+            check=True,
+        )
+
     def get_list(
         self, name: str | None = None, *, verbose: bool = False, offline: bool = False, **kwargs
-    ) -> list[OwnedGame]:
+    ) -> list[GOGGame]:
         """Return all owned Windows-platform games. Downloads nothing, but by
         default still contacts GOG (via lgogdownloader) on every call - this is
         the pause `lsgog`/`downloadgog` show at startup. Pass offline=True to
@@ -63,7 +83,7 @@ class GOGClient(BaseClient):
                     f"No cached owned-games list at {OWNED_GAMES_CACHE_PATH} yet - run once without --offline first."
                 )
             raw = json.loads(OWNED_GAMES_CACHE_PATH.read_text())
-            return [OwnedGame.model_validate(g) for g in raw]
+            return [GOGGame.model_validate(g) for g in raw]
 
         _log_connecting(
             "lgogdownloader --list=json --platform w (contacts gog.com to refresh login/library)",
@@ -79,7 +99,7 @@ class GOGClient(BaseClient):
         seen: dict[str, str] = {}
         for g in games:
             seen[g["gamename"]] = g["product_id"]
-        owned = [OwnedGame(gamename=name, product_id=pid) for name, pid in seen.items()]
+        owned = [GOGGame(gamename=name, product_id=pid) for name, pid in seen.items()]
 
         OWNED_GAMES_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         OWNED_GAMES_CACHE_PATH.write_text(json.dumps([g.model_dump(mode="json") for g in owned]))

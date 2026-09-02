@@ -6,7 +6,7 @@ downloaded ones), so a lookup never repeats unless ``refresh=True``.
 
 from datetime import datetime, timezone
 
-from ..core.metadata_cache import JsonMetadataCache
+from ..core.metadata_cache import MetadataCache
 from ..core.settings import CONFIG_DIR
 from .client import fetch_item
 from .models import ArchiveMetadata
@@ -19,7 +19,7 @@ def _fetch(identifier: str) -> ArchiveMetadata:
     return ArchiveMetadata(**info.model_dump(), fetched_at=datetime.now(timezone.utc))
 
 
-_cache = JsonMetadataCache(CACHE_PATH, ArchiveMetadata, _fetch)
+_cache = MetadataCache(CACHE_PATH, ArchiveMetadata, _fetch)
 
 
 def get_metadata(

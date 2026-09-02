@@ -21,7 +21,7 @@ from internetarchive.item import Item
 
 from dedb.archive import client as archive_client
 from dedb.archive import downloader
-from dedb.archive.client import ArchiveClient, _pick_archive, fetch_item
+from dedb.archive.client import ArchiveClient, _resolve_drive_c_archive, fetch_item
 from dedb.archive.downloader import ArchiveDownloader, _extract_zip
 from dedb.archive.importer import autoexec_commands
 from dedb.archive.models import ArchiveFavorite, ArchiveMetadata
@@ -89,7 +89,7 @@ def test_fetch_item_raises_when_no_file_matches_the_declared_ext(stub_get_item):
         fetch_item(DOS_ITEM_ID)
 
 
-# --- _pick_archive: choosing between several bundled archives ------------
+# --- _resolve_drive_c_archive: choosing between several bundled archives ------------
 #
 # Pure function; the args below are the real metadata field and real
 # archive.org filename patterns (a shareware build shipped next to the
@@ -106,8 +106,8 @@ def test_fetch_item_raises_when_no_file_matches_the_declared_ext(stub_get_item):
         ({"dosbox_drive_c": "gone.zip"}, "shareware.zip"),  # hint names a missing file
     ],
 )
-def test_pick_archive(meta, expected):
-    assert _pick_archive(["shareware.zip", "registered.zip"], meta) == expected
+def test_resolve_drive_c_archive(meta, expected):
+    assert _resolve_drive_c_archive(["shareware.zip", "registered.zip"], meta) == expected
 
 
 # --- autoexec_commands: the synthetic [autoexec] -----------------------

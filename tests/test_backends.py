@@ -15,7 +15,7 @@ from dedb.archive.models import ArchiveFavorite
 from dedb.core import Target, get_backends, long_target, resolve, resolve_game, short_target
 from dedb.core.settings import Settings
 from dedb.gog.backend import GogBackend
-from dedb.gog.models import OwnedGame
+from dedb.gog.models import GOGGame
 
 ARCHIVE_URL = "https://archive.org/details/msdos_Electro_Man_1992"
 
@@ -32,7 +32,7 @@ def test_short_and_long_target_spellings():
     "reference",
     [
         ArchiveFavorite(identifier="msdos_Foo").target,
-        OwnedGame(gamename="tyrian_2000", product_id="1").target,
+        GOGGame(gamename="tyrian_2000", product_id="1").target,
         Target("gog", "x", None, "x").url,
     ],
 )

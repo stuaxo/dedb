@@ -6,7 +6,7 @@ downloading), so a lookup never repeats unless ``refresh=True``.
 
 from datetime import datetime, timezone
 
-from ..core.metadata_cache import JsonMetadataCache
+from ..core.metadata_cache import MetadataCache
 from ..core.settings import CONFIG_DIR
 from .client import classify_dependencies, fetch_dependencies
 from .models import GogMetadata
@@ -25,7 +25,7 @@ def _fetch(gamename: str, product_id: str, *, verbose: bool = False) -> GogMetad
     )
 
 
-_cache = JsonMetadataCache(CACHE_PATH, GogMetadata, _fetch)
+_cache = MetadataCache(CACHE_PATH, GogMetadata, _fetch)
 
 
 def get_metadata(
