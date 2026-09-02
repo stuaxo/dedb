@@ -13,8 +13,17 @@ import urllib.error
 import urllib.request
 import zlib
 
+from ..metadata_cache import OfflineError  # re-exported: owned_games() and lsgog/classify use it
 from ..settings import CONFIG_DIR
 from .models import OwnedGame
+
+__all__ = [
+    "FETCH_ERRORS",
+    "OfflineError",
+    "classify_dependencies",
+    "fetch_dependencies",
+    "owned_games",
+]
 
 BUILDS_URL = "https://content-system.gog.com/products/{product_id}/os/windows/builds?generation=2"
 
@@ -27,10 +36,6 @@ FETCH_ERRORS = (urllib.error.URLError, LookupError, zlib.error, json.JSONDecodeE
 # instead of calling lgogdownloader (which always contacts GOG, even with
 # its own --use-cache, to check login status).
 OWNED_GAMES_CACHE_PATH = CONFIG_DIR / "gog" / "owned_games_cache.json"
-
-
-class OfflineError(RuntimeError):
-    """Raised for an --offline request that has no cached data to answer it."""
 
 
 def _log_connecting(url: str, *, verbose: bool) -> None:
