@@ -34,11 +34,18 @@ class GogLayout(LayoutPaths):
         """Delete the downloaded installer (setup_*.exe etc.)."""
         self._safe_rmtree(self.installer)
 
+    # The one place the per-profile file-naming rule lives: the default
+    # profile's pair is unsuffixed, every other profile's is
+    # <stem>_<slug>.<ext> (see the module docstring). gog.importer and
+    # gog.runner both name files through here.
+    def _profile_file(self, stem: str, ext: str, slug: str | None) -> Path:
+        return self.dosemu / (f"{stem}_{slug}.{ext}" if slug else f"{stem}.{ext}")
+
     def dosemu_conf_for(self, slug: str | None) -> Path:
-        return self.dosemu / (f"dosemu_{slug}.conf" if slug else "dosemu.conf")
+        return self._profile_file("dosemu", "conf", slug)
 
     def userhook_for(self, slug: str | None) -> Path:
-        return self.dosemu / (f"userhook_{slug}.bat" if slug else "userhook.bat")
+        return self._profile_file("userhook", "bat", slug)
 
     def is_converted(self, slug: str | None = None) -> bool:
         return self.dosemu_conf_for(slug).is_file()

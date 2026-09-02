@@ -22,17 +22,6 @@ from .profiles import (
 )
 
 
-def _dosemu_filename(slug: str | None) -> str:
-    return f"dosemu_{slug}.conf" if slug else "dosemu.conf"
-
-
-def _userhook_filename(slug: str | None) -> str:
-    """
-    :param slug: GOG game's slug
-    """
-    return f"userhook_{slug}.bat" if slug else "userhook.bat"
-
-
 def _resolve_targets(
     layout: GogLayout, profile: str | None
 ) -> tuple[bool, list[tuple[str, list[Path], Path]]]:
@@ -96,8 +85,8 @@ def import_gog_game(
             conf_files,
             output_dir,
             force=True,
-            dosemu_filename=_dosemu_filename(slug),
-            userhook_filename=_userhook_filename(slug),
+            dosemu_filename=layout.dosemu_conf_for(slug).name,
+            userhook_filename=layout.userhook_for(slug).name,
             working_dir=working_dir,
         )
         results[label] = conf_files
