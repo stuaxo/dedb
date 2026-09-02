@@ -46,7 +46,11 @@ CONF_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
     help="Print the userhook.bat it would create instead of writing any files.",
 )
 def importdosbox(
-    conf_files: tuple[Path, ...], output_dir: Path | None, force: bool, dumpconf: bool, dumpuserhook: bool
+    conf_files: tuple[Path, ...],
+    output_dir: Path | None,
+    force: bool,
+    dumpconf: bool,
+    dumpuserhook: bool,
 ) -> None:
     """Import one or more dosbox.conf files into a DOSEMU2 config.
 
@@ -64,7 +68,9 @@ def importdosbox(
         return
 
     if output_dir is None:
-        raise click.UsageError("--output-dir is required unless --dumpconf/--dumpuserhook is given.")
+        raise click.UsageError(
+            "--output-dir is required unless --dumpconf/--dumpuserhook is given."
+        )
     convert_config(list(conf_files), output_dir, force=force)
     sources = ", ".join(str(f) for f in conf_files)
     click.echo(f"Imported {sources} -> '{output_dir}'")
@@ -98,7 +104,9 @@ def _existing_conf(source: str) -> Path:
     default=False,
     help="Show Sound Blaster ([sblaster]) settings.",
 )
-@click.option("--gus", "-g", is_flag=True, default=False, help="Show Gravis Ultrasound ([gus]) settings.")
+@click.option(
+    "--gus", "-g", is_flag=True, default=False, help="Show Gravis Ultrasound ([gus]) settings."
+)
 @click.option(
     "--issues",
     "-i",

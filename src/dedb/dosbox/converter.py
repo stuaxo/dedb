@@ -10,7 +10,9 @@ from .models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
 from .parser import parse_dosbox_confs
 
 
-def build(input_files: Sequence[Path], working_dir: Path | None = None) -> tuple[DosemuConfig, list[str]]:
+def build(
+    input_files: Sequence[Path], working_dir: Path | None = None
+) -> tuple[DosemuConfig, list[str]]:
     """Parse and transform one or more dosbox.conf files (merged in order,
     later files overriding earlier ones, the same rule DOSBox uses for
     multiple -conf files) into (dosemu_config, userhook_lines). Same

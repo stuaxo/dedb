@@ -90,7 +90,9 @@ class BackendBase:
 
     # --- actions -------------------------------------------------------
 
-    def ensure_downloaded(self, identifier: str, *, keep: bool, refresh_metadata: bool, redownload: bool):
+    def ensure_downloaded(
+        self, identifier: str, *, keep: bool, refresh_metadata: bool, redownload: bool
+    ):
         """Download + extract ``identifier`` if needed; return its GameLayout."""
         raise NotImplementedError
 
@@ -152,7 +154,9 @@ def _closest_name(value: str, names: "list[str]") -> "str | None":
 
 def _finish(backend: BackendBase, identifier: str, profile: "str | None", raw: str) -> Target:
     if profile is not None and not backend.supports_profile:
-        raise click.ClickException(f"{backend.scheme}:// games have no launch profiles (drop --profile).")
+        raise click.ClickException(
+            f"{backend.scheme}:// games have no launch profiles (drop --profile)."
+        )
     return Target(backend.scheme, identifier, profile, raw)
 
 
@@ -179,8 +183,7 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
             if identifier is not None:
                 return _finish(backend, identifier, profile, value)
         raise click.ClickException(
-            f"Don't know how to handle URL: {value}\n"
-            "Use a scheme instead, e.g. archive://<id>."
+            f"Don't know how to handle URL: {value}\nUse a scheme instead, e.g. archive://<id>."
         )
 
     if scheme in registry:

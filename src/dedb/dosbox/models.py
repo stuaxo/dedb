@@ -48,14 +48,18 @@ class DosboxConfig(BaseModel):
     serial1: str = Field(default="dummy", validation_alias=AliasPath("serial", "serial1"))
 
     # Joystick fields
-    joysticktype: str = Field(default="auto", validation_alias=AliasPath("joystick", "joysticktype"))
+    joysticktype: str = Field(
+        default="auto", validation_alias=AliasPath("joystick", "joysticktype")
+    )
 
     # Render/Video fields
     aspect: bool = Field(default=False, validation_alias=AliasPath("render", "aspect"))
     scaler: str = Field(default="normal2x", validation_alias=AliasPath("render", "scaler"))
     output: str = Field(default="surface", validation_alias=AliasPath("sdl", "output"))
 
-    coerce_bool = field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")(istruthy)
+    coerce_bool = field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")(
+        istruthy
+    )
     coerce_int = field_validator("memsize", "irq", "dma", "hdma", mode="before")(coerce_int)
 
 

@@ -12,7 +12,9 @@ from .downloader import download_and_extract
 
 
 @click.command("downloadgog")
-@click.option("--keep", is_flag=True, default=False, help="Keep the installer/ directory after extracting.")
+@click.option(
+    "--keep", is_flag=True, default=False, help="Keep the installer/ directory after extracting."
+)
 @click.option(
     "--game",
     "game_id",
@@ -50,7 +52,12 @@ from .downloader import download_and_extract
     ),
 )
 def downloadgog(
-    keep: bool, game_id: str | None, all_games: bool, refresh_metadata: bool, redownload: bool, merge_save: bool
+    keep: bool,
+    game_id: str | None,
+    all_games: bool,
+    refresh_metadata: bool,
+    redownload: bool,
+    merge_save: bool,
 ) -> None:
     """Download and extract DOSBox-based owned games from GOG.
 
@@ -69,8 +76,7 @@ def downloadgog(
         targets = sorted(name for name, s in status.items() if s.classification == "dosbox")
     else:
         raise click.UsageError(
-            "Nothing to download. Pass --game <id>, or --all for every "
-            "DOSBox-based owned game."
+            "Nothing to download. Pass --game <id>, or --all for every DOSBox-based owned game."
         )
 
     click.echo(f"Using download directory: {download_dir}")
@@ -147,7 +153,11 @@ def lsgog(
     status = None
     if dos_only or not names_only:
         status = classify_owned_games(
-            games, get_download_dir("gog"), refresh=refresh_metadata, verbose=verbose, offline=offline
+            games,
+            get_download_dir("gog"),
+            refresh=refresh_metadata,
+            verbose=verbose,
+            offline=offline,
         )
         if dos_only:
             games = [g for g in games if status[g.gamename].classification == "dosbox"]

@@ -24,9 +24,7 @@ def test_the_written_default_leaves_download_dir_commented_out():
     text = settings.SETTINGS_PATH.read_text()
 
     assert "# download_dir" in text
-    assert not any(
-        line.strip().startswith("download_dir") for line in text.splitlines()
-    )
+    assert not any(line.strip().startswith("download_dir") for line in text.splitlines())
     assert load_settings().download_dir is None
 
 
@@ -52,7 +50,9 @@ def test_invalid_schema_falls_back_to_defaults_with_a_warning(capsys):
 
 def test_a_valid_file_is_respected(tmp_path):
     settings.SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    settings.SETTINGS_PATH.write_text(f'download_dir = "{tmp_path}"\n[dosbox]\ndosbox = "dosbox_x"\n')
+    settings.SETTINGS_PATH.write_text(
+        f'download_dir = "{tmp_path}"\n[dosbox]\ndosbox = "dosbox_x"\n'
+    )
 
     result = load_settings()
 

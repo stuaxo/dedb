@@ -10,7 +10,9 @@ import pytest
 from dedb.dosbox.converter import build, convert
 
 
-def test_build_merges_profiles_into_a_single_config(write_conf, base_profile_conf, variant_profile_conf):
+def test_build_merges_profiles_into_a_single_config(
+    write_conf, base_profile_conf, variant_profile_conf
+):
     base = write_conf(base_profile_conf)
     variant = write_conf(variant_profile_conf)
 

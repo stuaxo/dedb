@@ -22,7 +22,9 @@ def _safe_extract(zip_path: Path, dest: Path) -> None:
         for member in zf.infolist():
             target = (dest / member.filename).resolve()
             if not target.is_relative_to(dest):
-                raise click.ClickException(f"Refusing to extract '{member.filename}' outside {dest}")
+                raise click.ClickException(
+                    f"Refusing to extract '{member.filename}' outside {dest}"
+                )
         zf.extractall(dest)
 
 
@@ -37,7 +39,9 @@ def _download(identifier: str, filename: str, dest_dir: Path) -> None:
         retries=3,
     )
     if errors:
-        raise click.ClickException(f"Could not download '{filename}' from archive.org item '{identifier}'")
+        raise click.ClickException(
+            f"Could not download '{filename}' from archive.org item '{identifier}'"
+        )
 
 
 def _write_metadata_file(layout: GameLayout, metadata: ArchiveMetadata) -> None:

@@ -48,7 +48,9 @@ def build_archive_game(layout: GameLayout) -> tuple[DosemuConfig, list[str]]:
     return target, userhook_lines
 
 
-def import_archive_game(layout: GameLayout, output_dir: Path | None = None, *, force: bool = False) -> None:
+def import_archive_game(
+    layout: GameLayout, output_dir: Path | None = None, *, force: bool = False
+) -> None:
     if not layout.is_downloaded():
         raise click.ClickException(
             f"'{layout.identifier}' hasn't been downloaded yet. Run "

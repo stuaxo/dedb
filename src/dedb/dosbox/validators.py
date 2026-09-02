@@ -3,6 +3,7 @@ def istruthy(value: object) -> object:
         return value.strip().lower() in ("true", "1", "yes", "on")
     return value
 
+
 def coerce_int(cls, value: object, info) -> object:
     if isinstance(value, str):
         try:

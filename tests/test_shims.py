@@ -163,10 +163,12 @@ def test_diagnose_autoexec_reports_the_lines_each_workaround_rewrote(launcher_au
 
     triggered = {(i.workaround, i.line): i for i in issues}
     assert triggered[("mount", 'MOUNT C ".."')].rewritten == 'REM MOUNT C ".."'
-    assert triggered[("overlay-mount", 'MOUNT D "..\\cloud_saves" -t overlay')].rewritten.startswith("REM ")
-    assert triggered[("choice", "CHOICE /C123 /S Which program do you want to run?: /N")].rewritten == (
-        "CHOICE Which program do you want to run?:"
-    )
+    assert triggered[
+        ("overlay-mount", 'MOUNT D "..\\cloud_saves" -t overlay')
+    ].rewritten.startswith("REM ")
+    assert triggered[
+        ("choice", "CHOICE /C123 /S Which program do you want to run?: /N")
+    ].rewritten == ("CHOICE Which program do you want to run?:")
     assert triggered[("imgmount", "IMGMOUNT E disk.img")].rewritten == "REM IMGMOUNT E disk.img"
 
 

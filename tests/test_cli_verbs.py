@@ -35,12 +35,15 @@ def spy_run(monkeypatch):
     calls: dict = {}
     monkeypatch.setattr(
         "dedb.gog.backend.GogBackend.ensure_downloaded",
-        lambda self, identifier, **kw: calls.update(ensure={"identifier": identifier, **kw}) or "LAYOUT",
+        lambda self, identifier, **kw: (
+            calls.update(ensure={"identifier": identifier, **kw}) or "LAYOUT"
+        ),
     )
     monkeypatch.setattr(
         "dedb.gog.backend.GogBackend.run",
-        lambda self, target, layout, **kw: calls.update(run={"target": target, **kw})
-        or calls.get("exit_code", 0),
+        lambda self, target, layout, **kw: (
+            calls.update(run={"target": target, **kw}) or calls.get("exit_code", 0)
+        ),
     )
     return calls
 
@@ -124,7 +127,9 @@ def test_import_refreshconf_reconverts_a_downloaded_archive_item(download_dir, m
     """`import archive://<id> --refreshconf` on a downloaded item calls
     convert(force=True) with the archive backend's real signature."""
     seen = {}
-    monkeypatch.setattr("dedb.archive.backend.ArchiveBackend.is_downloaded", lambda self, ident: True)
+    monkeypatch.setattr(
+        "dedb.archive.backend.ArchiveBackend.is_downloaded", lambda self, ident: True
+    )
 
     def fake_convert(self, target, *, output_dir=None, force=False):
         seen.update(id=target.identifier, force=force)
@@ -237,8 +242,14 @@ def test_dosboxconf_archive_target_has_no_conf():
 @pytest.mark.parametrize(
     "name",
     [
-        "rungog", "importgog", "dosboxconfgog", "rmgog",
-        "runarchive", "downloadarchive", "importarchive", "rmarchive",
+        "rungog",
+        "importgog",
+        "dosboxconfgog",
+        "rmgog",
+        "runarchive",
+        "downloadarchive",
+        "importarchive",
+        "rmarchive",
     ],
 )
 def test_removed_per_backend_commands(name):

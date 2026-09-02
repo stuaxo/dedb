@@ -31,7 +31,9 @@ def test_gog_ensure_converted_reconverts_even_when_already_converted(tmp_path, m
     monkeypatch.setattr(gog_runner, "_profile_file_slug", lambda lyt, profile: None)
     calls = []
     monkeypatch.setattr(
-        gog_runner, "import_gog_game", lambda lyt, *, profile=None, force=False: calls.append((profile, force))
+        gog_runner,
+        "import_gog_game",
+        lambda lyt, *, profile=None, force=False: calls.append((profile, force)),
     )
 
     assert gog_runner.ensure_converted(layout) == layout.dosemu_conf

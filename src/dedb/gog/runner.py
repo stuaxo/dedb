@@ -52,7 +52,7 @@ def resolve_dosbox_binary(choice: str) -> str:
 
     if choice not in DOSBOX_BINARIES:
         valid = ", ".join(["default", *DOSBOX_BINARIES])
-        raise click.ClickException(f"Unknown [dosbox] dosbox = \"{choice}\". Valid options: {valid}")
+        raise click.ClickException(f'Unknown [dosbox] dosbox = "{choice}". Valid options: {valid}')
     return DOSBOX_BINARIES[choice]
 
 
@@ -75,7 +75,12 @@ def ensure_downloaded(
     if product_id is None:
         raise click.ClickException(f"'{gamename}' not found in your GOG library")
     download_and_extract(
-        gamename, product_id, download_dir, keep=keep, refresh=refresh_metadata, redownload=redownload
+        gamename,
+        product_id,
+        download_dir,
+        keep=keep,
+        refresh=refresh_metadata,
+        redownload=redownload,
     )
     return layout
 
@@ -86,7 +91,9 @@ def _profile_file_slug(layout: GameLayout, profile: str | None) -> str | None:
     profiles = valid_profiles(layout.game)
     if not profiles:
         return None
-    chosen = select_profile(layout.game, profile) if profile is not None else default_profile(profiles)
+    chosen = (
+        select_profile(layout.game, profile) if profile is not None else default_profile(profiles)
+    )
     return None if chosen is default_profile(profiles) else profile_slug(chosen)
 
 
@@ -102,7 +109,10 @@ def ensure_converted(layout: GameLayout, profile: str | None = None) -> Path:
 
 
 def run_dosbox(
-    layout: GameLayout, profile: str | None = None, extra_args: Sequence[str] = (), verbose: bool = False
+    layout: GameLayout,
+    profile: str | None = None,
+    extra_args: Sequence[str] = (),
+    verbose: bool = False,
 ) -> int:
     conf_files = get_conf_files(layout.game, profile)
     binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
@@ -128,7 +138,10 @@ def run_dosbox(
 
 
 def run_dosemu(
-    layout: GameLayout, profile: str | None = None, extra_args: Sequence[str] = (), verbose: bool = False
+    layout: GameLayout,
+    profile: str | None = None,
+    extra_args: Sequence[str] = (),
+    verbose: bool = False,
 ) -> int:
     dosemu_conf = ensure_converted(layout, profile)
     layout.dosemu_local.mkdir(parents=True, exist_ok=True)

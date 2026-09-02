@@ -68,7 +68,9 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
     return "dosbox" if use_dosbox else "dosemu"
 
 
-def _run(game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload) -> None:
+def _run(
+    game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload
+) -> None:
     """Download (if needed) and launch a resolved game; exit non-zero if the emulator does."""
     layout = backend.ensure_downloaded(
         game.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
@@ -121,7 +123,16 @@ def _do_import(game, backend, *, output_dir, force, refreshconf, dumpconf, dumpu
     "--verbose", "-v", is_flag=True, default=False, help="Print the command line before launching."
 )
 def run(
-    game, emulator_args, use_dosbox, use_dosemu, profile, backend, keep, refresh_metadata, redownload, verbose
+    game,
+    emulator_args,
+    use_dosbox,
+    use_dosemu,
+    profile,
+    backend,
+    keep,
+    refresh_metadata,
+    redownload,
+    verbose,
 ):
     """Run a game in DOSBox or DOSEMU2.
 
@@ -173,14 +184,18 @@ def download(game, backend, keep, refresh_metadata, redownload):
 )
 @click.option("--profile", default=None, help="Launch profile to convert (gog:// only).")
 @_backend_option
-@click.option("--force", "-f", is_flag=True, default=False, help="Overwrite an existing output dir.")
+@click.option(
+    "--force", "-f", is_flag=True, default=False, help="Overwrite an existing output dir."
+)
 @click.option(
     "--refreshconf",
     is_flag=True,
     default=False,
     help="Regenerate the config for an already-downloaded game (implies --force; skips if not downloaded).",
 )
-@click.option("--dumpconf", is_flag=True, default=False, help="Print the dosemu.conf instead of writing.")
+@click.option(
+    "--dumpconf", is_flag=True, default=False, help="Print the dosemu.conf instead of writing."
+)
 @click.option(
     "--dumpuserhook", is_flag=True, default=False, help="Print the userhook.bat instead of writing."
 )
