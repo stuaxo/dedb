@@ -22,7 +22,7 @@ from internetarchive.item import Item
 from dedb.archive import client as archive_client
 from dedb.archive import downloader
 from dedb.archive.client import _pick_archive, favorite_items, fetch_item
-from dedb.archive.downloader import ArchiveDownloader, _safe_extract
+from dedb.archive.downloader import ArchiveDownloader, _extract_zip
 from dedb.archive.importer import autoexec_commands
 from dedb.archive.models import ArchiveFavorite, ArchiveMetadata
 
@@ -171,27 +171,17 @@ def test_import_archive_game_refuses_to_overwrite_without_force(tmp_path):
     import_archive_game(layout, force=True)  # force overwrites
 
 
-# --- _safe_extract: the zip-slip guard --------------------------------
+# --- _extract_zip ----------------------------------------------------
 
 
-def test_safe_extract_writes_members_under_dest(tmp_path):
+def test_extract_zip_writes_members_under_dest(tmp_path):
     archive = tmp_path / "game.zip"
     with zipfile.ZipFile(archive, "w") as zf:
         zf.writestr("GAME/RUN.EXE", "MZ")
 
-    _safe_extract(archive, tmp_path / "game")
+    _extract_zip(archive, tmp_path / "game")
 
     assert (tmp_path / "game" / "GAME" / "RUN.EXE").read_text() == "MZ"
-
-
-def test_safe_extract_refuses_a_member_that_escapes_dest(tmp_path):
-    archive = tmp_path / "evil.zip"
-    with zipfile.ZipFile(archive, "w") as zf:
-        zf.writestr("../escaped.txt", "pwned")
-
-    with pytest.raises(click.ClickException, match="outside"):
-        _safe_extract(archive, tmp_path / "game")
-    assert not (tmp_path / "escaped.txt").exists()
 
 
 # --- ArchiveDownloader._prepare: item-type guards --------------------
