@@ -1,3 +1,13 @@
+dedb (0.0.8) unstable; urgency=medium
+
+  * Add `dedb lsarchive`: list an archive.org user's public favorites as
+    `archive:<id>` targets, filtered to MS-DOS items by default (--all
+    for every favorite, -1 for bare lines). The username comes from the
+    new `[archive]` favorites_user setting, or is prompted for and
+    optionally saved when unset.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Wed, 02 Sep 2026 11:26:00 +0100
+
 dedb (0.0.7) unstable; urgency=medium
 
   * Fix every `dedb run ... --dosemu`: stop emitting `$_video = "X"` into
