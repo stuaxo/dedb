@@ -84,9 +84,9 @@ class BackendBase:
         return sorted(p.name for p in root.iterdir() if p.is_dir())
 
     def remove(self, identifier: str, *, assume_yes: bool) -> None:
-        from . import remove_download, require_download_dir
+        from . import remove_download
 
-        remove_download(require_download_dir(self.scheme), identifier, assume_yes=assume_yes)
+        remove_download(self.layout(identifier), assume_yes=assume_yes)
 
     # --- actions -------------------------------------------------------
 

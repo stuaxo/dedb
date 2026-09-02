@@ -146,12 +146,12 @@ def test_rm_dispatches(download_dir, monkeypatch):
     seen = {}
     monkeypatch.setattr(
         "dedb.core.remove_download",
-        lambda root, name, *, assume_yes: seen.update(root=root, name=name, assume_yes=assume_yes),
+        lambda layout, *, assume_yes: seen.update(dir=layout.dir, assume_yes=assume_yes),
     )
     result = CliRunner().invoke(cli, ["rm", "gog://x", "-y"])
 
     assert result.exit_code == 0
-    assert seen == {"root": download_dir / "gog", "name": "x", "assume_yes": True}
+    assert seen == {"dir": download_dir / "gog" / "x", "assume_yes": True}
 
 
 # --- -b/--backend component form ----------------------------------
