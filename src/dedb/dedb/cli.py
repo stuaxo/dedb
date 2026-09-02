@@ -5,7 +5,7 @@ backend), plus the generic `run` / `download` / `import` / `rm` from
 
 import click
 
-from ..core import get_backends, get_download_dir, short_target
+from ..core import get_backends, short_target
 from .verbs import GENERIC_COMMANDS
 
 # Registered backends, each with a namespaced <download_dir>/<scheme>/ tree.
@@ -38,14 +38,13 @@ def _parse_backends(
 
 def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     """`{game name: [backends that have it], ...}`, each backend list in the
-    given order."""
+    given order. Uses each backend's own `local_names()` - the same view of
+    "what's downloaded" that `dedb run`'s bare-name resolution uses."""
+    registry = get_backends()
     games: dict[str, list[str]] = {}
-    for backend in backends:
-        root = get_download_dir(backend)
-        if root and root.is_dir():
-            for path in root.iterdir():
-                if path.is_dir():
-                    games.setdefault(path.name, []).append(backend)
+    for scheme in backends:
+        for name in registry[scheme].local_names():
+            games.setdefault(name, []).append(scheme)
     return games
 
 
