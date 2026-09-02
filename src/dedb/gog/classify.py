@@ -12,7 +12,7 @@ from .client import FETCH_ERRORS, OfflineError
 from .downloader import local_dosbox_status
 from .layout import GogLayout
 from .metadata import get_metadata
-from .models import OwnedGame
+from .models import GOGGame
 
 
 @dataclass
@@ -22,7 +22,7 @@ class GameStatus:
 
 
 def classify_owned_games(
-    games: Sequence[OwnedGame],
+    games: Sequence[GOGGame],
     download_dir: Path | None,
     *,
     refresh: bool = False,

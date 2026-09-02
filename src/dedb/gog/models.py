@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from ..core import short_target
 
 
-class OwnedGame(BaseModel):
+class GOGGame(BaseModel):
     gamename: str
     product_id: str
 
