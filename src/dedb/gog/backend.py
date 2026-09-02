@@ -8,7 +8,7 @@ dedb.core -> dedb.gog.backend import-light and cycle-free.
 from dataclasses import dataclass
 
 from ..core import BackendBase, Target, register_backend
-from .layout import GameLayout
+from .layout import GogLayout
 
 
 @register_backend("gog")
@@ -16,7 +16,7 @@ from .layout import GameLayout
 class GogBackend(BackendBase):
     scheme: str = "gog"
     supports_profile: bool = True
-    layout_cls = GameLayout
+    layout_cls = GogLayout
 
     def _downloader(self):
         from .downloader import GogDownloader

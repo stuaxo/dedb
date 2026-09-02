@@ -6,7 +6,7 @@
     dosemu/            dosemu.conf + userhook.bat, once converted
     dosemu_local/      DOSEMU2's own bootstrap/local dir
 
-Mirrors `dedb.gog.layout.GameLayout` without launch profiles (an item has
+Mirrors `dedb.gog.layout.GogLayout` without launch profiles (an item has
 one launch mode).
 """
 
@@ -17,7 +17,7 @@ from ..core.layout import LayoutPaths
 
 
 @dataclass(frozen=True)
-class GameLayout(LayoutPaths):
+class ArchiveLayout(LayoutPaths):
     download_dir: Path
     identifier: str
 

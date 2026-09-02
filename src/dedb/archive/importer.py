@@ -13,14 +13,14 @@ from ..core import long_target
 from ..dosbox.converter import build as build_dosbox_defaults
 from ..dosbox.models import DosemuConfig
 from ..shims.autoexec import autoexec_shims
-from .layout import GameLayout
+from .layout import ArchiveLayout
 from .models import ArchiveMetadata, GameMetadataFile
 
 DOSEMU_CONF_NAME = "dosemu.conf"
 USERHOOK_NAME = "userhook.bat"
 
 
-def load_metadata(layout: GameLayout) -> ArchiveMetadata:
+def load_metadata(layout: ArchiveLayout) -> ArchiveMetadata:
     if not layout.metadata_json.is_file():
         raise click.ClickException(
             f"No metadata.json for '{layout.identifier}' - run "
@@ -40,7 +40,7 @@ def autoexec_commands(emulator_start: str) -> list[str]:
     return commands
 
 
-def build_archive_game(layout: GameLayout) -> tuple[DosemuConfig, list[str]]:
+def build_archive_game(layout: ArchiveLayout) -> tuple[DosemuConfig, list[str]]:
     """Like `import_archive_game` but returns the content instead of writing it."""
     metadata = load_metadata(layout)
     target, _defaults_userhook = build_dosbox_defaults([])
@@ -49,7 +49,7 @@ def build_archive_game(layout: GameLayout) -> tuple[DosemuConfig, list[str]]:
 
 
 def import_archive_game(
-    layout: GameLayout, output_dir: Path | None = None, *, force: bool = False
+    layout: ArchiveLayout, output_dir: Path | None = None, *, force: bool = False
 ) -> None:
     if not layout.is_downloaded():
         raise click.ClickException(

@@ -1,6 +1,6 @@
 """Tests for dedb.core.remove_download and ensure_download_dir.
 
-remove_download takes a GameLayout; the removal safety checks it relies on
+remove_download takes a layout; the removal safety checks it relies on
 (`LayoutPaths._safe_rmtree`) are tested in test_layout. ensure_download_dir
 reads settings.download_dir, so patch dedb.core.get_settings; the temp-dir
 gate patches tempfile.gettempdir.
@@ -13,7 +13,7 @@ import pytest
 
 from dedb.core import ensure_download_dir, remove_download
 from dedb.core.settings import Settings
-from dedb.gog.layout import GameLayout
+from dedb.gog.layout import GogLayout
 
 # --- remove_download -------------------------------------------------------
 
@@ -28,29 +28,29 @@ def gog_root(tmp_path: Path) -> Path:
 
 
 def test_removes_a_single_item(gog_root: Path):
-    remove_download(GameLayout(gog_root, "doom"), assume_yes=True)
+    remove_download(GogLayout(gog_root, "doom"), assume_yes=True)
     assert not (gog_root / "doom").exists()
     assert gog_root.is_dir()  # only the item goes, not the root
 
 
 def test_missing_item_is_a_no_op(gog_root: Path, capsys):
-    remove_download(GameLayout(gog_root, "quake"), assume_yes=True)
+    remove_download(GogLayout(gog_root, "quake"), assume_yes=True)
     assert "Nothing to remove" in capsys.readouterr().out
 
 
 def test_missing_download_dir_is_a_no_op(tmp_path: Path, capsys):
-    remove_download(GameLayout(tmp_path / "downloads" / "gog", "doom"), assume_yes=True)
+    remove_download(GogLayout(tmp_path / "downloads" / "gog", "doom"), assume_yes=True)
     assert "Nothing to remove" in capsys.readouterr().out
 
 
 def test_propagates_a_safety_refusal(gog_root: Path):
     with pytest.raises(click.ClickException, match="Refusing"):
-        remove_download(GameLayout(gog_root, "doom/sub"), assume_yes=True)
+        remove_download(GogLayout(gog_root, "doom/sub"), assume_yes=True)
 
 
 def test_removes_a_stray_file_child(gog_root: Path):
     (gog_root / "notes.txt").write_text("x")
-    remove_download(GameLayout(gog_root, "notes.txt"), assume_yes=True)
+    remove_download(GogLayout(gog_root, "notes.txt"), assume_yes=True)
     assert not (gog_root / "notes.txt").exists()
 
 

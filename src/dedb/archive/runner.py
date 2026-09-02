@@ -13,10 +13,10 @@ import click
 from ..core import get_settings
 from ..gog.runner import resolve_dosbox_binary
 from .importer import autoexec_commands, import_archive_game, load_metadata
-from .layout import GameLayout
+from .layout import ArchiveLayout
 
 
-def ensure_converted(layout: GameLayout) -> Path:
+def ensure_converted(layout: ArchiveLayout) -> Path:
     """(Re)generate the DOSEMU2 config + userhook, returning the conf path.
 
     Run on every launch - cheap and deterministic - so the config never
@@ -26,7 +26,7 @@ def ensure_converted(layout: GameLayout) -> Path:
     return layout.dosemu_conf
 
 
-def run_dosbox(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
+def run_dosbox(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
     metadata = load_metadata(layout)
     binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
 
@@ -46,7 +46,7 @@ def run_dosbox(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool
     return result.returncode
 
 
-def run_dosemu(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
+def run_dosemu(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
     dosemu_conf = ensure_converted(layout)
     layout.dosemu_local.mkdir(parents=True, exist_ok=True)
 

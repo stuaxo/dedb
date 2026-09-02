@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .client import FETCH_ERRORS, OfflineError
 from .downloader import local_dosbox_status
-from .layout import GameLayout
+from .layout import GogLayout
 from .metadata import get_metadata
 from .models import OwnedGame
 
@@ -36,7 +36,7 @@ def classify_owned_games(
     status: dict[str, GameStatus] = {}
     for game in games:
         local = (
-            local_dosbox_status(GameLayout(download_dir, game.gamename)) if download_dir else None
+            local_dosbox_status(GogLayout(download_dir, game.gamename)) if download_dir else None
         )
         if local is not None:
             status[game.gamename] = GameStatus(local, "local")

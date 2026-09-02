@@ -1,12 +1,12 @@
 """Tests for dedb.core.downloader.Downloader - the download/extract
 template gog and archive share. A fake subclass records the hook calls;
-the real filesystem effects come from a real GameLayout under tmp_path.
+the real filesystem effects come from a real GogLayout under tmp_path.
 """
 
 import pytest
 
 from dedb.core.downloader import Downloader
-from dedb.gog.layout import GameLayout
+from dedb.gog.layout import GogLayout
 
 
 class FakeDownloader(Downloader):
@@ -40,7 +40,7 @@ class FakeDownloader(Downloader):
 
 @pytest.fixture
 def layout(tmp_path):
-    return GameLayout(tmp_path / "downloads" / "gog", "x")
+    return GogLayout(tmp_path / "downloads" / "gog", "x")
 
 
 def _mark_downloaded(layout, *, metadata=True):

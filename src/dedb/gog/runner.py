@@ -12,7 +12,7 @@ import click
 
 from ..core import get_settings
 from .importer import import_gog_game
-from .layout import GameLayout
+from .layout import GogLayout
 from .profiles import (
     default_profile,
     get_conf_files,
@@ -54,8 +54,8 @@ def resolve_dosbox_binary(choice: str) -> str:
     return DOSBOX_BINARIES[choice]
 
 
-def _profile_file_slug(layout: GameLayout, profile: str | None) -> str | None:
-    """The GameLayout slug (None = unsuffixed/default) a given --profile
+def _profile_file_slug(layout: GogLayout, profile: str | None) -> str | None:
+    """The GogLayout slug (None = unsuffixed/default) a given --profile
     choice maps to."""
     profiles = valid_profiles(layout.game)
     if not profiles:
@@ -66,7 +66,7 @@ def _profile_file_slug(layout: GameLayout, profile: str | None) -> str | None:
     return None if chosen is default_profile(profiles) else profile_slug(chosen)
 
 
-def ensure_converted(layout: GameLayout, profile: str | None = None) -> Path:
+def ensure_converted(layout: GogLayout, profile: str | None = None) -> Path:
     """(Re)generate layout's DOSEMU2 config(s) for the requested launch
     profile, returning the resulting conf path. profile=None picks the
     default profile. Runs on every launch - the conversion is
@@ -78,7 +78,7 @@ def ensure_converted(layout: GameLayout, profile: str | None = None) -> Path:
 
 
 def run_dosbox(
-    layout: GameLayout,
+    layout: GogLayout,
     profile: str | None = None,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
@@ -107,7 +107,7 @@ def run_dosbox(
 
 
 def run_dosemu(
-    layout: GameLayout,
+    layout: GogLayout,
     profile: str | None = None,
     extra_args: Sequence[str] = (),
     verbose: bool = False,

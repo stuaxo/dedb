@@ -9,7 +9,7 @@ from ..core import ensure_download_dir, get_download_dir
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
 from .downloader import GogDownloader
-from .layout import GameLayout
+from .layout import GogLayout
 
 
 @click.command("downloadgog")
@@ -88,7 +88,7 @@ def downloadgog(
             click.echo(f"'{gamename}' not found in your GOG library - skipping")
             continue
         downloader.ensure(
-            GameLayout(download_dir, gamename),
+            GogLayout(download_dir, gamename),
             keep=keep,
             refresh_metadata=refresh_metadata,
             redownload=redownload,
