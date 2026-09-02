@@ -1,14 +1,14 @@
 """GOG backend: `gog://<gamename>` targets.
 
-Registered into the dedb.core registry; imported by dedb.core.get_backends(). Every
-method delegates to this package's existing runner/importer/layout - the
-imports are function-local to keep dedb.core -> dedb.gog.backend import-light
-and cycle-free.
+Registered into the dedb.core registry; imported by dedb.core.get_backends().
+The runner / importer imports are function-local to keep
+dedb.core -> dedb.gog.backend import-light and cycle-free.
 """
 
 from dataclasses import dataclass
 
 from ..core import BackendBase, Target, register_backend
+from .layout import GameLayout
 
 
 @register_backend("gog")
@@ -16,24 +16,12 @@ from ..core import BackendBase, Target, register_backend
 class GogBackend(BackendBase):
     scheme: str = "gog"
     supports_profile: bool = True
+    layout_cls = GameLayout
 
-    def layout(self, identifier: str):
-        from ..core import require_download_dir
-        from .layout import GameLayout
+    def _downloader(self):
+        from .downloader import GogDownloader
 
-        return GameLayout(require_download_dir("gog"), identifier)
-
-    def ensure_downloaded(self, identifier, *, keep, refresh_metadata, redownload):
-        from ..core import ensure_download_dir
-        from .runner import ensure_downloaded
-
-        return ensure_downloaded(
-            identifier,
-            ensure_download_dir("gog"),
-            keep=keep,
-            refresh_metadata=refresh_metadata,
-            redownload=redownload,
-        )
+        return GogDownloader()
 
     def run(self, target: Target, layout, *, emulator, extra_args, verbose):
         from .runner import run_dosbox, run_dosemu

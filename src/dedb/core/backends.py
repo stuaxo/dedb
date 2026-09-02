@@ -50,12 +50,13 @@ def register_backend(scheme: str):
 
 class BackendBase:
     """Behaviour shared by every backend. Subclasses are frozen dataclasses
-    that add the ``scheme`` / ``supports_profile`` fields and override the
-    four abstract methods (``layout``, ``ensure_downloaded``, ``run``,
-    ``convert``). The rest have working defaults."""
+    that set the ``scheme`` / ``supports_profile`` fields, point ``layout_cls``
+    / ``_downloader()`` at their own classes, and override ``run`` / ``convert``
+    / ``build``. The rest have working defaults."""
 
     scheme: str
     supports_profile: bool = False
+    layout_cls: type  # the backend's LayoutPaths subclass
 
     # --- URL recognition -------------------------------------------------
 
@@ -67,8 +68,10 @@ class BackendBase:
     # --- filesystem state ----------------------------------------------
 
     def layout(self, identifier: str):
-        """The backend's GameLayout for ``identifier``."""
-        raise NotImplementedError
+        """The backend's layout for ``identifier`` (download_dir must be set)."""
+        from . import require_download_dir
+
+        return self.layout_cls(require_download_dir(self.scheme), identifier)
 
     def is_downloaded(self, identifier: str) -> bool:
         return self.layout(identifier).is_downloaded()
@@ -90,11 +93,21 @@ class BackendBase:
 
     # --- actions -------------------------------------------------------
 
+    def _downloader(self):
+        """The backend's `dedb.core.downloader.Downloader` subclass, ready to use."""
+        raise NotImplementedError
+
     def ensure_downloaded(
         self, identifier: str, *, keep: bool, refresh_metadata: bool, redownload: bool
     ):
-        """Download + extract ``identifier`` if needed; return its GameLayout."""
-        raise NotImplementedError
+        """Download + extract ``identifier`` if needed; return its layout."""
+        from . import ensure_download_dir
+
+        layout = self.layout_cls(ensure_download_dir(self.scheme), identifier)
+        self._downloader().ensure(
+            layout, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+        )
+        return layout
 
     def run(self, target: "Target", layout, *, emulator: str, extra_args, verbose: bool) -> int:
         """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu"); return the exit code."""

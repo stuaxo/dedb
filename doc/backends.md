@@ -26,11 +26,18 @@ profile).
 
 ## Adding a backend
 
-1. Create `src/dedb/<app>/backend.py`:
+1. Create `src/dedb/<app>/layout.py` - a frozen dataclass mixing in
+   `dedb.core.LayoutPaths` (see `dedb.archive.layout`), and
+   `src/dedb/<app>/downloader.py` - a `dedb.core.Downloader` subclass filling
+   `_prepare` / `_fetch` / `_extract` / `_write_metadata` / `_rm_staging`
+   (and `_post_extract` if needed).
+
+2. Create `src/dedb/<app>/backend.py`:
 
    ```python
    from dataclasses import dataclass
    from ..core import BackendBase, Target, register_backend
+   from .layout import GameLayout
 
 
    @register_backend("myscheme")
@@ -38,22 +45,23 @@ profile).
    class MyBackend(BackendBase):
        scheme: str = "myscheme"
        supports_profile: bool = False
+       layout_cls = GameLayout
 
-       def layout(self, identifier): ...
-       def ensure_downloaded(self, identifier, *, keep, refresh_metadata, redownload): ...
+       def _downloader(self): ...  # your Downloader subclass
        def run(self, target: Target, layout, *, emulator, extra_args, verbose) -> int: ...
        def convert(self, target: Target, *, output_dir=None, force=False): ...
        def build(self, target: Target): ...  # [(label, dosemu_conf_text, userhook_lines)]
    ```
 
-   `BackendBase` provides `is_downloaded`, `local_names` and `remove`. Override
+   `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `remove` and
+   `ensure_downloaded` (which drives your `Downloader`). Override
    `identifier_from_url` if the backend has its own URL form, and `dosbox_sources`
    if its games ship a `dosbox.conf`.
 
-2. Add `"dedb.<app>"` to `Settings.apps`. `get_backends()` imports
+3. Add `"dedb.<app>"` to `Settings.apps`. `get_backends()` imports
    `dedb.<app>.backend`; `dedb ls` and `DOWNLOAD_BACKENDS` pick it up.
 
-3. Keep `backend.py` cheap to import - put `runner` / `importer` imports inside
+4. Keep `backend.py` cheap to import - put `runner` / `importer` imports inside
    the methods.
 
 ## Downloading

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import click
 
 from ..core import BackendBase, Target, register_backend
+from .layout import GameLayout
 
 
 @register_backend("archive")
@@ -14,6 +15,7 @@ from ..core import BackendBase, Target, register_backend
 class ArchiveBackend(BackendBase):
     scheme: str = "archive"
     supports_profile: bool = False
+    layout_cls = GameLayout
 
     def identifier_from_url(self, url: str):
         from .client import _ITEM_URL_RE
@@ -21,23 +23,10 @@ class ArchiveBackend(BackendBase):
         match = _ITEM_URL_RE.match(url)
         return match.group(1) if match else None
 
-    def layout(self, identifier: str):
-        from ..core import require_download_dir
-        from .layout import GameLayout
+    def _downloader(self):
+        from .downloader import ArchiveDownloader
 
-        return GameLayout(require_download_dir("archive"), identifier)
-
-    def ensure_downloaded(self, identifier, *, keep, refresh_metadata, redownload):
-        from ..core import ensure_download_dir
-        from .runner import ensure_downloaded
-
-        return ensure_downloaded(
-            identifier,
-            ensure_download_dir("archive"),
-            keep=keep,
-            refresh_metadata=refresh_metadata,
-            redownload=redownload,
-        )
+        return ArchiveDownloader()
 
     def run(self, target: Target, layout, *, emulator, extra_args, verbose):
         if target.profile is not None:

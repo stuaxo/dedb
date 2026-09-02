@@ -8,7 +8,8 @@ import click
 from ..core import ensure_download_dir, get_download_dir
 from .classify import classify_owned_games
 from .client import OfflineError, owned_games
-from .downloader import download_and_extract
+from .downloader import GogDownloader
+from .layout import GameLayout
 
 
 @click.command("downloadgog")
@@ -80,20 +81,17 @@ def downloadgog(
         )
 
     click.echo(f"Using download directory: {download_dir}")
+    downloader = GogDownloader(product_ids=product_id_by_name, merge_save=merge_save)
     for gamename in targets:
         click.echo("-" * 40)
-        product_id = product_id_by_name.get(gamename)
-        if product_id is None:
+        if gamename not in product_id_by_name:
             click.echo(f"'{gamename}' not found in your GOG library - skipping")
             continue
-        download_and_extract(
-            gamename,
-            product_id,
-            download_dir,
+        downloader.ensure(
+            GameLayout(download_dir, gamename),
             keep=keep,
-            refresh=refresh_metadata,
+            refresh_metadata=refresh_metadata,
             redownload=redownload,
-            merge_save=merge_save,
         )
 
     click.echo("-" * 40)

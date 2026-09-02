@@ -22,6 +22,7 @@ from .backends import (
     resolve,
     short_target,
 )
+from .downloader import Downloader
 from .layout import LayoutPaths
 from .metadata_cache import JsonMetadataCache, OfflineError
 from .settings import (
@@ -36,6 +37,7 @@ __all__ = [
     "CONFIG_DIR",
     "SETTINGS_PATH",
     "BackendBase",
+    "Downloader",
     "JsonMetadataCache",
     "LayoutPaths",
     "OfflineError",
