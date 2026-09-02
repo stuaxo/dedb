@@ -3,7 +3,7 @@ install) into structured profile data - see GogProfile.
 """
 
 import json
-import re
+import shlex
 from pathlib import Path
 
 from .models import GogProfile
@@ -14,16 +14,18 @@ def find_game_info(extracted_dir: Path) -> Path | None:
     return matches[0] if matches else None
 
 
-def _tokenize_arguments(arguments: str) -> list[str]:
+def _split_windows_args(arguments: str) -> list[str]:
     """Split a GOG playTask arguments string into tokens, unquoting any
-    "..." segments. Not shlex: these are Windows-style paths with
-    backslashes, which posix shlex would mangle as escape sequences."""
-    tokens = re.findall(r'"[^"]*"|\S+', arguments)
-    return [t[1:-1] if t.startswith('"') and t.endswith('"') else t for t in tokens]
+    "..." segments. Non-POSIX shlex so the Windows-style backslash paths
+    inside survive (POSIX shlex would treat "\\" as an escape)."""
+    lexer = shlex.shlex(arguments, posix=False)
+    lexer.whitespace_split = True
+    lexer.commenters = ""  # '#' is an ordinary character in a path/arg
+    return [t[1:-1] if t.startswith('"') and t.endswith('"') else t for t in lexer]
 
 
 def _conf_basenames(arguments: str) -> list[str]:
-    tokens = _tokenize_arguments(arguments)
+    tokens = _split_windows_args(arguments)
     confs = []
     prev = None
     for tok in tokens:
