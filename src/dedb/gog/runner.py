@@ -5,8 +5,8 @@ converting) it first if that hasn't happened yet.
 import shlex
 import shutil
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import click
 
@@ -15,7 +15,14 @@ from .client import owned_games
 from .downloader import download_and_extract
 from .importer import import_gog_game
 from .layout import GameLayout
-from .profiles import default_profile, get_conf_files, get_working_dir, profile_slug, select_profile, valid_profiles
+from .profiles import (
+    default_profile,
+    get_conf_files,
+    get_working_dir,
+    profile_slug,
+    select_profile,
+    valid_profiles,
+)
 
 # Logical [dosbox] dosbox= choice -> actual binary name on PATH. Only
 # "dosbox" and "dosbox_staging" are tested; "dosbox_x" and "dosbox_pure"
@@ -116,7 +123,7 @@ def run_dosbox(
     try:
         result = subprocess.run(cmd, cwd=cwd)
     except FileNotFoundError:
-        raise click.ClickException(f"'{binary}' not found on PATH - install it first")
+        raise click.ClickException(f"'{binary}' not found on PATH - install it first") from None
     return result.returncode
 
 
@@ -157,5 +164,7 @@ def run_dosemu(
     try:
         result = subprocess.run(cmd)
     except FileNotFoundError:
-        raise click.ClickException("'dosemu' not found on PATH - install the dosemu2 package first")
+        raise click.ClickException(
+            "'dosemu' not found on PATH - install the dosemu2 package first"
+        ) from None
     return result.returncode

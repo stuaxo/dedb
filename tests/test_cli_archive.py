@@ -1,28 +1,25 @@
-"""Tests for `dedb lsarchive` and the archive.org favorites client.
+"""Tests for the `dedb lsarchive` CLI command.
 
-The autouse _isolate_dedb_config fixture (conftest) already points
-settings at a throwaway config dir. `lsarchive` does a function-local
-`from .client import favorite_items`, so tests patch it on the client
-module, not on dedb.archive.cli.
+Only the network call is stubbed: `internetarchive.search_items` is
+replaced with one replaying real result docs captured into
+tests/fixtures/archive/. Everything downstream - the favorites client,
+the sort, the output formatting - runs for real. The autouse
+_isolate_dedb_config fixture (conftest) points settings at a throwaway
+config dir.
 """
 
 import json
-import urllib.error
-import urllib.parse
+from pathlib import Path
 
 import pytest
+import requests
 from click.testing import CliRunner
 
 from dedb import core
-from dedb.archive import client as archive_client
-from dedb.archive.models import ArchiveFavorite
 from dedb.cli import cli
-from dedb.settings import Settings, load_settings, save_archive_favorites_user
+from dedb.settings import Settings, load_settings
 
-FAVES = [
-    ArchiveFavorite(identifier="msdos_Electro_Man_1992", title="Electro Man", year="1992"),
-    ArchiveFavorite(identifier="msdos_Zzt", title="ZZT"),
-]
+FIXTURES = Path(__file__).parent / "fixtures" / "archive"
 
 
 @pytest.fixture
@@ -34,162 +31,71 @@ def configured_user(monkeypatch):
 
 
 @pytest.fixture
-def fake_favorites(monkeypatch):
-    calls = {}
+def stub_search(monkeypatch):
+    """Replace search_items() with one recording the query it's handed and
+    replaying captured real favorites docs. Assign stub_search['result']
+    to override (an iterable, or an exception to raise)."""
+    state = {"result": None}
+    docs = json.loads((FIXTURES / "search_favorites.json").read_text())
 
-    def _fake(username, *, dos_only=True):
-        calls["username"] = username
-        calls["dos_only"] = dos_only
-        return FAVES
+    def _fake(query, *, fields=None, sorts=None):
+        state["query"] = query
+        result = state["result"]
+        if isinstance(result, Exception):
+            raise result
+        return iter(docs if result is None else result)
 
-    monkeypatch.setattr(archive_client, "favorite_items", _fake)
-    return calls
+    monkeypatch.setattr("dedb.archive.client.search_items", _fake)
+    return state
 
 
-def test_lsarchive_lists_configured_users_favorites(configured_user, fake_favorites):
+def test_lists_favorites_as_targets_with_a_title_column(configured_user, stub_search):
     result = CliRunner().invoke(cli, ["lsarchive"])
 
     assert result.exit_code == 0
-    assert fake_favorites == {"username": "someuser", "dos_only": True}
+    assert "collection:fav-someuser" in stub_search["query"]
     lines = result.output.splitlines()
-    assert lines[0].startswith("archive:msdos_Electro_Man_1992")
-    assert lines[0].endswith("Electro Man (1992)")
-    assert lines[1].startswith("archive:msdos_Zzt")
-    assert lines[1].endswith("ZZT")
+    assert lines[0] == f"{'archive:msdos_100000_Pyramid_1988':<50} $100,000 Pyramid (1988)"
+    assert len(lines) == 5  # one per captured doc
 
 
-def test_lsarchive_names_only(configured_user, fake_favorites):
+def test_names_only_drops_the_title_column(configured_user, stub_search):
     result = CliRunner().invoke(cli, ["lsarchive", "-1"])
 
-    assert result.output.splitlines() == [
-        "archive:msdos_Electro_Man_1992",
-        "archive:msdos_Zzt",
-    ]
+    assert result.output.splitlines()[0] == "archive:msdos_100000_Pyramid_1988"
+    assert all(ln.startswith("archive:") and " " not in ln for ln in result.output.splitlines())
 
 
-def test_lsarchive_all_drops_the_dos_filter(configured_user, fake_favorites):
-    CliRunner().invoke(cli, ["lsarchive", "--all"])
+def test_user_and_all_flags_reach_the_query(configured_user, stub_search):
+    CliRunner().invoke(cli, ["lsarchive", "--user", "override", "--all"])
 
-    assert fake_favorites["dos_only"] is False
-
-
-def test_lsarchive_user_flag_overrides_the_setting(configured_user, fake_favorites):
-    CliRunner().invoke(cli, ["lsarchive", "--user", "override"])
-
-    assert fake_favorites["username"] == "override"
+    assert "collection:fav-override" in stub_search["query"]
+    assert "softwarelibrary_msdos" not in stub_search["query"]  # --all drops the DOS filter
 
 
-def test_lsarchive_prompts_when_unconfigured_and_saves(fake_favorites):
+@pytest.mark.parametrize(("answer", "saved"), [("y", "prompteduser"), ("n", None)])
+def test_prompts_for_an_unconfigured_user_and_offers_to_save(stub_search, answer, saved):
     load_settings()  # write the packaged default so there's a file to edit
     core.get_settings.cache_clear()
 
-    result = CliRunner().invoke(cli, ["lsarchive"], input="prompteduser\ny\n")
+    result = CliRunner().invoke(cli, ["lsarchive"], input=f"prompteduser\n{answer}\n")
 
     assert result.exit_code == 0
-    assert fake_favorites["username"] == "prompteduser"
-    assert load_settings().archive.favorites_user == "prompteduser"
+    assert "collection:fav-prompteduser" in stub_search["query"]
+    assert load_settings().archive.favorites_user == saved
 
 
-def test_lsarchive_prompts_but_can_decline_to_save(fake_favorites):
-    load_settings()
-    core.get_settings.cache_clear()
+@pytest.mark.parametrize(
+    ("result", "match"),
+    [
+        (requests.exceptions.ConnectionError("no route to host"), "Could not reach archive.org"),
+        ([], "No favorites found"),  # empty search -> favorite_items raises LookupError
+    ],
+)
+def test_client_errors_become_exit_1_messages(configured_user, stub_search, result, match):
+    stub_search["result"] = result
 
-    result = CliRunner().invoke(cli, ["lsarchive"], input="prompteduser\nn\n")
+    outcome = CliRunner().invoke(cli, ["lsarchive"])
 
-    assert result.exit_code == 0
-    assert fake_favorites["username"] == "prompteduser"
-    assert load_settings().archive.favorites_user is None
-
-
-def test_lsarchive_reports_a_network_failure(configured_user, monkeypatch):
-    def _boom(username, *, dos_only=True):
-        raise urllib.error.URLError("no route to host")
-
-    monkeypatch.setattr(archive_client, "favorite_items", _boom)
-    result = CliRunner().invoke(cli, ["lsarchive"])
-
-    assert result.exit_code == 1
-    assert "Could not reach archive.org" in result.output
-
-
-def test_lsarchive_reports_an_empty_favorites_collection(configured_user, monkeypatch):
-    def _empty(username, *, dos_only=True):
-        raise LookupError("No favorites found for archive.org user 'someuser'")
-
-    monkeypatch.setattr(archive_client, "favorite_items", _empty)
-    result = CliRunner().invoke(cli, ["lsarchive"])
-
-    assert result.exit_code == 1
-    assert "No favorites found" in result.output
-
-
-# --- client.favorite_items -------------------------------------------------
-
-
-class _FakeResponse:
-    def __init__(self, payload):
-        self._payload = json.dumps(payload).encode()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def read(self):
-        return self._payload
-
-
-@pytest.fixture
-def capture_search(monkeypatch):
-    seen = {}
-
-    def _fake_urlopen(url, timeout=None):
-        seen["url"] = url
-        return _FakeResponse(
-            {"response": {"docs": [{"identifier": "msdos_Foo", "title": "Foo", "year": 1993}]}}
-        )
-
-    monkeypatch.setattr(archive_client.urllib.request, "urlopen", _fake_urlopen)
-    return seen
-
-
-def test_favorite_items_queries_the_fav_collection_filtered_to_dos(capture_search):
-    items = archive_client.favorite_items("bob")
-
-    query = urllib.parse.unquote_plus(capture_search["url"])
-    assert "collection:fav-bob" in query
-    assert "softwarelibrary_msdos" in query
-    assert items == [ArchiveFavorite(identifier="msdos_Foo", title="Foo", year="1993")]
-
-
-def test_favorite_items_all_omits_the_dos_collection_filter(capture_search):
-    archive_client.favorite_items("bob", dos_only=False)
-
-    query = urllib.parse.unquote_plus(capture_search["url"])
-    assert "collection:fav-bob" in query
-    assert "softwarelibrary_msdos" not in query
-
-
-def test_favorite_items_raises_lookup_error_on_no_docs(monkeypatch):
-    monkeypatch.setattr(
-        archive_client.urllib.request,
-        "urlopen",
-        lambda url, timeout=None: _FakeResponse({"response": {"docs": []}}),
-    )
-    with pytest.raises(LookupError):
-        archive_client.favorite_items("nobody")
-
-
-def test_save_archive_favorites_user_is_idempotent_and_preserves_comments():
-    load_settings()
-    save_archive_favorites_user("first")
-    save_archive_favorites_user("second")
-
-    from dedb import settings
-
-    text = settings.SETTINGS_PATH.read_text()
-    uncommented = [ln for ln in text.splitlines() if ln.strip().startswith("favorites_user")]
-    assert uncommented == ['favorites_user = "second"']
-    assert "# dedb configuration." in text  # comments preserved
-    assert load_settings().archive.favorites_user == "second"
+    assert outcome.exit_code == 1
+    assert match in outcome.output

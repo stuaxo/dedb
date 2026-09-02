@@ -1,10 +1,6 @@
-"""Click commands contributed by the archive app: `lsarchive` (list an
-archive.org user's public favorites). archive.org games are named
-`archive://<id>` and downloaded/run/converted by the generic commands
-(see dedb.verbs, dedb.archive.backend). dedb.core.get_apps() reads
-`commands`."""
-
-import urllib.error
+"""Click commands for the archive app. Games (``archive:<id>``) are
+downloaded/run/converted by the generic commands; only ``lsarchive`` is
+app-specific. `dedb.core.get_apps()` reads `commands`."""
 
 import click
 
@@ -12,9 +8,8 @@ from ..settings import SETTINGS_PATH, save_archive_favorites_user
 
 
 def _resolve_user(user: str | None) -> str:
-    """The archive.org screen name whose favorites to list: --user if
-    given, else the configured [archive] favorites_user, else prompt for
-    it and offer to save it."""
+    """The screen name to list: ``--user``, else the configured
+    ``favorites_user``, else prompt (and offer to save)."""
     if user:
         return user
 
@@ -69,29 +64,28 @@ def _resolve_user(user: str | None) -> str:
 def lsarchive(list_mode: str, user: str | None, dos_only: bool, names_only: bool) -> None:
     """List an archive.org user's favorites as `archive:<id>` targets.
 
-    The user is read from the [archive] favorites_user setting, or
-    prompted for when unset. By default only MS-DOS items are shown;
-    pass --all for every favorite.
+    The user comes from the `favorites_user` setting, or a prompt.
+    MS-DOS items only, unless --all.
     """
-    from .client import favorite_items
+    from .client import FETCH_ERRORS, favorite_items
 
     username = _resolve_user(user)
 
     try:
         items = favorite_items(username, dos_only=dos_only)
-    except urllib.error.URLError as exc:
-        raise click.ClickException(f"Could not reach archive.org: {exc}")
+    except FETCH_ERRORS as exc:
+        raise click.ClickException(f"Could not reach archive.org: {exc}") from exc
     except LookupError as exc:
-        raise click.ClickException(str(exc))
+        raise click.ClickException(str(exc)) from exc
 
     for item in items:
         if names_only:
-            click.echo(f"archive:{item.identifier}")
+            click.echo(item.target)
         else:
             label = item.title or ""
             if item.year:
                 label = f"{label} ({item.year})".strip()
-            click.echo(f"{'archive:' + item.identifier:<50} {label}".rstrip())
+            click.echo(f"{item.target:<50} {label}".rstrip())
 
 
 commands = [lsarchive]

@@ -1,30 +1,24 @@
 """Main entry point for the dedb CLI.
 
-Commands are contributed by "apps" (listed in Settings.apps, e.g.
-dedb.dosbox) and registered here flat on the root command group —
-`dedb importdosbox`, not `dedb dosbox importdosbox` — but --help still
-groups them by contributing app, the way a Django project's manage.py
-groups per-app commands.
-
-A few cross-app commands (e.g. `ls`, which spans every download backend)
-are defined here and shown under a "[dedb]" heading.
+Commands are contributed by "apps" (`Settings.apps`) and registered flat on
+the root group; --help groups them per app, Django manage.py style.
 """
 
 import click
 
+from .backends import short_target
 from .core import get_apps, get_backends, get_download_dir
 from .verbs import GENERIC_COMMANDS
 
-# Download backends `ls` knows about - each a registered backend with a
-# namespaced <download_dir>/<scheme>/ tree of one dir per downloaded game/item.
-# Sourced from the backend registry so there's a single source of truth.
+# Download backends - e.g. gog, archive - these contribute a url scheme,
+# each is stored in a subdirectory of the <download_dir> e.g.
+# <download_dir>/<scheme>/.
 DOWNLOAD_BACKENDS = tuple(get_backends())
 
 
 class AppGroupedGroup(click.Group):
-    """A click Group that lists its commands flat but formats --help output
-    grouped under an "[app]" heading per contributing app (plus a "[dedb]"
-    heading for commands defined on the root group itself)."""
+    """A click Group that lists commands flat but groups --help output
+    under an "[app]" heading per contributing app ("[dedb]" for root commands)."""
 
     def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         app_command_names = {c.name for commands in get_apps().values() for c in commands}
@@ -70,6 +64,7 @@ def _parse_backends(
             part = part.strip()
             if not part:
                 continue
+
             if part not in DOWNLOAD_BACKENDS:
                 raise click.BadParameter(
                     f"unknown backend '{part}' (choose from {', '.join(DOWNLOAD_BACKENDS)})",
@@ -84,7 +79,7 @@ def _parse_backends(
 def _downloaded_games(backends: list[str]) -> "dict[str, list[str]]":
     """`{game name: [backends that have it], ...}`, each backend list in the
     given order."""
-    games: "dict[str, list[str]]" = {}
+    games: dict[str, list[str]] = {}
     for backend in backends:
         root = get_download_dir(backend)
         if root and root.is_dir():
@@ -142,7 +137,8 @@ def list_downloads(backends: list[str], short: bool, names_only: bool, qualified
             click.echo(name)
         else:
             for backend in owners:
-                click.echo(f"{backend}:{name}" if qualified or len(owners) > 1 else name)
+                qualify = qualified or len(owners) > 1
+                click.echo(short_target(backend, name) if qualify else name)
 
 
 ROOT_COMMANDS = [list_downloads, *GENERIC_COMMANDS]

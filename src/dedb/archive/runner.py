@@ -1,14 +1,12 @@
-"""Run an archive.org item in DOSBox or DOSEMU2, downloading (and, for
-DOSEMU2, converting) it first if that hasn't happened yet. Mirrors
-dedb.gog.runner, minus the launch-profile handling GOG needs - an
-archive.org item only ever has one launch mode.
+"""Run an archive.org item in DOSBox or DOSEMU2, downloading/converting
+first if needed. Mirrors `dedb.gog.runner` without launch profiles.
 """
 
 import shlex
 import shutil
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import click
 
@@ -27,9 +25,11 @@ def ensure_downloaded(
     refresh_metadata: bool = False,
     redownload: bool = False,
 ) -> GameLayout:
-    """Download and extract identifier if it isn't already, returning its layout.
-    --redownload re-fetches it even when already present; --refreshmetadata
-    re-fetches the cached archive.org item metadata."""
+    """Download + extract the item if needed; return its layout.
+
+    :param redownload: re-fetch even if already present.
+    :param refresh_metadata: re-fetch the cached item metadata.
+    """
     layout = GameLayout(download_dir, identifier)
     if redownload or refresh_metadata or not layout.is_downloaded():
         download_and_extract(
@@ -39,11 +39,11 @@ def ensure_downloaded(
 
 
 def ensure_converted(layout: GameLayout) -> Path:
-    """(Re)generate layout's DOSEMU2 config + userhook, returning the conf
-    path. Runs on every launch - the conversion is deterministic and
-    cheap, and doing it each time keeps the config in step with the
-    installed dedb instead of lingering from whatever version first
-    downloaded the item."""
+    """(Re)generate the DOSEMU2 config + userhook, returning the conf path.
+
+    Run on every launch - cheap and deterministic - so the config never
+    lingers from an older dedb.
+    """
     import_archive_game(layout, force=True)
     return layout.dosemu_conf
 
@@ -52,8 +52,7 @@ def run_dosbox(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool
     metadata = load_metadata(layout)
     binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
 
-    # No dosbox.conf exists for archive.org items - hand DOSBox the same
-    # synthetic autoexec userhook.bat would otherwise run, as -c commands.
+    # No dosbox.conf for archive.org items - pass the synthetic autoexec as -c.
     cmd = [binary]
     for command in autoexec_commands(metadata.emulator_start):
         cmd += ["-c", command]
@@ -65,7 +64,7 @@ def run_dosbox(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool
     try:
         result = subprocess.run(cmd, cwd=layout.game)
     except FileNotFoundError:
-        raise click.ClickException(f"'{binary}' not found on PATH - install it first")
+        raise click.ClickException(f"'{binary}' not found on PATH - install it first") from None
     return result.returncode
 
 
@@ -73,9 +72,8 @@ def run_dosemu(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool
     dosemu_conf = ensure_converted(layout)
     layout.dosemu_local.mkdir(parents=True, exist_ok=True)
 
-    # DOSEMU2's boot chain (dosrc.d/4uhook.bat) auto-runs only
-    # %USERDRV%:\userhook.bat. --Fdrive_c maps C: to layout.game, so that
-    # means layout.game/userhook.bat, not anything under layout.dosemu.
+    # DOSEMU2's boot chain auto-runs only %USERDRV%:\userhook.bat, and
+    # --Fdrive_c maps C: to layout.game - so copy it there.
     shutil.copyfile(layout.userhook, layout.game / "userhook.bat")
 
     cmd = [
@@ -86,9 +84,7 @@ def run_dosemu(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool
         str(layout.dosemu_local),
         "--Fdrive_c",
         str(layout.game),
-        # userhook.bat's LREDIR calls (see dedb.shims.autoexec.mount_lredir_shim)
-        # only ever target paths under the item's own directory - permit
-        # exactly that, nothing wider.
+        # userhook.bat's LREDIR calls only target the item's own dir - permit only that.
         "-I",
         f'$_lredir_paths = "{layout.game}"',
     ]
@@ -100,5 +96,7 @@ def run_dosemu(layout: GameLayout, extra_args: Sequence[str] = (), verbose: bool
     try:
         result = subprocess.run(cmd)
     except FileNotFoundError:
-        raise click.ClickException("'dosemu' not found on PATH - install the dosemu2 package first")
+        raise click.ClickException(
+            "'dosemu' not found on PATH - install the dosemu2 package first"
+        ) from None
     return result.returncode

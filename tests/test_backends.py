@@ -11,11 +11,36 @@ import click
 import pytest
 
 from dedb.archive.backend import ArchiveBackend
-from dedb.backends import Target, resolve
+from dedb.archive.models import ArchiveFavorite
+from dedb.backends import Target, long_target, resolve, short_target
 from dedb.core import get_backends
 from dedb.gog.backend import GogBackend
+from dedb.gog.models import OwnedGame
 
 ARCHIVE_URL = "https://archive.org/details/msdos_Electro_Man_1992"
+
+
+# --- target reference formatting ----------------------------------------
+
+
+def test_short_and_long_target_spellings():
+    assert short_target("archive", "msdos_Foo") == "archive:msdos_Foo"
+    assert long_target("archive", "msdos_Foo") == "archive://msdos_Foo"
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [
+        ArchiveFavorite(identifier="msdos_Foo").target,
+        OwnedGame(gamename="tyrian_2000", product_id="1").target,
+        Target("gog", "x", None, "x").url,
+    ],
+)
+def test_model_target_references_round_trip_through_resolve(reference):
+    # Everything that formats a `<scheme>:<id>` reference must be something
+    # resolve() accepts back.
+    scheme, _, identifier = reference.partition(":")
+    assert resolve(reference) == Target(scheme, identifier.lstrip("/"), None, reference)
 
 
 # --- registry -----------------------------------------------------------

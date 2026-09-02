@@ -26,7 +26,7 @@ def get_settings() -> Settings:
 def get_apps() -> "OrderedDict[str, list[click.Command]]":
     """Resolve Settings.apps into each app's contributed click commands,
     keyed by short app name (`dedb.dosbox` -> `dosbox`) in settings order."""
-    apps: "OrderedDict[str, list[click.Command]]" = OrderedDict()
+    apps: OrderedDict[str, list[click.Command]] = OrderedDict()
     for dotted_path in get_settings().apps:
         module = import_module(f"{dotted_path}.cli")
         short_name = dotted_path.rsplit(".", 1)[-1]
@@ -50,7 +50,7 @@ def get_backends() -> "OrderedDict[str, object]":
             if exc.name != f"{dotted_path}.backend":
                 raise
 
-    backends: "OrderedDict[str, object]" = OrderedDict()
+    backends: OrderedDict[str, object] = OrderedDict()
     for dotted_path in get_settings().apps:
         short_name = dotted_path.rsplit(".", 1)[-1]
         if short_name in _REGISTRY:
@@ -115,13 +115,14 @@ _MIN_SAFE_ROOT_PARTS = 3
 
 
 def remove_download(download_root: Path, name: str, *, assume_yes: bool) -> None:
-    """Shared implementation of the `rm` command: delete one game/item's
-    whole directory tree (game files, converted config, cached
-    metadata.json, ...) under an app's downloads root, after confirming.
-    Refuses anything that doesn't resolve to a single child of the root."""
+    """Delete one downloaded game/item's directory tree, after confirming.
+
+    Refuses anything that doesn't resolve to a single child of the root.
+    """
     root = download_root.resolve()
     if len(root.parts) < _MIN_SAFE_ROOT_PARTS:
         raise click.ClickException(f"Refusing to touch '{root}' - download_dir looks misconfigured.")
+
     target = (download_root / name).resolve()
     if target.parent != root:
         raise click.ClickException(f"Refusing to remove '{name}' - not a single item under {download_root}")
@@ -129,13 +130,15 @@ def remove_download(download_root: Path, name: str, *, assume_yes: bool) -> None
     if not target.exists():
         click.echo(f"Nothing to remove for '{name}' ({target} doesn't exist)")
         return
+
     if not assume_yes:
         click.confirm(f"Remove '{name}' and everything under {target}?", abort=True)
+
     try:
         if target.is_dir():
             shutil.rmtree(target)
         else:
             target.unlink()
     except OSError as exc:
-        raise click.ClickException(f"Could not remove '{name}' ({target}): {exc}")
+        raise click.ClickException(f"Could not remove '{name}' ({target}): {exc}") from exc
     click.echo(f"Removed '{name}' ({target})")

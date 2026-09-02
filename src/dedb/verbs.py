@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-from .backends import resolve
+from .backends import long_target, resolve
 from .core import get_backends
 
 
@@ -35,7 +35,7 @@ def _resolve_game(game: str, backend: "str | None", *, profile: "str | None" = N
             raise click.UsageError(f"Unknown backend '{backend}'. Known: {', '.join(registry)}.")
         if "://" in game:
             raise click.UsageError("Give a <scheme>://<id> URL or --backend, not both.")
-        game = f"{backend}://{game}"
+        game = long_target(backend, game)
     return resolve(game, profile=profile)
 
 

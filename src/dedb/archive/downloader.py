@@ -1,12 +1,12 @@
-"""Per-item download/extract orchestration for archive.org items. See
-GameLayout for the on-disk directory structure each item gets."""
+"""Download and extract archive.org items. See `GameLayout` for the
+on-disk layout."""
 
 import shutil
-import urllib.request
 import zipfile
 from pathlib import Path
 
 import click
+from internetarchive import download as ia_download
 
 from .client import FETCH_ERRORS, NotDosItemError
 from .layout import GameLayout
@@ -15,9 +15,8 @@ from .models import ArchiveMetadata, GameMetadataFile
 
 
 def _safe_extract(zip_path: Path, dest: Path) -> None:
-    """Extract zip_path into dest, refusing any member whose resolved
-    path would land outside dest ("zip slip") rather than silently
-    writing there."""
+    """Extract zip_path into dest, refusing any member that escapes dest
+    (zip slip)."""
     dest = dest.resolve()
     with zipfile.ZipFile(zip_path) as zf:
         for member in zf.infolist():
@@ -27,9 +26,18 @@ def _safe_extract(zip_path: Path, dest: Path) -> None:
         zf.extractall(dest)
 
 
-def _download(url: str, dest: Path) -> None:
-    with urllib.request.urlopen(url, timeout=60) as resp, dest.open("wb") as f:
-        shutil.copyfileobj(resp, f)
+def _download(identifier: str, filename: str, dest_dir: Path) -> None:
+    """Fetch one file from an item into dest_dir (flat), retrying
+    transient failures."""
+    errors = ia_download(
+        identifier,
+        files=[filename],
+        destdir=str(dest_dir),
+        no_directory=True,
+        retries=3,
+    )
+    if errors:
+        raise click.ClickException(f"Could not download '{filename}' from archive.org item '{identifier}'")
 
 
 def _write_metadata_file(layout: GameLayout, metadata: ArchiveMetadata) -> None:
@@ -41,9 +49,11 @@ def _get_metadata_or_die(identifier: str, *, refresh: bool) -> ArchiveMetadata:
     try:
         return get_metadata(identifier, refresh=refresh)
     except NotDosItemError as exc:
-        raise click.ClickException(str(exc))
+        raise click.ClickException(str(exc)) from exc
     except (LookupError, *FETCH_ERRORS) as exc:
-        raise click.ClickException(f"Could not fetch archive.org metadata for '{identifier}': {exc}")
+        raise click.ClickException(
+            f"Could not fetch archive.org metadata for '{identifier}': {exc}"
+        ) from exc
 
 
 def download_and_extract(
@@ -60,8 +70,8 @@ def download_and_extract(
         print(f"Removing existing download: {identifier}")
         shutil.rmtree(layout.game, ignore_errors=True)
         shutil.rmtree(layout.download, ignore_errors=True)
-        # The converted DOSEMU2 conf is derived from the extracted files -
-        # drop it too so the next `dedb run archive://<id> --dosemu` regenerates it.
+        # Derived from the extracted files - drop it so the next --dosemu
+        # run regenerates it.
         shutil.rmtree(layout.dosemu, ignore_errors=True)
 
     if layout.is_downloaded():
@@ -85,7 +95,7 @@ def download_and_extract(
     archive_path = layout.download / metadata.download_filename
 
     print(f"Downloading: {identifier}")
-    _download(metadata.download_url, archive_path)
+    _download(identifier, metadata.download_filename, layout.download)
 
     print(f"Extracting: {identifier}")
     layout.game.mkdir(parents=True, exist_ok=True)

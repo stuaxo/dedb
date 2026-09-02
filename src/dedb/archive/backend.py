@@ -1,8 +1,5 @@
-"""archive.org backend: `archive://<identifier>` targets.
-
-Also recognises full archive.org item URLs (https://archive.org/details/<id>
-etc.) via identifier_from_url. archive.org items have no launch profiles, so
---profile is rejected. See dedb.gog.backend for the delegation pattern.
+"""archive.org backend: `archive:<id>` targets (and full item URLs via
+`identifier_from_url`). No launch profiles. See `dedb.gog.backend`.
 """
 
 from dataclasses import dataclass

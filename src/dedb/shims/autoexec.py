@@ -7,10 +7,10 @@ context if a shim needs it.
 """
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Callable
 
 SinglelineShim = Callable[[str], str]
 

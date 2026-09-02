@@ -1,18 +1,14 @@
-"""Filesystem layout for one item under <download_dir>/archive/ (see
-dedb.core.require_download_dir):
+"""Filesystem layout for one item under <download_dir>/archive/:
 
     <download_dir>/archive/<identifier>/
-        download/         the fetched .zip - deleted after extraction
-                            unless --keep
-        metadata.json      cached archive.org item metadata, under an
-                             "archive" key (see dedb.archive.models)
+        download/          the fetched .zip - deleted unless --keep
+        metadata.json      cached item metadata (see dedb.archive.models)
         game/              extracted game files
         dosemu/            dosemu.conf + userhook.bat, once converted
-        dosemu_local/      DOSEMU2's own bootstrap/local dir for this item
+        dosemu_local/      DOSEMU2's own bootstrap/local dir
 
-Mirrors dedb.gog.layout.GameLayout, minus the launch-profile support
-GOG needs - an archive.org item only ever has one launch mode
-(emulator_start), so there's nothing to suffix filenames by.
+Mirrors `dedb.gog.layout.GameLayout` without launch profiles (an item
+has one launch mode).
 """
 
 from dataclasses import dataclass
