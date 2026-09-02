@@ -1,8 +1,8 @@
 """Tests for dedb.core.backends: the backend registry and target resolution.
 
-resolve() and BackendBase reach into dedb.core with *function-local*
-imports, so tests patch the origin `dedb.core.<name>`, not a re-imported
-alias.
+resolve() / BackendBase call helpers as `<module>.<name>()`, so tests
+patch the origin - `dedb.core.settings.get_settings`,
+`dedb.core.downloads.require_download_dir` - not the `dedb.core` re-export.
 """
 
 import dataclasses
@@ -91,7 +91,7 @@ def test_run_dispatches_to_the_runner_module(monkeypatch, emulator, expected_fn)
 
 
 def test_convert_writes_via_the_import_hook_and_returns_the_dir(monkeypatch, tmp_path):
-    monkeypatch.setattr("dedb.core.require_download_dir", lambda scheme: tmp_path)
+    monkeypatch.setattr("dedb.core.downloads.require_download_dir", lambda scheme: tmp_path)
 
     seen = {}
     monkeypatch.setattr(
@@ -188,7 +188,7 @@ def local_downloads(tmp_path, monkeypatch):
     root = tmp_path / "downloads"
     for name in ("tyrian_2000", "jazz_jackrabbit_collection", "dungeon_keeper"):
         (root / "gog" / name).mkdir(parents=True)
-    monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=root))
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=root))
     return root
 
 

@@ -1,36 +1,35 @@
-"""The framework every dedb "app" (dosbox, gog, archive, ...) plugs into:
-settings, the app/backend registry built from them, the download-root
-helpers, plus the `BackendBase` contract and the `Target` / layout /
-metadata-cache building blocks (re-exported here from submodules).
+"""The framework every dedb "app" (dosbox, gog, archive, ...) plugs into.
 
-Apps import from `dedb.core`, never from each other or `settings.json`.
+This package is the app-facing surface: everything below is defined in a
+submodule and re-exported here, so apps do ``from dedb.core import X``
+and never reach into a sibling app or ``settings.json`` directly.
+
+    refs            game-reference spellings + the resolved Target
+    settings        the TOML-backed Settings models + get_settings()
+    _registry       the bare scheme -> backend dict + @register_backend
+    registry        get_apps() / get_backends() - discovery from settings
+    backends        BackendBase + resolve() / resolve_game()
+    downloads       the <download_dir> resolve/create ops + `dedb rm`
+    layout          LayoutPaths - the per-download directory tree
+    downloader      the download+extract template
+    runner          the emulator-launch helpers
+    metadata_cache  JsonMetadataCache
 """
 
-import tempfile
-from collections import OrderedDict
-from functools import lru_cache
-from importlib import import_module
-from pathlib import Path
-
-import click
-
-from .backends import (
-    BackendBase,
-    Target,
-    long_target,
-    register_backend,
-    resolve,
-    resolve_game,
-    short_target,
-)
+from ._registry import register_backend
+from .backends import BackendBase, resolve, resolve_game
 from .downloader import Downloader
+from .downloads import ensure_download_dir, remove_download, require_download_dir
 from .layout import LayoutPaths
 from .metadata_cache import JsonMetadataCache, OfflineError
+from .refs import Target, long_target, short_target
+from .registry import get_apps, get_backends
 from .runner import launch, launch_dosemu
 from .settings import (
     CONFIG_DIR,
     SETTINGS_PATH,
     Settings,
+    get_settings,
     load_settings,
     save_archive_favorites_user,
 )
@@ -61,106 +60,3 @@ __all__ = [
     "save_archive_favorites_user",
     "short_target",
 ]
-
-
-@lru_cache(maxsize=1)
-def get_settings() -> Settings:
-    return load_settings()
-
-
-def get_apps() -> "OrderedDict[str, list[click.Command]]":
-    """Resolve the installed apps into each one's contributed click commands,
-    keyed by short app name (`dedb.dosbox` -> `dosbox`). `dedb.dedb` first,
-    then Settings.apps in order."""
-    apps: OrderedDict[str, list[click.Command]] = OrderedDict()
-    for dotted_path in get_settings().app_paths():
-        module = import_module(f"{dotted_path}.cli")
-        short_name = dotted_path.rsplit(".", 1)[-1]
-        apps[short_name] = module.commands
-    return apps
-
-
-def get_backends() -> "OrderedDict[str, object]":
-    """Import each app's optional `backend` module (which self-registers via
-    dedb.core.register_backend) and return the registry, keyed by scheme
-    (== app short name) in Settings.apps order. Apps without a backend module
-    (e.g. dedb.dosbox) are skipped."""
-    from .backends import _REGISTRY
-
-    app_paths = get_settings().app_paths()
-    for dotted_path in app_paths:
-        try:
-            import_module(f"{dotted_path}.backend")
-        except ModuleNotFoundError as exc:
-            # Only swallow "there is no such backend module"; a genuine
-            # broken import *inside* an existing backend module must surface.
-            if exc.name != f"{dotted_path}.backend":
-                raise
-
-    backends: OrderedDict[str, object] = OrderedDict()
-    for dotted_path in app_paths:
-        short_name = dotted_path.rsplit(".", 1)[-1]
-        if short_name in _REGISTRY:
-            backends[short_name] = _REGISTRY[short_name]
-    return backends
-
-
-def require_download_dir(app_name: str) -> Path:
-    """The app's ``<download_dir>/<scheme>`` subdir (see
-    ``Settings.download_dir_for``), raising a ClickException when
-    [download_dir] isn't configured - for commands that can't do anything
-    without it. Doesn't check the directory exists; the download path uses
-    ensure_download_dir for that."""
-    app_dir = get_settings().download_dir_for(app_name)
-    if app_dir is None:
-        raise click.ClickException(
-            f"download_dir is not set. Add it to {SETTINGS_PATH}, e.g.:\n"
-            '  download_dir = "/path/to/downloads"'
-        )
-    return app_dir
-
-
-def ensure_download_dir(app_name: str) -> Path:
-    """require_download_dir, plus make sure the app's downloads dir exists
-    ready to write into. The per-app subdir is created whenever its parent
-    - the configured download_dir - is already there. A missing
-    download_dir itself is created only when it sits under the system temp
-    dir, a throwaway location; anywhere else a typo in the setting should
-    surface as an error rather than scatter empty trees across the disk."""
-    app_dir = require_download_dir(app_name)
-    if app_dir.is_dir():
-        return app_dir
-
-    configured = app_dir.parent  # == settings.download_dir
-    if configured.is_dir():
-        app_dir.mkdir(exist_ok=True)
-        return app_dir
-
-    tmp_root = Path(tempfile.gettempdir()).resolve()
-    resolved = app_dir.resolve()
-    if resolved == tmp_root or tmp_root in resolved.parents:
-        app_dir.mkdir(parents=True, exist_ok=True)
-        return app_dir
-
-    raise click.ClickException(
-        f"download_dir '{configured}' does not exist. Create it first "
-        f"(it's auto-created only under {tmp_root})."
-    )
-
-
-def remove_download(layout: LayoutPaths, *, assume_yes: bool) -> None:
-    """Shared implementation of `dedb rm`: delete a downloaded game/item's
-    whole directory tree, after confirming. The safety checks live in
-    `LayoutPaths._safe_rmtree`."""
-    if not layout.dir.exists():
-        click.echo(f"Nothing to remove for '{layout.dir.name}' ({layout.dir} doesn't exist)")
-        return
-    if not assume_yes:
-        click.confirm(f"Remove '{layout.dir.name}' and everything under {layout.dir}?", abort=True)
-    try:
-        layout.rm()
-    except OSError as exc:
-        raise click.ClickException(
-            f"Could not remove '{layout.dir.name}' ({layout.dir}): {exc}"
-        ) from exc
-    click.echo(f"Removed '{layout.dir.name}' ({layout.dir})")

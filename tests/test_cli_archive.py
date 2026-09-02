@@ -25,7 +25,7 @@ FIXTURES = Path(__file__).parent / "fixtures" / "archive"
 @pytest.fixture
 def configured_user(monkeypatch):
     monkeypatch.setattr(
-        "dedb.core.get_settings",
+        "dedb.core.settings.get_settings",
         lambda: Settings(archive={"favorites_user": "someuser"}),
     )
 

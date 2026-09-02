@@ -17,7 +17,7 @@ def downloads(tmp_path, monkeypatch):
     root = tmp_path / "downloads"
     for path in ("gog/alpha_game", "gog/beta_game", "archive/msdos_Zzt"):
         (root / path).mkdir(parents=True)
-    monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=root))
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=root))
     return root
 
 

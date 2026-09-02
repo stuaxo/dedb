@@ -12,7 +12,7 @@ from pathlib import Path
 
 import click
 
-from .backends import long_target
+from .refs import long_target
 
 # A download root with fewer parts than this - '/', '/home', a bare drive -
 # is almost certainly a misconfigured download_dir, not somewhere to rmtree.

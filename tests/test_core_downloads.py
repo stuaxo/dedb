@@ -1,9 +1,9 @@
-"""Tests for dedb.core.remove_download and ensure_download_dir.
+"""Tests for dedb.core.downloads: remove_download and ensure_download_dir.
 
 remove_download takes a layout; the removal safety checks it relies on
 (`LayoutPaths._safe_rmtree`) are tested in test_layout. ensure_download_dir
-reads settings.download_dir, so patch dedb.core.get_settings; the temp-dir
-gate patches tempfile.gettempdir.
+reads settings.download_dir, so patch dedb.core.settings.get_settings; the
+temp-dir gate patches tempfile.gettempdir.
 """
 
 from pathlib import Path
@@ -60,7 +60,7 @@ def test_removes_a_stray_file_child(gog_root: Path):
 @pytest.fixture
 def set_download_dir(monkeypatch):
     def _set(path: Path) -> None:
-        monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=path))
+        monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=path))
 
     return _set
 

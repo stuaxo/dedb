@@ -4,7 +4,7 @@ app-specific. `dedb.core.get_apps()` reads `commands`."""
 
 import click
 
-from ..core.settings import SETTINGS_PATH, save_archive_favorites_user
+from ..core import settings
 
 
 def _resolve_user(user: str | None) -> str:
@@ -13,9 +13,7 @@ def _resolve_user(user: str | None) -> str:
     if user:
         return user
 
-    from ..core import get_settings
-
-    configured = get_settings().archive.favorites_user
+    configured = settings.get_settings().archive.favorites_user
     if configured:
         return configured
 
@@ -23,13 +21,13 @@ def _resolve_user(user: str | None) -> str:
     if not user:
         raise click.ClickException("No username given.")
 
-    if click.confirm(f"Save this as favorites_user in {SETTINGS_PATH}?", default=True):
+    if click.confirm(f"Save this as favorites_user in {settings.SETTINGS_PATH}?", default=True):
         try:
-            save_archive_favorites_user(user)
+            settings.save_archive_favorites_user(user)
         except OSError as exc:
-            click.echo(f"Could not save to {SETTINGS_PATH}: {exc}", err=True)
+            click.echo(f"Could not save to {settings.SETTINGS_PATH}: {exc}", err=True)
         else:
-            get_settings.cache_clear()
+            settings.get_settings.cache_clear()
     return user
 
 
