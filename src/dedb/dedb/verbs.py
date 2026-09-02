@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-from ..core import get_backends, long_target, resolve
+from ..core import get_backends, resolve_game
 
 
 def _backend_option(func):
@@ -23,19 +23,6 @@ def _backend_option(func):
         metavar="SCHEME",
         help="Read GAME as a bare id for this backend, rather than a <scheme>://<id> URL.",
     )(func)
-
-
-def _resolve_game(game: str, backend: "str | None", *, profile: "str | None" = None):
-    """resolve(), honouring the -b/--backend option: `NAME -b gog` is the
-    same as `gog://NAME`."""
-    if backend is not None:
-        registry = get_backends()
-        if backend not in registry:
-            raise click.UsageError(f"Unknown backend '{backend}'. Known: {', '.join(registry)}.")
-        if "://" in game:
-            raise click.UsageError("Give a <scheme>://<id> URL or --backend, not both.")
-        game = long_target(backend, game)
-    return resolve(game, profile=profile)
 
 
 def _download_options(func):
@@ -140,7 +127,7 @@ def run(
     if needed. Arguments after `--` go straight to the emulator.
     """
     emulator = _require_one_emulator(use_dosbox, use_dosemu)
-    resolved = _resolve_game(game, backend, profile=profile)
+    resolved = resolve_game(game, backend, profile=profile)
     _run(
         resolved,
         get_backends()[resolved.scheme],
@@ -164,7 +151,7 @@ def download(game, backend, keep, refresh_metadata, redownload):
     URL), or -b <scheme> with a bare id. A bare name works only for a
     game already downloaded.
     """
-    resolved = _resolve_game(game, backend)
+    resolved = resolve_game(game, backend)
     get_backends()[resolved.scheme].ensure_downloaded(
         resolved.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
     )
@@ -200,7 +187,7 @@ def download(game, backend, keep, refresh_metadata, redownload):
 )
 def import_target(game, output_dir, profile, backend, force, refreshconf, dumpconf, dumpuserhook):
     """Create a DOSEMU2 config for a downloaded program."""
-    resolved = _resolve_game(game, backend, profile=profile)
+    resolved = resolve_game(game, backend, profile=profile)
     _do_import(
         resolved,
         get_backends()[resolved.scheme],
@@ -218,7 +205,7 @@ def import_target(game, output_dir, profile, backend, force, refreshconf, dumpco
 @click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting.")
 def rm(game, backend, yes):
     """Delete a downloaded game's whole directory tree."""
-    resolved = _resolve_game(game, backend)
+    resolved = resolve_game(game, backend)
     get_backends()[resolved.scheme].remove(resolved.identifier, assume_yes=yes)
 
 

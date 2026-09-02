@@ -20,6 +20,7 @@ from .backends import (
     long_target,
     register_backend,
     resolve,
+    resolve_game,
     short_target,
 )
 from .downloader import Downloader
@@ -59,6 +60,7 @@ __all__ = [
     "require_download_dir",
     "resolve",
     "resolve_dosbox_binary",
+    "resolve_game",
     "save_archive_favorites_user",
     "short_target",
 ]

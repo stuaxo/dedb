@@ -247,3 +247,22 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
         f"'{value}' is downloaded under multiple backends ({', '.join(found)}).\n"
         f"Disambiguate with a scheme, e.g. {long_target(found[0], value)}"
     )
+
+
+def resolve_game(
+    value: str, backend: "str | None" = None, *, profile: "str | None" = None
+) -> Target:
+    """:func:`resolve`, plus the ``-b/--backend`` shorthand used by the CLI
+    verbs: ``resolve_game("x", "gog")`` means ``resolve("gog://x")``. A
+    ``backend`` and a ``<scheme>://`` URL in ``value`` are mutually
+    exclusive. Raises ``click.UsageError`` for a bad ``--backend``."""
+    from . import get_backends
+
+    if backend is not None:
+        registry = get_backends()
+        if backend not in registry:
+            raise click.UsageError(f"Unknown backend '{backend}'. Known: {', '.join(registry)}.")
+        if "://" in value:
+            raise click.UsageError("Give a <scheme>://<id> URL or --backend, not both.")
+        value = long_target(backend, value)
+    return resolve(value, profile=profile)

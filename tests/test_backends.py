@@ -12,7 +12,7 @@ import pytest
 
 from dedb.archive.backend import ArchiveBackend
 from dedb.archive.models import ArchiveFavorite
-from dedb.core import Target, get_backends, long_target, resolve, short_target
+from dedb.core import Target, get_backends, long_target, resolve, resolve_game, short_target
 from dedb.gog.backend import GogBackend
 from dedb.gog.models import OwnedGame
 
@@ -155,6 +155,27 @@ def test_resolve_urls(value, kwargs, expected):
 def test_resolve_url_errors(value, kwargs, match):
     with pytest.raises(click.ClickException, match=match):
         resolve(value, **kwargs)
+
+
+# --- resolve_game(): the -b/--backend shorthand --------------------
+
+
+def test_resolve_game_backend_flag_is_a_scheme_prefix():
+    assert resolve_game("tyrian_2000", "gog") == resolve("gog://tyrian_2000")
+    # no --backend: plain resolve() (a scheme URL still works)
+    assert resolve_game("gog://x") == resolve("gog://x")
+
+
+@pytest.mark.parametrize(
+    ("value", "backend", "match"),
+    [
+        ("gog://x", "gog", "not both"),  # URL *and* --backend
+        ("x", "steam", "Unknown backend"),
+    ],
+)
+def test_resolve_game_backend_flag_errors(value, backend, match):
+    with pytest.raises(click.UsageError, match=match):
+        resolve_game(value, backend)
 
 
 # --- resolve(): bare names -----------------------------------------
