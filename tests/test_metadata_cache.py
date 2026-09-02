@@ -58,8 +58,6 @@ def test_entries_survive_a_new_cache_over_the_same_file(cache, tmp_path):
     cache.get("a")
     cache.get("b", 5)
 
-    reopened = MetadataCache(
-        tmp_path / "cache.json", Meta, lambda *a, **k: pytest.fail("no fetch")
-    )
+    reopened = MetadataCache(tmp_path / "cache.json", Meta, lambda *a, **k: pytest.fail("no fetch"))
     assert reopened.get("a") == Meta(key="a", n=1)
     assert reopened.get("b") == Meta(key="b", n=7)

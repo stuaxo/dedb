@@ -14,16 +14,14 @@ from . import settings
 from ._registry import _REGISTRY
 
 
-def get_apps() -> "OrderedDict[str, list]":
+def get_apps() -> dict[str, list]:
     """Resolve the installed apps into each one's contributed click commands,
     keyed by short app name (`dedb.dosbox` -> `dosbox`). `dedb.dedb` first,
     then Settings.apps in order."""
-    apps: OrderedDict[str, list] = OrderedDict()
-    for dotted_path in settings.get_settings().app_paths():
-        module = import_module(f"{dotted_path}.cli")
-        short_name = dotted_path.rsplit(".", 1)[-1]
-        apps[short_name] = module.commands
-    return apps
+    return {
+        path.split(".")[-1]: import_module(f"{path}.cli").commands
+        for path in settings.get_settings().app_paths()
+    }
 
 
 def get_backends() -> "OrderedDict[str, object]":
