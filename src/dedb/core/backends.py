@@ -81,9 +81,9 @@ class BackendBase:
     def local_names(self) -> "list[str]":
         """Names of everything downloaded under this backend, for bare-name
         target resolution."""
-        from . import get_download_dir
+        from . import get_settings
 
-        root = get_download_dir(self.scheme)
+        root = get_settings().download_dir_for(self.scheme)
         if root is None or not root.is_dir():
             return []
         return sorted(p.name for p in root.iterdir() if p.is_dir())

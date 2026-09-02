@@ -48,7 +48,6 @@ __all__ = [
     "ensure_download_dir",
     "get_apps",
     "get_backends",
-    "get_download_dir",
     "get_settings",
     "launch",
     "launch_dosemu",
@@ -64,21 +63,9 @@ __all__ = [
 ]
 
 
-# Always loaded first, ahead of Settings.apps: the cross-cutting commands
-# (run/download/import/rm/ls) that every install needs.
-_BUILTIN_APPS = ("dedb.dedb",)
-
-
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return load_settings()
-
-
-def _app_paths() -> list[str]:
-    seen = dict.fromkeys(_BUILTIN_APPS)
-    for dotted_path in get_settings().apps:
-        seen.setdefault(dotted_path)
-    return list(seen)
 
 
 def get_apps() -> "OrderedDict[str, list[click.Command]]":
@@ -86,7 +73,7 @@ def get_apps() -> "OrderedDict[str, list[click.Command]]":
     keyed by short app name (`dedb.dosbox` -> `dosbox`). `dedb.dedb` first,
     then Settings.apps in order."""
     apps: OrderedDict[str, list[click.Command]] = OrderedDict()
-    for dotted_path in _app_paths():
+    for dotted_path in get_settings().app_paths():
         module = import_module(f"{dotted_path}.cli")
         short_name = dotted_path.rsplit(".", 1)[-1]
         apps[short_name] = module.commands
@@ -100,7 +87,8 @@ def get_backends() -> "OrderedDict[str, object]":
     (e.g. dedb.dosbox) are skipped."""
     from .backends import _REGISTRY
 
-    for dotted_path in _app_paths():
+    app_paths = get_settings().app_paths()
+    for dotted_path in app_paths:
         try:
             import_module(f"{dotted_path}.backend")
         except ModuleNotFoundError as exc:
@@ -110,27 +98,20 @@ def get_backends() -> "OrderedDict[str, object]":
                 raise
 
     backends: OrderedDict[str, object] = OrderedDict()
-    for dotted_path in _app_paths():
+    for dotted_path in app_paths:
         short_name = dotted_path.rsplit(".", 1)[-1]
         if short_name in _REGISTRY:
             backends[short_name] = _REGISTRY[short_name]
     return backends
 
 
-def get_download_dir(app_name: str) -> Path | None:
-    """<download_dir>/<app_name>, or None if [download_dir] isn't configured."""
-    download_dir = get_settings().download_dir
-    if download_dir is None:
-        return None
-    return download_dir / app_name
-
-
 def require_download_dir(app_name: str) -> Path:
-    """Like get_download_dir, but raises a ClickException instead of
-    returning None when [download_dir] isn't configured - for commands
-    that can't do anything without it. Doesn't check the directory
-    exists; the download path uses ensure_download_dir for that."""
-    app_dir = get_download_dir(app_name)
+    """The app's ``<download_dir>/<scheme>`` subdir (see
+    ``Settings.download_dir_for``), raising a ClickException when
+    [download_dir] isn't configured - for commands that can't do anything
+    without it. Doesn't check the directory exists; the download path uses
+    ensure_download_dir for that."""
+    app_dir = get_settings().download_dir_for(app_name)
     if app_dir is None:
         raise click.ClickException(
             f"download_dir is not set. Add it to {SETTINGS_PATH}, e.g.:\n"

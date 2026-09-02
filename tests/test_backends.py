@@ -13,6 +13,7 @@ import pytest
 from dedb.archive.backend import ArchiveBackend
 from dedb.archive.models import ArchiveFavorite
 from dedb.core import Target, get_backends, long_target, resolve, resolve_game, short_target
+from dedb.core.settings import Settings
 from dedb.gog.backend import GogBackend
 from dedb.gog.models import OwnedGame
 
@@ -187,7 +188,7 @@ def local_downloads(tmp_path, monkeypatch):
     root = tmp_path / "downloads"
     for name in ("tyrian_2000", "jazz_jackrabbit_collection", "dungeon_keeper"):
         (root / "gog" / name).mkdir(parents=True)
-    monkeypatch.setattr("dedb.core.get_download_dir", lambda scheme: root / scheme)
+    monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=root))
     return root
 
 

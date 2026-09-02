@@ -94,6 +94,20 @@ def test_an_unknown_dosbox_choice_is_rejected_at_validation():
         DosboxSettings(dosbox="nope")
 
 
+# --- Settings.app_paths / .download_dir_for ---------------------------
+
+
+def test_app_paths_prepends_the_builtin_and_dedupes_it():
+    assert Settings().app_paths() == ["dedb.dedb", "dedb.dosbox", "dedb.gog", "dedb.archive"]
+    # a config that names dedb.dedb explicitly doesn't get it twice, order kept
+    assert Settings(apps=["dedb.gog", "dedb.dedb"]).app_paths() == ["dedb.dedb", "dedb.gog"]
+
+
+def test_download_dir_for_namespaces_by_scheme_or_is_none(tmp_path):
+    assert Settings(download_dir=None).download_dir_for("gog") is None
+    assert Settings(download_dir=tmp_path).download_dir_for("gog") == tmp_path / "gog"
+
+
 def test_a_valid_file_is_respected(tmp_path):
     settings.SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
     settings.SETTINGS_PATH.write_text(
