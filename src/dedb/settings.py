@@ -7,6 +7,7 @@ default (dedbconf.default.toml), and an unreadable or invalid file falls
 back to the built-in defaults with a warning. dedb should always start.
 """
 
+import json
 import os
 import sys
 from importlib.resources import files
@@ -40,6 +41,12 @@ class DosboxSettings(BaseModel):
     dosbox: str = "default"
 
 
+class ArchiveSettings(BaseModel):
+    # archive.org screen name whose public favorites `lsarchive` lists.
+    # When unset, `lsarchive` prompts for it and offers to save it here.
+    favorites_user: str | None = None
+
+
 class Settings(BaseModel):
     # dotted module paths, each expected to expose a `cli.commands` list -
     # mirrors Django's INSTALLED_APPS.
@@ -53,6 +60,7 @@ class Settings(BaseModel):
     # by dedb.core.require_download_dir/get_download_dir.
     download_dir: Path | None = None
     dosbox: DosboxSettings = DosboxSettings()
+    archive: ArchiveSettings = ArchiveSettings()
 
     @field_validator("download_dir", mode="before")
     @classmethod
@@ -100,3 +108,37 @@ def load_settings() -> Settings:
         # ValidationError.
         print(f"dedb: ignoring invalid {SETTINGS_PATH} ({exc}); using defaults", file=sys.stderr)
         return Settings()
+
+
+def save_archive_favorites_user(username: str) -> None:
+    """Write ``favorites_user`` into the ``[archive]`` section of the
+    on-disk config, preserving its comments and creating the file or the
+    section as needed. Raises OSError if the file can't be written."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if not SETTINGS_PATH.is_file():
+        _write_default_settings()
+
+    lines = SETTINGS_PATH.read_text(encoding="utf-8").splitlines() if SETTINGS_PATH.is_file() else []
+    # json.dumps yields a double-quoted string with the same escaping a
+    # TOML basic string uses for the characters that can appear here.
+    new_line = f"favorites_user = {json.dumps(username)}"
+
+    in_archive = False
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_archive = stripped == "[archive]"
+            continue
+        if in_archive and stripped.split("=", 1)[0].strip() == "favorites_user":
+            lines[i] = new_line
+            break
+    else:
+        if "[archive]" in (s.strip() for s in lines):
+            idx = next(i for i, s in enumerate(lines) if s.strip() == "[archive]")
+            lines.insert(idx + 1, new_line)
+        else:
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines += ["[archive]", new_line]
+
+    SETTINGS_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")

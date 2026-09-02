@@ -100,6 +100,11 @@ download_dir = "/home/stu/dos/downloads"
 # "dosbox_x" DOSBOX-testing (currently untested)
 # "dosbox_pure" DOSBOX-pure (currently untested)
 dosbox = "default"
+
+[archive]
+# archive.org screen name whose public favorites `dedb lsarchive` lists.
+# Left unset, `lsarchive` prompts for it and offers to save it here.
+favorites_user = "your-archive-org-username"
 ```
 
 
@@ -179,3 +184,19 @@ These have a URI scheme that looks like ```archive:<id>```
 You can also use:
 
 ```$ dedb run archive:msdos_Electro_Man_1992```
+
+### List a user's favorites
+
+`lsarchive` lists the public favorites of an archive.org user as
+`archive:<id>` targets, filtered to MS-DOS items by default:
+
+```sh
+$ dedb lsarchive
+archive:msdos_Commander_Keen_3_-_Keen_Must_Die_1990   Commander Keen 3 - Keen Must Die! (1990)
+archive:msdos_Electro_Man_1992                        Electro Man (1992)
+```
+
+The username comes from the `[archive]` `favorites_user` setting; if
+that isn't set you're prompted for it once and offered the chance to
+save it. Pass `--user <name>` to list someone else, `--all` to include
+non-DOS favorites, and `-1` for bare `archive:<id>` lines.

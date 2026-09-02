@@ -24,3 +24,8 @@ apps = [
 # "default" picks the first installed of dosbox_staging or dosbox. Other
 # recognised values: "dosbox", "dosbox_staging", "dosbox_x", "dosbox_pure".
 dosbox = "default"
+
+[archive]
+# archive.org screen name whose public favorites `dedb lsarchive` lists.
+# Left unset, `lsarchive` prompts for it and offers to save it here.
+# favorites_user = "your-archive-org-username"

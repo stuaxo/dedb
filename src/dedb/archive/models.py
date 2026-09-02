@@ -27,6 +27,16 @@ class ArchiveMetadata(ArchiveItemInfo):
     fetched_at: datetime
 
 
+class ArchiveFavorite(BaseModel):
+    """One entry in an archive.org user's public favorites, as returned by
+    the advancedsearch API - just enough to list and to build an
+    `archive://<identifier>` target."""
+
+    identifier: str
+    title: str | None = None
+    year: str | None = None
+
+
 class GameMetadataFile(BaseModel):
     """Schema of downloads/<identifier>/metadata.json. Namespaced by
     source, mirroring dedb.gog.models.GameMetadataFile, so other kinds

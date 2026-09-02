@@ -16,10 +16,17 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from .models import ArchiveItemInfo
+from .models import ArchiveFavorite, ArchiveItemInfo
 
 METADATA_URL = "https://archive.org/metadata/{identifier}"
 DOWNLOAD_URL = "https://archive.org/download/{identifier}/{filename}"
+SEARCH_URL = "https://archive.org/advancedsearch.php"
+
+# archive.org's DOS software collections. A favorited item keeps every
+# collection it belongs to in its (multi-valued) "collection" field, so
+# an item that is both favorited and a DOS game carries "fav-<user>" and
+# one of these - which is how favorite_items() filters to MS-DOS.
+MSDOS_COLLECTIONS = ("softwarelibrary_msdos", "softwarelibrary_msdos_games")
 
 # Errors fetch_item() can raise: network failure, malformed JSON.
 FETCH_ERRORS = (urllib.error.URLError, json.JSONDecodeError)
@@ -66,6 +73,51 @@ def _pick_archive(candidates: list[str], meta: dict) -> str:
             if name.lower() == drive_c.lower():
                 return name
     return candidates[0]
+
+
+def favorite_items(username: str, *, dos_only: bool = True, timeout: int = 20) -> list[ArchiveFavorite]:
+    """List the items in ``username``'s public favorites (the
+    ``fav-<username>`` collection archive.org creates for every account),
+    ordered by title. With dos_only (the default), restrict the query to
+    items that are also in a DOS software collection.
+    Raises urllib.error.URLError on a network failure, or LookupError if
+    archive.org reports no such user / an empty favorites collection."""
+    query = f"collection:fav-{username}"
+    if dos_only:
+        query += " AND collection:(" + " OR ".join(MSDOS_COLLECTIONS) + ")"
+
+    params = [
+        ("q", query),
+        ("fl[]", "identifier"),
+        ("fl[]", "title"),
+        ("fl[]", "year"),
+        ("sort[]", "titleSorter asc"),
+        ("rows", "1000"),
+        ("page", "1"),
+        ("output", "json"),
+    ]
+    url = f"{SEARCH_URL}?{urllib.parse.urlencode(params)}"
+    with urllib.request.urlopen(url, timeout=timeout) as resp:
+        data = json.loads(resp.read())
+
+    docs = (data.get("response") or {}).get("docs") or []
+    if not docs:
+        hint = " (does this user have any favorited MS-DOS items?)" if dos_only else ""
+        raise LookupError(f"No favorites found for archive.org user '{username}'{hint}")
+
+    def _year(doc: dict) -> str | None:
+        value = _scalar(doc.get("year"))
+        return str(value) if value is not None else None
+
+    return [
+        ArchiveFavorite(
+            identifier=doc["identifier"],
+            title=_scalar(doc.get("title")),
+            year=_year(doc),
+        )
+        for doc in docs
+        if doc.get("identifier")
+    ]
 
 
 def fetch_item(identifier: str) -> ArchiveItemInfo:
