@@ -50,7 +50,7 @@ def _scalar(value: object) -> str | None:
     return value  # type: ignore[return-value]
 
 
-def _pick_archive(candidates: list[str], meta: dict) -> str:
+def _resolve_drive_c_archive(archive_names: list[str], meta: dict) -> str:
     """Which ``emulator_ext``-matching file to mount as C:.
 
     A multi-archive item (e.g. shareware alongside registered) names it in
@@ -58,10 +58,10 @@ def _pick_archive(candidates: list[str], meta: dict) -> str:
     """
     drive_c = _scalar(meta.get("dosbox_drive_c"))
     if drive_c:
-        for name in candidates:
+        for name in archive_names:
             if name.lower() == drive_c.lower():
                 return name
-    return candidates[0]
+    return archive_names[0]
 
 
 class ArchiveClient(BaseClient):
@@ -139,10 +139,10 @@ def fetch_item(identifier: str) -> ArchiveItemInfo:
         )
 
     ext = (_scalar(meta.get("emulator_ext")) or "zip").lower()
-    candidates = [f["name"] for f in item.files if f.get("name", "").lower().endswith(f".{ext}")]
-    if not candidates:
+    archive_names = [f["name"] for f in item.files if f.get("name", "").lower().endswith(f".{ext}")]
+    if not archive_names:
         raise LookupError(f"No .{ext} file found among '{identifier}''s files")
-    filename = _pick_archive(candidates, meta)
+    filename = _resolve_drive_c_archive(archive_names, meta)
 
     return ArchiveItemInfo(
         identifier=identifier,
