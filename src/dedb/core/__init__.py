@@ -26,7 +26,7 @@ from .backends import (
 from .downloader import Downloader
 from .layout import LayoutPaths
 from .metadata_cache import JsonMetadataCache, OfflineError
-from .runner import DOSBOX_BINARIES, launch, launch_dosemu, resolve_dosbox_binary
+from .runner import launch, launch_dosemu
 from .settings import (
     CONFIG_DIR,
     SETTINGS_PATH,
@@ -37,7 +37,6 @@ from .settings import (
 
 __all__ = [
     "CONFIG_DIR",
-    "DOSBOX_BINARIES",
     "SETTINGS_PATH",
     "BackendBase",
     "Downloader",
@@ -59,7 +58,6 @@ __all__ = [
     "remove_download",
     "require_download_dir",
     "resolve",
-    "resolve_dosbox_binary",
     "resolve_game",
     "save_archive_favorites_user",
     "short_target",

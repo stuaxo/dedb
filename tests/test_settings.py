@@ -6,8 +6,15 @@ call load_settings() and inspect the result and the file it writes.
 Reach SETTINGS_PATH through the module - the fixture patches it there.
 """
 
+import pytest
+
 from dedb.core import settings
-from dedb.core.settings import Settings, load_settings, save_archive_favorites_user
+from dedb.core.settings import (
+    DosboxSettings,
+    Settings,
+    load_settings,
+    save_archive_favorites_user,
+)
 
 
 def test_missing_file_is_created_from_the_packaged_default():
@@ -46,6 +53,45 @@ def test_invalid_schema_falls_back_to_defaults_with_a_warning(capsys):
 
     assert result == Settings()
     assert "ignoring invalid" in capsys.readouterr().err
+
+
+def test_a_bad_dosbox_choice_falls_back_to_defaults_with_a_warning(capsys):
+    settings.SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    settings.SETTINGS_PATH.write_text('[dosbox]\ndosbox = "dosbox-x"\n')  # hyphen, not underscore
+
+    result = load_settings()
+
+    assert result == Settings()
+    assert "ignoring invalid" in capsys.readouterr().err
+
+
+# --- DosboxSettings.binary(): choice -> executable name ----------------
+
+
+def test_binary_maps_an_explicit_choice_straight_through():
+    assert DosboxSettings(dosbox="dosbox_x").binary() == "dosbox-x"
+
+
+def test_binary_default_probes_path_in_order(monkeypatch):
+    seen = []
+
+    def fake_which(name):
+        seen.append(name)
+        return name if name == "dosbox" else None  # only plain dosbox installed
+
+    monkeypatch.setattr(settings.shutil, "which", fake_which)
+    assert DosboxSettings().binary() == "dosbox"
+    assert seen == ["dosbox-staging", "dosbox"]  # staging tried first
+
+
+def test_binary_default_falls_back_to_dosbox_when_nothing_is_installed(monkeypatch):
+    monkeypatch.setattr(settings.shutil, "which", lambda _name: None)
+    assert DosboxSettings().binary() == "dosbox"  # so FileNotFoundError names it
+
+
+def test_an_unknown_dosbox_choice_is_rejected_at_validation():
+    with pytest.raises(ValueError, match="must be one of"):
+        DosboxSettings(dosbox="nope")
 
 
 def test_a_valid_file_is_respected(tmp_path):

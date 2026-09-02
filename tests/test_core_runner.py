@@ -1,5 +1,6 @@
 """Tests for dedb.core.runner: the launch helpers both backend runners
-share (binary resolution is exercised via the backends elsewhere)."""
+share. (Which DOSBox binary to run lives on DosboxSettings - see
+test_settings.)"""
 
 import subprocess
 

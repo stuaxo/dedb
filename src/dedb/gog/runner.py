@@ -5,7 +5,7 @@ converting) it first if that hasn't happened yet.
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..core import Target, get_settings, launch, launch_dosemu, resolve_dosbox_binary
+from ..core import Target, get_settings, launch, launch_dosemu
 from .importer import import_gog_game
 from .layout import GogLayout
 from .profiles import (
@@ -48,7 +48,7 @@ def run_dosbox(
     verbose: bool = False,
 ) -> int:
     profile = target.profile
-    binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
+    binary = get_settings().dosbox.binary()
 
     cmd = [binary]
     for conf in get_conf_files(layout.game, profile):

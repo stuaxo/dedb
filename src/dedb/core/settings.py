@@ -9,6 +9,7 @@ back to the built-in defaults with a warning. dedb should always start.
 
 import json
 import os
+import shutil
 import sys
 from importlib.resources import files
 from pathlib import Path
@@ -32,13 +33,46 @@ SETTINGS_PATH = CONFIG_DIR / "dedbconf.toml"
 DEFAULT_SETTINGS_RESOURCE = "dedbconf.default.toml"
 
 
+# Logical [dosbox] dosbox= choice -> the executable name to run. Only
+# "dosbox" and "dosbox_staging" are actually tested; "dosbox_x" /
+# "dosbox_pure" are here for people who want to try them. "default"
+# probes PATH instead - see DosboxSettings.binary.
+_DOSBOX_BINARIES = {
+    "dosbox": "dosbox",
+    "dosbox_staging": "dosbox-staging",
+    "dosbox_x": "dosbox-x",
+    "dosbox_pure": "dosbox-pure",
+}
+# "default" tries these in order; the first one on PATH wins.
+_DOSBOX_DEFAULT_PROBE = ("dosbox_staging", "dosbox")
+_DOSBOX_CHOICES = ("default", *_DOSBOX_BINARIES)
+
+
 class DosboxSettings(BaseModel):
-    # Which real DOSBox binary `dedb run <target> --dosbox` launches. "default" picks
-    # the first installed of dosbox_staging or dosbox. Other recognized
-    # values: "dosbox", "dosbox_staging", "dosbox_x", "dosbox_pure" - only
-    # "dosbox" and "dosbox_staging" have actually been tested so far. See
-    # dedb.core.runner.resolve_dosbox_binary.
+    # Which real DOSBox binary `dedb run <target> --dosbox` launches.
+    # "default" picks the first installed of dosbox_staging or dosbox;
+    # other recognised values are the keys of _DOSBOX_BINARIES.
     dosbox: str = "default"
+
+    @field_validator("dosbox")
+    @classmethod
+    def _known_choice(cls, value: str) -> str:
+        if value not in _DOSBOX_CHOICES:
+            raise ValueError(f"must be one of {', '.join(_DOSBOX_CHOICES)}, got {value!r}")
+        return value
+
+    def binary(self) -> str:
+        """The DOSBox executable name to actually run. "default" returns
+        the first of dosbox-staging / dosbox found on PATH, falling back
+        to "dosbox" so a later FileNotFoundError still names the tool
+        people know to install. The `dosbox` field is validated against
+        the known choices, so this never has to reject one."""
+        if self.dosbox != "default":
+            return _DOSBOX_BINARIES[self.dosbox]
+        for name in _DOSBOX_DEFAULT_PROBE:
+            if shutil.which(_DOSBOX_BINARIES[name]):
+                return _DOSBOX_BINARIES[name]
+        return _DOSBOX_BINARIES["dosbox"]
 
 
 class ArchiveSettings(BaseModel):

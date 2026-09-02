@@ -5,7 +5,7 @@ first if needed. Mirrors `dedb.gog.runner` without launch profiles.
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..core import Target, get_settings, launch, launch_dosemu, resolve_dosbox_binary
+from ..core import Target, get_settings, launch, launch_dosemu
 from .importer import autoexec_commands, import_archive_game, load_metadata
 from .layout import ArchiveLayout
 
@@ -29,7 +29,7 @@ def run_dosbox(
     # archive.org items have no launch profiles - `target` is unused, kept
     # only for a signature the core dispatcher shares with the gog runner.
     metadata = load_metadata(layout)
-    binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
+    binary = get_settings().dosbox.binary()
 
     # No dosbox.conf for archive.org items - pass the synthetic autoexec as -c.
     cmd = [binary]
