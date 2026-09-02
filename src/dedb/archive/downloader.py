@@ -5,10 +5,9 @@ import zipfile
 from pathlib import Path
 
 import click
-from internetarchive import download as ia_download
 
 from ..core import Downloader
-from .client import FETCH_ERRORS, NotDosItemError
+from .client import FETCH_ERRORS, ArchiveClient, NotDosItemError
 from .metadata import get_metadata
 from .models import ArchiveMetadata, GameMetadataFile
 
@@ -17,17 +16,6 @@ def _extract_zip(zip_path: Path, dest: Path) -> None:
     """Extract zip_path into dest."""
     with zipfile.ZipFile(zip_path) as zf:
         zf.extractall(dest)
-
-
-def _fetch_file(identifier: str, filename: str, dest_dir: Path) -> None:
-    """Fetch one file from an item into dest_dir (flat), retrying transient failures."""
-    errors = ia_download(
-        identifier, files=[filename], destdir=str(dest_dir), no_directory=True, retries=3
-    )
-    if errors:
-        raise click.ClickException(
-            f"Could not download '{filename}' from archive.org item '{identifier}'"
-        )
 
 
 class ArchiveDownloader(Downloader):
@@ -55,7 +43,7 @@ class ArchiveDownloader(Downloader):
 
     def _fetch(self, layout, metadata: ArchiveMetadata) -> None:
         layout.download.mkdir(parents=True, exist_ok=True)
-        _fetch_file(layout.name, metadata.download_filename, layout.download)
+        ArchiveClient().download(layout.name, metadata.download_filename, layout.download)
 
     def _extract(self, layout, metadata: ArchiveMetadata) -> None:
         _extract_zip(layout.download / metadata.download_filename, layout.game)

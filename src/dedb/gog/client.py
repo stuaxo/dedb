@@ -12,6 +12,7 @@ import sys
 import urllib.error
 import urllib.request
 import zlib
+from pathlib import Path
 
 from ..core.client import BaseClient
 from ..core.metadata_cache import (
@@ -47,8 +48,27 @@ def _log_connecting(url: str, *, verbose: bool) -> None:
 
 
 class GOGClient(BaseClient):
+    default_name = "owned"
+
     def has_default_list(self) -> bool:
         return True
+
+    def download(self, name: str, dest_dir: Path) -> None:
+        """Download one game via lgogdownloader. Raises subprocess.CalledProcessError on failure."""
+        subprocess.run(
+            [
+                "lgogdownloader",
+                "--download",
+                "--game",
+                f"^{name}$",
+                "--platform",
+                "w",
+                "--include",
+                "installers",
+            ],
+            cwd=dest_dir,
+            check=True,
+        )
 
     def get_list(
         self, name: str | None = None, *, verbose: bool = False, offline: bool = False, **kwargs

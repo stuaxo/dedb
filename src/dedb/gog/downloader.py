@@ -109,22 +109,8 @@ class GogDownloader(Downloader):
         # its own; download into a holding dir and flatten that into installer/.
         holding_dir = layout.dir / ".installer_download"
         holding_dir.mkdir(parents=True, exist_ok=True)
-        # --include installers: without this, lgogdownloader also pulls bonus
-        # content (soundtracks, wallpapers, ...), which can dwarf the installer.
-        subprocess.run(
-            [
-                "lgogdownloader",
-                "--download",
-                "--game",
-                f"^{layout.name}$",
-                "--platform",
-                "w",
-                "--include",
-                "installers",
-            ],
-            cwd=holding_dir,
-            check=True,
-        )
+
+        GOGClient().download(layout.name, holding_dir)
 
         downloaded_dir = holding_dir / layout.name
         if not downloaded_dir.is_dir():
