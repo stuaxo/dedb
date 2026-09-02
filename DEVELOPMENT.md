@@ -7,8 +7,9 @@ See [doc/backends.md](doc/backends.md) for how game-source backends
 ## Checks
 
 ```bash
-uv run ruff check .    # lint (config in pyproject.toml [tool.ruff])
-uv run pytest          # tests
+uv run ruff check .       # lint (config in pyproject.toml [tool.ruff])
+uv run ruff format .      # autoformat
+uv run pytest             # tests
 ```
 
 Both run in CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
