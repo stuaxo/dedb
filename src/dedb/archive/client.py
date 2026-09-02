@@ -12,6 +12,7 @@ import urllib.parse
 from internetarchive import get_item, search_items
 from requests.exceptions import RequestException
 
+from ..core.client import BaseClient
 from .models import ArchiveFavorite, ArchiveItemInfo
 
 DOWNLOAD_URL = "https://archive.org/download/{identifier}/{filename}"
@@ -58,6 +59,16 @@ def _pick_archive(candidates: list[str], meta: dict) -> str:
             if name.lower() == drive_c.lower():
                 return name
     return candidates[0]
+
+
+class Client(BaseClient):
+    def has_default_list(self) -> bool:
+        return False
+
+    def get_list(self, name: str | None = None, **kwargs) -> list[ArchiveFavorite]:
+        if name is None:
+            raise ValueError("username is required for archive.org favorites")
+        return favorite_items(name, **kwargs)
 
 
 def favorite_items(username: str, *, dos_only: bool = True) -> list[ArchiveFavorite]:

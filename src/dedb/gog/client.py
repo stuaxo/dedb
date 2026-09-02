@@ -13,6 +13,7 @@ import urllib.error
 import urllib.request
 import zlib
 
+from ..core.client import BaseClient
 from ..core.metadata_cache import (
     OfflineError,
 )  # re-exported: owned_games() and lsgog/classify use it
@@ -22,6 +23,7 @@ from .models import OwnedGame
 __all__ = [
     "FETCH_ERRORS",
     "OfflineError",
+    "Client",
     "classify_dependencies",
     "fetch_dependencies",
     "owned_games",
@@ -43,6 +45,14 @@ OWNED_GAMES_CACHE_PATH = CONFIG_DIR / "gog" / "owned_games_cache.json"
 def _log_connecting(url: str, *, verbose: bool) -> None:
     if verbose:
         print(f"Connecting to GOG: {url}", file=sys.stderr)
+
+
+class Client(BaseClient):
+    def has_default_list(self) -> bool:
+        return True
+
+    def get_list(self, name: str | None = None, **kwargs) -> list[OwnedGame]:
+        return owned_games(**kwargs)
 
 
 def owned_games(*, verbose: bool = False, offline: bool = False) -> list[OwnedGame]:
