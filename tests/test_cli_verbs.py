@@ -81,7 +81,6 @@ def test_run_requires_exactly_one_emulator(download_dir, spy_run):
 def test_run_accepts_a_bare_local_name(tmp_path, monkeypatch, spy_run):
     (tmp_path / "gog" / "alpha").mkdir(parents=True)
     monkeypatch.setattr("dedb.core.get_settings", lambda: Settings(download_dir=tmp_path))
-    monkeypatch.setattr("dedb.core.get_download_dir", lambda scheme: tmp_path / scheme)
 
     result = CliRunner().invoke(cli, ["run", "alpha", "--dosemu"])
 
