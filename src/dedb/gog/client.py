@@ -16,7 +16,7 @@ import zlib
 from ..core.client import BaseClient
 from ..core.metadata_cache import (
     OfflineError,
-)  # re-exported: owned_games() and lsgog/classify use it
+)  # re-exported: GOGClient and lsgog/classify use it
 from ..core.settings import CONFIG_DIR
 from .models import OwnedGame
 
@@ -26,7 +26,6 @@ __all__ = [
     "OfflineError",
     "classify_dependencies",
     "fetch_dependencies",
-    "owned_games",
 ]
 
 BUILDS_URL = "https://content-system.gog.com/products/{product_id}/os/windows/builds?generation=2"
@@ -36,7 +35,7 @@ BUILDS_URL = "https://content-system.gog.com/products/{product_id}/os/windows/bu
 # handle a lookup failing don't each repeat this tuple.
 FETCH_ERRORS = (urllib.error.URLError, LookupError, zlib.error, json.JSONDecodeError)
 
-# Cache of the last owned_games() result, so --offline has something to read
+# Cache of the last GOGClient.get_list() result, so --offline has something to read
 # instead of calling lgogdownloader (which always contacts GOG, even with
 # its own --use-cache, to check login status).
 OWNED_GAMES_CACHE_PATH = CONFIG_DIR / "gog" / "owned_games_cache.json"
@@ -51,43 +50,41 @@ class GOGClient(BaseClient):
     def has_default_list(self) -> bool:
         return True
 
-    def get_list(self, name: str | None = None, **kwargs) -> list[OwnedGame]:
-        return owned_games(**kwargs)
+    def get_list(
+        self, name: str | None = None, *, verbose: bool = False, offline: bool = False, **kwargs
+    ) -> list[OwnedGame]:
+        """Return all owned Windows-platform games. Downloads nothing, but by
+        default still contacts GOG (via lgogdownloader) on every call - this is
+        the pause `lsgog`/`downloadgog` show at startup. Pass offline=True to
+        reuse the last successful result instead, with no network access."""
+        if offline:
+            if not OWNED_GAMES_CACHE_PATH.is_file():
+                raise OfflineError(
+                    f"No cached owned-games list at {OWNED_GAMES_CACHE_PATH} yet - run once without --offline first."
+                )
+            raw = json.loads(OWNED_GAMES_CACHE_PATH.read_text())
+            return [OwnedGame.model_validate(g) for g in raw]
 
+        _log_connecting(
+            "lgogdownloader --list=json --platform w (contacts gog.com to refresh login/library)",
+            verbose=verbose,
+        )
+        result = subprocess.run(
+            ["lgogdownloader", "--list=json", "--platform", "w"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        games = json.loads(result.stdout)
+        seen: dict[str, str] = {}
+        for g in games:
+            seen[g["gamename"]] = g["product_id"]
+        owned = [OwnedGame(gamename=name, product_id=pid) for name, pid in seen.items()]
 
-def owned_games(*, verbose: bool = False, offline: bool = False) -> list[OwnedGame]:
-    """Return all owned Windows-platform games. Downloads nothing, but by
-    default still contacts GOG (via lgogdownloader) on every call - this is
-    the pause `lsgog`/`downloadgog` show at startup. Pass offline=True to
-    reuse the last successful result instead, with no network access."""
-    if offline:
-        if not OWNED_GAMES_CACHE_PATH.is_file():
-            raise OfflineError(
-                f"No cached owned-games list at {OWNED_GAMES_CACHE_PATH} yet - run once without --offline first."
-            )
-        raw = json.loads(OWNED_GAMES_CACHE_PATH.read_text())
-        return [OwnedGame.model_validate(g) for g in raw]
+        OWNED_GAMES_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        OWNED_GAMES_CACHE_PATH.write_text(json.dumps([g.model_dump(mode="json") for g in owned]))
 
-    _log_connecting(
-        "lgogdownloader --list=json --platform w (contacts gog.com to refresh login/library)",
-        verbose=verbose,
-    )
-    result = subprocess.run(
-        ["lgogdownloader", "--list=json", "--platform", "w"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    games = json.loads(result.stdout)
-    seen: dict[str, str] = {}
-    for g in games:
-        seen[g["gamename"]] = g["product_id"]
-    owned = [OwnedGame(gamename=name, product_id=pid) for name, pid in seen.items()]
-
-    OWNED_GAMES_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OWNED_GAMES_CACHE_PATH.write_text(json.dumps([g.model_dump(mode="json") for g in owned]))
-
-    return owned
+        return owned
 
 
 def fetch_dependencies(product_id: str, *, verbose: bool = False) -> list[str] | None:
