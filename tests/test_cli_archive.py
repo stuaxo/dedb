@@ -17,7 +17,7 @@ from click.testing import CliRunner
 
 from dedb import core
 from dedb.cli import cli
-from dedb.settings import Settings, load_settings
+from dedb.core.settings import Settings, load_settings
 
 FIXTURES = Path(__file__).parent / "fixtures" / "archive"
 

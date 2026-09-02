@@ -1,9 +1,9 @@
-"""Core dedb infrastructure: the settings instance, the app registry
-built from it, and the shared downloads-root helper every app's cli.py
-uses instead of managing its own download_dir setting. Anything that
-needs settings or the list of installed apps (cli.py, an app's own cli
-module, ...) should go through here rather than loading settings.json
-or importing another app's cli module directly.
+"""The framework every dedb "app" (dosbox, gog, archive, ...) plugs into:
+settings, the app/backend registry built from them, the download-root
+helpers, plus the `BackendBase` contract and the `Target` / layout /
+metadata-cache building blocks (re-exported here from submodules).
+
+Apps import from `dedb.core`, never from each other or `settings.json`.
 """
 
 import shutil
@@ -15,7 +15,52 @@ from pathlib import Path
 
 import click
 
-from .settings import SETTINGS_PATH, Settings, load_settings
+from .backends import (
+    BackendBase,
+    Target,
+    long_target,
+    register_backend,
+    resolve,
+    short_target,
+)
+from .layout import LayoutPaths
+from .metadata_cache import JsonMetadataCache, OfflineError
+from .settings import (
+    CONFIG_DIR,
+    SETTINGS_PATH,
+    Settings,
+    load_settings,
+    save_archive_favorites_user,
+)
+
+__all__ = [
+    "CONFIG_DIR",
+    "SETTINGS_PATH",
+    "BackendBase",
+    "JsonMetadataCache",
+    "LayoutPaths",
+    "OfflineError",
+    "Settings",
+    "Target",
+    "ensure_download_dir",
+    "get_apps",
+    "get_backends",
+    "get_download_dir",
+    "get_settings",
+    "load_settings",
+    "long_target",
+    "register_backend",
+    "remove_download",
+    "require_download_dir",
+    "resolve",
+    "save_archive_favorites_user",
+    "short_target",
+]
+
+
+# Always loaded first, ahead of Settings.apps: the cross-cutting commands
+# (run/download/import/rm/ls) that every install needs.
+_BUILTIN_APPS = ("dedb.dedb",)
 
 
 @lru_cache(maxsize=1)
@@ -23,11 +68,19 @@ def get_settings() -> Settings:
     return load_settings()
 
 
-def get_apps() -> "OrderedDict[str, list[click.Command]]":
-    """Resolve Settings.apps into each app's contributed click commands,
-    keyed by short app name (`dedb.dosbox` -> `dosbox`) in settings order."""
-    apps: OrderedDict[str, list[click.Command]] = OrderedDict()
+def _app_paths() -> list[str]:
+    seen = dict.fromkeys(_BUILTIN_APPS)
     for dotted_path in get_settings().apps:
+        seen.setdefault(dotted_path)
+    return list(seen)
+
+
+def get_apps() -> "OrderedDict[str, list[click.Command]]":
+    """Resolve the installed apps into each one's contributed click commands,
+    keyed by short app name (`dedb.dosbox` -> `dosbox`). `dedb.dedb` first,
+    then Settings.apps in order."""
+    apps: OrderedDict[str, list[click.Command]] = OrderedDict()
+    for dotted_path in _app_paths():
         module = import_module(f"{dotted_path}.cli")
         short_name = dotted_path.rsplit(".", 1)[-1]
         apps[short_name] = module.commands
@@ -36,12 +89,12 @@ def get_apps() -> "OrderedDict[str, list[click.Command]]":
 
 def get_backends() -> "OrderedDict[str, object]":
     """Import each app's optional `backend` module (which self-registers via
-    dedb.backends.register_backend) and return the registry, keyed by scheme
+    dedb.core.register_backend) and return the registry, keyed by scheme
     (== app short name) in Settings.apps order. Apps without a backend module
     (e.g. dedb.dosbox) are skipped."""
     from .backends import _REGISTRY
 
-    for dotted_path in get_settings().apps:
+    for dotted_path in _app_paths():
         try:
             import_module(f"{dotted_path}.backend")
         except ModuleNotFoundError as exc:
@@ -51,7 +104,7 @@ def get_backends() -> "OrderedDict[str, object]":
                 raise
 
     backends: OrderedDict[str, object] = OrderedDict()
-    for dotted_path in get_settings().apps:
+    for dotted_path in _app_paths():
         short_name = dotted_path.rsplit(".", 1)[-1]
         if short_name in _REGISTRY:
             backends[short_name] = _REGISTRY[short_name]

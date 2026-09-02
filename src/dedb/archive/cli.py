@@ -4,7 +4,7 @@ app-specific. `dedb.core.get_apps()` reads `commands`."""
 
 import click
 
-from ..settings import SETTINGS_PATH, save_archive_favorites_user
+from ..core.settings import SETTINGS_PATH, save_archive_favorites_user
 
 
 def _resolve_user(user: str | None) -> str:

@@ -10,7 +10,7 @@ URL and `-b` is an error.
 
 ## Resolving a game
 
-`dedb.backends.resolve()` turns the argument into a `Target` (backend, id,
+`dedb.core.resolve()` turns the argument into a `Target` (backend, id,
 profile).
 
 - `<scheme>:<id>` (optionally `?profile=<slug>`) - read from the registry.
@@ -30,7 +30,7 @@ profile).
 
    ```python
    from dataclasses import dataclass
-   from ..backends import BackendBase, Target, register_backend
+   from ..core import BackendBase, Target, register_backend
 
 
    @register_backend("myscheme")

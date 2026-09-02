@@ -1,11 +1,11 @@
-"""Tests for dedb.metadata_cache.JsonMetadataCache - the generic that
+"""Tests for dedb.core.metadata_cache.JsonMetadataCache - the generic that
 dedb.gog.metadata and dedb.archive.metadata are thin wrappers over.
 """
 
 import pytest
 from pydantic import BaseModel
 
-from dedb.metadata_cache import JsonMetadataCache, OfflineError
+from dedb.core.metadata_cache import JsonMetadataCache, OfflineError
 
 
 class Meta(BaseModel):

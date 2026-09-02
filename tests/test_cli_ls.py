@@ -1,14 +1,14 @@
-"""Tests for the root `dedb ls` command.
+"""Tests for the `dedb ls` command.
 
 `ls` scans <download_dir>/<backend>/ for one dir per game. `get_download_dir`
-is imported into dedb.cli, so tests patch it there (not dedb.core).
+is imported into dedb.dedb.cli, so tests patch it there (not dedb.core).
 """
 
 import pytest
 from click.testing import CliRunner
 
-from dedb import cli as cli_module
 from dedb.cli import cli
+from dedb.dedb import cli as ls_module
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def downloads(tmp_path, monkeypatch):
     root = tmp_path / "downloads"
     for path in ("gog/alpha_game", "gog/beta_game", "archive/msdos_Zzt"):
         (root / path).mkdir(parents=True)
-    monkeypatch.setattr(cli_module, "get_download_dir", lambda backend: root / backend)
+    monkeypatch.setattr(ls_module, "get_download_dir", lambda backend: root / backend)
     return root
 
 

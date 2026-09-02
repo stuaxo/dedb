@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import click
 
-from ..backends import BackendBase, Target, register_backend
+from ..core import BackendBase, Target, register_backend
 
 
 @register_backend("archive")

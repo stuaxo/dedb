@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from ..backends import short_target
+from ..core import short_target
 
 
 class OwnedGame(BaseModel):
