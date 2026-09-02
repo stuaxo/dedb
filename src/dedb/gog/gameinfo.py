@@ -3,9 +3,9 @@ install) into structured profile data - see GogProfile.
 """
 
 import json
-import shlex
 from pathlib import Path
 
+from ..shims.autoexec import split_command
 from .models import GogProfile
 
 
@@ -14,18 +14,8 @@ def find_game_info(extracted_dir: Path) -> Path | None:
     return matches[0] if matches else None
 
 
-def _split_windows_args(arguments: str) -> list[str]:
-    """Split a GOG playTask arguments string into tokens, unquoting any
-    "..." segments. Non-POSIX shlex so the Windows-style backslash paths
-    inside survive (POSIX shlex would treat "\\" as an escape)."""
-    lexer = shlex.shlex(arguments, posix=False)
-    lexer.whitespace_split = True
-    lexer.commenters = ""  # '#' is an ordinary character in a path/arg
-    return [t[1:-1] if t.startswith('"') and t.endswith('"') else t for t in lexer]
-
-
 def _conf_basenames(arguments: str) -> list[str]:
-    tokens = _split_windows_args(arguments)
+    tokens = split_command(arguments)
     confs = []
     prev = None
     for tok in tokens:

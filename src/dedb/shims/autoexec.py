@@ -15,13 +15,20 @@ from pathlib import Path
 SinglelineShim = Callable[[str], str]
 
 
+def split_command(text: str) -> list[str]:
+    """Tokenise a DOS command string: whitespace-separated, except a
+    ``"double-quoted run"`` is a single token (and is unquoted). Not
+    shlex - a backslash in a DOS path must not be read as an escape.
+    Shared with dedb.gog.gameinfo (parsing playTask arguments)."""
+    tokens = re.findall(r'"[^"]*"|\S+', text)
+    return [t[1:-1] if t.startswith('"') and t.endswith('"') else t for t in tokens]
+
+
 def _split_line(line: str) -> tuple[str, list[str]]:
-    """Split into (leading '@' or '', quote-aware tokens). Not shlex:
-    backslashes in DOS paths would be read as escapes."""
+    """Split an autoexec line into (leading '@' or '', tokens) - see
+    :func:`split_command`."""
     prefix, rest = ("@", line[1:]) if line.startswith("@") else ("", line)
-    tokens = re.findall(r'"[^"]*"|\S+', rest)
-    tokens = [t[1:-1] if t.startswith('"') and t.endswith('"') else t for t in tokens]
-    return prefix, tokens
+    return prefix, split_command(rest)
 
 
 def choice_shim(line: str) -> str:

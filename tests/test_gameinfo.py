@@ -9,7 +9,8 @@ import json
 
 import pytest
 
-from dedb.gog.gameinfo import _conf_basenames, _split_windows_args, parse_profiles
+from dedb.gog.gameinfo import _conf_basenames, parse_profiles
+from dedb.shims.autoexec import split_command
 
 
 @pytest.mark.parametrize(
@@ -26,8 +27,8 @@ from dedb.gog.gameinfo import _conf_basenames, _split_windows_args, parse_profil
         ("has#hash inside", ["has#hash", "inside"]),  # '#' is not a comment
     ],
 )
-def test_split_windows_args_keeps_backslashes_and_unquotes(arguments, expected):
-    assert _split_windows_args(arguments) == expected
+def test_split_command_keeps_backslashes_and_unquotes(arguments, expected):
+    assert split_command(arguments) == expected
 
 
 def test_conf_basenames_takes_the_file_after_each_conf_flag():
