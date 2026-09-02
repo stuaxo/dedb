@@ -10,7 +10,7 @@ import click
 from ..core import Downloader
 from ..dosbox.parser import parse_dosbox_confs
 from ..shims.autoexec import resolve_mounts
-from .client import FETCH_ERRORS, Client
+from .client import FETCH_ERRORS, GOGClient
 from .gameinfo import parse_profiles
 from .layout import GogLayout
 from .metadata import get_metadata
@@ -96,7 +96,7 @@ class GogDownloader(Downloader):
         if self._product_ids is not None:
             product_id = self._product_ids.get(layout.name)
         else:
-            client = Client()
+            client = GOGClient()
             product_id = next(
                 (g.product_id for g in client.get_list() if g.gamename == layout.name), None
             )

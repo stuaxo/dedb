@@ -7,7 +7,7 @@ import click
 
 from ..core import ensure_download_dir, get_settings
 from .classify import classify_owned_games
-from .client import Client, OfflineError
+from .client import GOGClient, OfflineError
 from .downloader import GogDownloader
 from .layout import GogLayout
 
@@ -67,7 +67,7 @@ def downloadgog(
     """
     download_dir = ensure_download_dir("gog")
 
-    client = Client()
+    client = GOGClient()
     games = client.get_list()
     product_id_by_name = {g.gamename: g.product_id for g in games}
 
@@ -143,7 +143,7 @@ def lsgog(
         raise click.UsageError("--offline and --refreshmetadata can't be used together.")
 
     try:
-        client = Client()
+        client = GOGClient()
         games = sorted(client.get_list(verbose=verbose, offline=offline), key=lambda g: g.gamename)
     except OfflineError as exc:
         raise click.ClickException(str(exc)) from exc

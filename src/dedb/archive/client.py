@@ -61,7 +61,7 @@ def _pick_archive(candidates: list[str], meta: dict) -> str:
     return candidates[0]
 
 
-class Client(BaseClient):
+class ArchiveClient(BaseClient):
     def has_default_list(self) -> bool:
         return False
 

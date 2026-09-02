@@ -22,8 +22,8 @@ from .models import OwnedGame
 
 __all__ = [
     "FETCH_ERRORS",
+    "GOGClient",
     "OfflineError",
-    "Client",
     "classify_dependencies",
     "fetch_dependencies",
     "owned_games",
@@ -47,7 +47,7 @@ def _log_connecting(url: str, *, verbose: bool) -> None:
         print(f"Connecting to GOG: {url}", file=sys.stderr)
 
 
-class Client(BaseClient):
+class GOGClient(BaseClient):
     def has_default_list(self) -> bool:
         return True
 

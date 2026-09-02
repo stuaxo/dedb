@@ -65,10 +65,10 @@ def lsarchive(list_mode: str, user: str | None, dos_only: bool, names_only: bool
     The user comes from the `favorites_user` setting, or a prompt.
     MS-DOS items only, unless --all.
     """
-    from .client import FETCH_ERRORS, Client
+    from .client import FETCH_ERRORS, ArchiveClient
 
     username = _resolve_user(user)
-    client = Client()
+    client = ArchiveClient()
 
     try:
         items = client.get_list(username, dos_only=dos_only)
