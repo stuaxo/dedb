@@ -144,6 +144,14 @@ class Severity(Enum):
     UNSUPPORTED = "unsupported"
 
 
+# Most severe first - the order active_workarounds() flattens its lists in,
+# and the order the `dosboxconf --issues` report groups by.
+SEVERITY_ORDER: tuple[Severity, ...] = (
+    Severity.UNSUPPORTED,
+    Severity.PARTIALLY_SUPPORTED,
+    Severity.SUPPORTED,
+)
+
 # One-line gloss on each severity, shown after the heading in the
 # verbose (`--issues -v`) report.
 SEVERITY_BLURB: dict[Severity, str] = {
