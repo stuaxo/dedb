@@ -60,6 +60,51 @@ def test_backends_are_frozen_dataclasses_carrying_their_flags():
         gog.scheme = "nope"
 
 
+# --- BackendBase.run / .convert templates ----------------------------
+
+
+@pytest.mark.parametrize(
+    ("emulator", "expected_fn"),
+    [("dosbox", "run_dosbox"), ("dosemu", "run_dosemu")],
+)
+def test_run_dispatches_to_the_runner_module(monkeypatch, emulator, expected_fn):
+    import dedb.gog.runner as gog_runner
+
+    seen = {}
+
+    def _record(name):
+        def _fn(*args):
+            seen["call"] = (name, args)
+            return 7
+
+        return _fn
+
+    for name in ("run_dosbox", "run_dosemu"):
+        monkeypatch.setattr(gog_runner, name, _record(name))
+
+    target = Target("gog", "x", "server", "gog://x?profile=server")
+    rc = GogBackend().run(target, "LAYOUT", emulator=emulator, extra_args=["-fs"], verbose=True)
+
+    assert rc == 7
+    assert seen["call"] == (expected_fn, ("LAYOUT", target, ["-fs"], True))
+
+
+def test_convert_writes_via_the_import_hook_and_returns_the_dir(monkeypatch, tmp_path):
+    monkeypatch.setattr("dedb.core.require_download_dir", lambda scheme: tmp_path)
+
+    seen = {}
+    monkeypatch.setattr(
+        "dedb.archive.importer.import_archive_game",
+        lambda layout, output_dir, *, force: seen.update(name=layout.name, force=force),
+    )
+
+    target = Target("archive", "msdos_X", None, "archive://msdos_X")
+    dest = ArchiveBackend().convert(target, force=True)
+
+    assert seen == {"name": "msdos_X", "force": True}
+    assert dest == tmp_path / "msdos_X" / "dosemu"
+
+
 # --- identifier_from_url ---------------------------------------------
 
 

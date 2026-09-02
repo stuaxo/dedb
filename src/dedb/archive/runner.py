@@ -5,7 +5,7 @@ first if needed. Mirrors `dedb.gog.runner` without launch profiles.
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..core import get_settings, launch, launch_dosemu, resolve_dosbox_binary
+from ..core import Target, get_settings, launch, launch_dosemu, resolve_dosbox_binary
 from .importer import autoexec_commands, import_archive_game, load_metadata
 from .layout import ArchiveLayout
 
@@ -20,7 +20,14 @@ def ensure_converted(layout: ArchiveLayout) -> Path:
     return layout.dosemu_conf
 
 
-def run_dosbox(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
+def run_dosbox(
+    layout: ArchiveLayout,
+    target: Target,
+    extra_args: Sequence[str] = (),
+    verbose: bool = False,
+) -> int:
+    # archive.org items have no launch profiles - `target` is unused, kept
+    # only for a signature the core dispatcher shares with the gog runner.
     metadata = load_metadata(layout)
     binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
 
@@ -38,7 +45,12 @@ def run_dosbox(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: b
     )
 
 
-def run_dosemu(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
+def run_dosemu(
+    layout: ArchiveLayout,
+    target: Target,
+    extra_args: Sequence[str] = (),
+    verbose: bool = False,
+) -> int:
     return launch_dosemu(
         layout,
         dosemu_conf=ensure_converted(layout),

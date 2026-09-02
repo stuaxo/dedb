@@ -5,7 +5,7 @@ converting) it first if that hasn't happened yet.
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..core import get_settings, launch, launch_dosemu, resolve_dosbox_binary
+from ..core import Target, get_settings, launch, launch_dosemu, resolve_dosbox_binary
 from .importer import import_gog_game
 from .layout import GogLayout
 from .profiles import (
@@ -43,10 +43,11 @@ def ensure_converted(layout: GogLayout, profile: str | None = None) -> Path:
 
 def run_dosbox(
     layout: GogLayout,
-    profile: str | None = None,
+    target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
 ) -> int:
+    profile = target.profile
     binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
 
     cmd = [binary]
@@ -68,10 +69,11 @@ def run_dosbox(
 
 def run_dosemu(
     layout: GogLayout,
-    profile: str | None = None,
+    target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
 ) -> int:
+    profile = target.profile
     return launch_dosemu(
         layout,
         dosemu_conf=ensure_converted(layout, profile),
