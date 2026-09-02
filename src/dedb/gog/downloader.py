@@ -161,6 +161,3 @@ class GogDownloader(Downloader):
         profiles = parse_profiles(layout.game)
         metadata_file = GameMetadataFile(gog=metadata.model_copy(update={"profiles": profiles}))
         layout.metadata_json.write_text(metadata_file.model_dump_json(indent=2))
-
-    def _rm_staging(self, layout: GogLayout) -> None:
-        layout.rm_installer()

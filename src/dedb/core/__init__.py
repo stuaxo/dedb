@@ -20,11 +20,13 @@ from .backends import (
     long_target,
     register_backend,
     resolve,
+    resolve_game,
     short_target,
 )
 from .downloader import Downloader
 from .layout import LayoutPaths
 from .metadata_cache import JsonMetadataCache, OfflineError
+from .runner import launch, launch_dosemu
 from .settings import (
     CONFIG_DIR,
     SETTINGS_PATH,
@@ -48,12 +50,15 @@ __all__ = [
     "get_backends",
     "get_download_dir",
     "get_settings",
+    "launch",
+    "launch_dosemu",
     "load_settings",
     "long_target",
     "register_backend",
     "remove_download",
     "require_download_dir",
     "resolve",
+    "resolve_game",
     "save_archive_favorites_user",
     "short_target",
 ]

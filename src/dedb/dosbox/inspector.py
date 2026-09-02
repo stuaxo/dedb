@@ -2,19 +2,15 @@
 
 from collections.abc import Sequence
 from pathlib import Path
-from unittest.util import safe_repr
 
 from ..shims.autoexec import (
     SEVERITY_BLURB,
     SEVERITY_HEADING,
+    SEVERITY_ORDER,
     AutoexecIssue,
-    Severity,
     diagnose_autoexec,
 )
 from .parser import parse_dosbox_confs
-
-# Most severe first, matching active_workarounds()' pipeline order.
-_SEVERITY_ORDER = (Severity.UNSUPPORTED, Severity.PARTIALLY_SUPPORTED, Severity.SUPPORTED)
 
 
 def _format_section(title: str, options: dict) -> str:
@@ -32,27 +28,24 @@ def _format_autoexec(commands: Sequence[str]) -> str:
 def _format_issues(issues: Sequence[AutoexecIssue], *, verbose: bool = False) -> str:
     """Render diagnose_autoexec()'s findings.
 
-    Default: one block per severity band, laid out the way
-    unittest.TestCase.assertSetEqual prints a set difference - a heading,
-    then the triggered workaround names one compact repr() per line
-    (unittest.util.safe_repr). verbose additionally lists every offending
-    autoexec line and what it is rewritten to.
+    Default: one block per severity band - a heading, then one triggered
+    workaround name per line (repr()'d, one per line, the way a set diff
+    reads). verbose additionally lists every offending autoexec line and
+    what it is rewritten to.
     """
     lines = ["[issues]"]
     if not issues:
         lines.append("(none)")
         return "\n".join(lines)
 
-    for severity in _SEVERITY_ORDER:
+    for severity in SEVERITY_ORDER:
         in_band = [issue for issue in issues if issue.severity is severity]
         if not in_band:
             continue
 
         if not verbose:
             lines.append(SEVERITY_HEADING[severity])
-            lines.extend(
-                safe_repr(name, short=True) for name in sorted({i.workaround for i in in_band})
-            )
+            lines.extend(repr(name) for name in sorted({i.workaround for i in in_band}))
             continue
 
         lines.append(f"{severity.value} ({SEVERITY_BLURB[severity]}):")

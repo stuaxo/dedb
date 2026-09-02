@@ -13,17 +13,9 @@ from .metadata import get_metadata
 from .models import ArchiveMetadata, GameMetadataFile
 
 
-def _safe_extract(zip_path: Path, dest: Path) -> None:
-    """Extract zip_path into dest, refusing any member that escapes dest
-    (zip slip)."""
-    dest = dest.resolve()
+def _extract_zip(zip_path: Path, dest: Path) -> None:
+    """Extract zip_path into dest."""
     with zipfile.ZipFile(zip_path) as zf:
-        for member in zf.infolist():
-            target = (dest / member.filename).resolve()
-            if not target.is_relative_to(dest):
-                raise click.ClickException(
-                    f"Refusing to extract '{member.filename}' outside {dest}"
-                )
         zf.extractall(dest)
 
 
@@ -66,12 +58,9 @@ class ArchiveDownloader(Downloader):
         _fetch_file(layout.name, metadata.download_filename, layout.download)
 
     def _extract(self, layout, metadata: ArchiveMetadata) -> None:
-        _safe_extract(layout.download / metadata.download_filename, layout.game)
+        _extract_zip(layout.download / metadata.download_filename, layout.game)
 
     def _write_metadata(self, layout, metadata: ArchiveMetadata, *, refresh: bool) -> None:
         layout.metadata_json.write_text(
             GameMetadataFile(archive=metadata).model_dump_json(indent=2)
         )
-
-    def _rm_staging(self, layout) -> None:
-        layout.rm_download()

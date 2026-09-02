@@ -141,10 +141,9 @@ def dosboxconf(
     if backend is not None or (len(sources) == 1 and "://" in sources[0]):
         if len(sources) != 1:
             raise click.UsageError("Pass a single game when using a scheme or --backend.")
-        from ..core import get_backends
-        from ..dedb.verbs import _resolve_game
+        from ..core import get_backends, resolve_game
 
-        game = _resolve_game(sources[0], backend, profile=profile)
+        game = resolve_game(sources[0], backend, profile=profile)
         conf_files, working_dir = get_backends()[game.scheme].dosbox_sources(game)
     else:
         conf_files = [_existing_conf(source) for source in sources]

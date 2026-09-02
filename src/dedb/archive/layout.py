@@ -27,11 +27,10 @@ class ArchiveLayout(LayoutPaths):
 
     @property
     def download(self) -> Path:
+        """The fetched .zip - `staging`."""
         return self.dir / "download"
 
-    def rm_download(self) -> None:
-        """Delete the fetched .zip."""
-        self._safe_rmtree(self.download)
+    staging = download
 
     @property
     def userhook(self) -> Path:

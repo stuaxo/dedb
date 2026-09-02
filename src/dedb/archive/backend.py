@@ -4,8 +4,6 @@
 
 from dataclasses import dataclass
 
-import click
-
 from ..core import BackendBase, Target, register_backend
 from .layout import ArchiveLayout
 
@@ -16,6 +14,7 @@ class ArchiveBackend(BackendBase):
     scheme: str = "archive"
     supports_profile: bool = False
     layout_cls = ArchiveLayout
+    runner_module = "dedb.archive.runner"
 
     def identifier_from_url(self, url: str):
         from .client import _ITEM_URL_RE
@@ -28,20 +27,10 @@ class ArchiveBackend(BackendBase):
 
         return ArchiveDownloader()
 
-    def run(self, target: Target, layout, *, emulator, extra_args, verbose):
-        if target.profile is not None:
-            raise click.ClickException("archive:// targets don't support --profile.")
-        from .runner import run_dosbox, run_dosemu
-
-        launch = run_dosbox if emulator == "dosbox" else run_dosemu
-        return launch(layout, extra_args, verbose)
-
-    def convert(self, target: Target, *, output_dir=None, force=False):
+    def _import(self, layout, target: Target, output_dir, *, force):
         from .importer import import_archive_game
 
-        layout = self.layout(target.identifier)
         import_archive_game(layout, output_dir, force=force)
-        return output_dir or layout.dosemu
 
     def build(self, target: Target):
         from .importer import build_archive_game

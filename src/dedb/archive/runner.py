@@ -2,16 +2,10 @@
 first if needed. Mirrors `dedb.gog.runner` without launch profiles.
 """
 
-import shlex
-import shutil
-import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
-import click
-
-from ..core import get_settings
-from ..gog.runner import resolve_dosbox_binary
+from ..core import Target, get_settings, launch, launch_dosemu
 from .importer import autoexec_commands, import_archive_game, load_metadata
 from .layout import ArchiveLayout
 
@@ -26,9 +20,16 @@ def ensure_converted(layout: ArchiveLayout) -> Path:
     return layout.dosemu_conf
 
 
-def run_dosbox(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
+def run_dosbox(
+    layout: ArchiveLayout,
+    target: Target,
+    extra_args: Sequence[str] = (),
+    verbose: bool = False,
+) -> int:
+    # archive.org items have no launch profiles - `target` is unused, kept
+    # only for a signature the core dispatcher shares with the gog runner.
     metadata = load_metadata(layout)
-    binary = resolve_dosbox_binary(get_settings().dosbox.dosbox)
+    binary = get_settings().dosbox.get_dosbox_binary()
 
     # No dosbox.conf for archive.org items - pass the synthetic autoexec as -c.
     cmd = [binary]
@@ -36,45 +37,24 @@ def run_dosbox(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: b
         cmd += ["-c", command]
     cmd += extra_args
 
-    if verbose:
-        click.echo(f"$ cd {shlex.quote(str(layout.game))} && {shlex.join(cmd)}")
-
-    try:
-        result = subprocess.run(cmd, cwd=layout.game)
-    except FileNotFoundError:
-        raise click.ClickException(f"'{binary}' not found on PATH - install it first") from None
-    return result.returncode
+    return launch(
+        cmd,
+        cwd=layout.game,
+        missing_hint=f"'{binary}' not found on PATH - install it first",
+        verbose=verbose,
+    )
 
 
-def run_dosemu(layout: ArchiveLayout, extra_args: Sequence[str] = (), verbose: bool = False) -> int:
-    dosemu_conf = ensure_converted(layout)
-    layout.dosemu_local.mkdir(parents=True, exist_ok=True)
-
-    # DOSEMU2's boot chain auto-runs only %USERDRV%:\userhook.bat, and
-    # --Fdrive_c maps C: to layout.game - so copy it there.
-    shutil.copyfile(layout.userhook, layout.game / "userhook.bat")
-
-    cmd = [
-        "dosemu",
-        "-f",
-        str(dosemu_conf),
-        "--Flocal_dir",
-        str(layout.dosemu_local),
-        "--Fdrive_c",
-        str(layout.game),
-        # userhook.bat's LREDIR calls only target the item's own dir - permit only that.
-        "-I",
-        f'$_lredir_paths = "{layout.game}"',
-    ]
-    cmd += extra_args
-
-    if verbose:
-        click.echo(f"$ {shlex.join(cmd)}")
-
-    try:
-        result = subprocess.run(cmd)
-    except FileNotFoundError:
-        raise click.ClickException(
-            "'dosemu' not found on PATH - install the dosemu2 package first"
-        ) from None
-    return result.returncode
+def run_dosemu(
+    layout: ArchiveLayout,
+    target: Target,
+    extra_args: Sequence[str] = (),
+    verbose: bool = False,
+) -> int:
+    return launch_dosemu(
+        layout,
+        dosemu_conf=ensure_converted(layout),
+        userhook_src=layout.userhook,
+        extra_args=extra_args,
+        verbose=verbose,
+    )

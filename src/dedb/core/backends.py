@@ -17,6 +17,7 @@ stays cycle-free and cheap.
 
 import difflib
 from dataclasses import dataclass
+from importlib import import_module
 from urllib.parse import parse_qs, urlparse
 
 import click
@@ -51,12 +52,13 @@ def register_backend(scheme: str):
 class BackendBase:
     """Behaviour shared by every backend. Subclasses are frozen dataclasses
     that set the ``scheme`` / ``supports_profile`` fields, point ``layout_cls``
-    / ``_downloader()`` at their own classes, and override ``run`` / ``convert``
-    / ``build``. The rest have working defaults."""
+    / ``runner_module`` / ``_downloader()`` at their own code, and fill the
+    ``_import`` / ``build`` hooks. The rest have working defaults."""
 
     scheme: str
     supports_profile: bool = False
     layout_cls: type  # the backend's LayoutPaths subclass
+    runner_module: str  # dotted path to the backend's runner (run_dosbox/run_dosemu)
 
     # --- URL recognition -------------------------------------------------
 
@@ -110,12 +112,22 @@ class BackendBase:
         return layout
 
     def run(self, target: "Target", layout, *, emulator: str, extra_args, verbose: bool) -> int:
-        """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu"); return the exit code."""
-        raise NotImplementedError
+        """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu") via the
+        backend's ``runner_module``; return the exit code."""
+        runner = import_module(self.runner_module)
+        launch = runner.run_dosbox if emulator == "dosbox" else runner.run_dosemu
+        return launch(layout, target, extra_args, verbose)
 
     def convert(self, target: "Target", *, output_dir=None, force: bool = False):
         """Convert an already-downloaded ``target`` to DOSEMU2 config(s);
         return the directory they were written to."""
+        layout = self.layout(target.identifier)
+        self._import(layout, target, output_dir, force=force)
+        return output_dir or layout.dosemu
+
+    def _import(self, layout, target: "Target", output_dir, *, force: bool) -> None:
+        """Write ``layout``'s DOSEMU2 config(s) into ``output_dir`` (or, when
+        None, the layout's own ``dosemu/`` dir). Backend-specific."""
         raise NotImplementedError
 
     def build(self, target: "Target") -> "list[tuple[str, str, list[str]]]":
@@ -235,3 +247,22 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
         f"'{value}' is downloaded under multiple backends ({', '.join(found)}).\n"
         f"Disambiguate with a scheme, e.g. {long_target(found[0], value)}"
     )
+
+
+def resolve_game(
+    value: str, backend: "str | None" = None, *, profile: "str | None" = None
+) -> Target:
+    """:func:`resolve`, plus the ``-b/--backend`` shorthand used by the CLI
+    verbs: ``resolve_game("x", "gog")`` means ``resolve("gog://x")``. A
+    ``backend`` and a ``<scheme>://`` URL in ``value`` are mutually
+    exclusive. Raises ``click.UsageError`` for a bad ``--backend``."""
+    from . import get_backends
+
+    if backend is not None:
+        registry = get_backends()
+        if backend not in registry:
+            raise click.UsageError(f"Unknown backend '{backend}'. Known: {', '.join(registry)}.")
+        if "://" in value:
+            raise click.UsageError("Give a <scheme>://<id> URL or --backend, not both.")
+        value = long_target(backend, value)
+    return resolve(value, profile=profile)
