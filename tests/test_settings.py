@@ -6,10 +6,8 @@ call load_settings() and inspect the result and the file it writes.
 Reach SETTINGS_PATH through the module - the fixture patches it there.
 """
 
-import pytest
-
 from dedb import settings
-from dedb.settings import Settings, load_settings
+from dedb.settings import Settings, load_settings, save_archive_favorites_user
 
 
 def test_missing_file_is_created_from_the_packaged_default():
@@ -67,6 +65,18 @@ def test_archive_favorites_user_defaults_to_none_and_is_read_when_set():
 
     settings.SETTINGS_PATH.write_text('[archive]\nfavorites_user = "someone"\n')
     assert load_settings().archive.favorites_user == "someone"
+
+
+def test_save_archive_favorites_user_is_idempotent_and_preserves_comments():
+    load_settings()  # write the packaged default, comments and all
+    save_archive_favorites_user("first")
+    save_archive_favorites_user("second")
+
+    text = settings.SETTINGS_PATH.read_text()
+    written = [ln for ln in text.splitlines() if ln.strip().startswith("favorites_user")]
+    assert written == ['favorites_user = "second"']  # replaced, not appended
+    assert "# dedb configuration." in text  # packaged comments survived
+    assert load_settings().archive.favorites_user == "second"
 
 
 def test_download_dir_expands_a_leading_tilde(monkeypatch, tmp_path):

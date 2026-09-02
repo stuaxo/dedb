@@ -7,6 +7,7 @@ from pathlib import Path
 
 import click
 
+from ..backends import long_target
 from ..dosbox.converter import build as build_dosbox
 from ..dosbox.converter import convert as convert_dosbox
 from ..dosbox.models import DosemuConfig
@@ -43,7 +44,7 @@ def _resolve_targets(
     if not layout.is_downloaded():
         raise click.ClickException(
             f"'{layout.gamename}' hasn't been downloaded yet. "
-            f"Run `dedb download gog://{layout.gamename}` first."
+            f"Run `dedb download {long_target('gog', layout.gamename)}` first."
         )
 
     profiles = valid_profiles(layout.game)

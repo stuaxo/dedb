@@ -3,8 +3,6 @@ ensure_converted() regenerates the config on every launch (rather than
 only when it is missing), so a config never lingers from an older dedb.
 """
 
-import pytest
-
 from dedb.archive import runner as archive_runner
 from dedb.archive.layout import GameLayout as ArchiveLayout
 from dedb.gog import runner as gog_runner

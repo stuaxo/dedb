@@ -21,6 +21,17 @@ from urllib.parse import parse_qs, urlparse
 
 import click
 
+
+def short_target(scheme: str, identifier: str) -> str:
+    """``<scheme>:<identifier>`` - the compact game reference."""
+    return f"{scheme}:{identifier}"
+
+
+def long_target(scheme: str, identifier: str) -> str:
+    """``<scheme>://<identifier>`` - the URL-style game reference."""
+    return f"{scheme}://{identifier}"
+
+
 # scheme -> backend instance. Populated by register_backend, which each
 # dedb.<app>.backend module calls at import time.
 _REGISTRY: "dict[str, BackendBase]" = {}
@@ -117,7 +128,7 @@ class Target:
 
     @property
     def url(self) -> str:
-        base = f"{self.scheme}://{self.identifier}"
+        base = long_target(self.scheme, self.identifier)
         return f"{base}?profile={self.profile}" if self.profile else base
 
 
@@ -200,11 +211,11 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
             lines.append(f"Did you mean:  dedb run {suggestion}")
         lines.append(
             "Otherwise prefix it with a scheme, e.g. "
-            + " or ".join(f"{s}://{value}" for s in schemes)
+            + " or ".join(long_target(s, value) for s in schemes)
         )
         raise click.ClickException("\n".join(lines))
     found = sorted(backend.scheme for backend in hits)
     raise click.ClickException(
         f"'{value}' is downloaded under multiple backends ({', '.join(found)}).\n"
-        f"Disambiguate with a scheme, e.g. {found[0]}://{value}"
+        f"Disambiguate with a scheme, e.g. {long_target(found[0], value)}"
     )

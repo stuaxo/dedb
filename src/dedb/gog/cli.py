@@ -140,7 +140,7 @@ def lsgog(
     try:
         games = sorted(owned_games(verbose=verbose, offline=offline), key=lambda g: g.gamename)
     except OfflineError as exc:
-        raise click.ClickException(str(exc))
+        raise click.ClickException(str(exc)) from exc
 
     # Bare names + --all needs no classification; every other combination
     # does, either to filter to dos_only or to show it in the listing.
@@ -154,13 +154,13 @@ def lsgog(
 
     if names_only:
         for game in games:
-            click.echo(f"gog:{game.gamename}")
+            click.echo(game.target)
         return
 
     for game in games:
         s = status[game.gamename]
         detail = s.source if dos_only else f"{s.classification} ({s.source})"
-        click.echo(f"{'gog:' + game.gamename:<50} {detail}")
+        click.echo(f"{game.target:<50} {detail}")
 
 
 commands = [downloadgog, lsgog]

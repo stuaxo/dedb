@@ -1,7 +1,7 @@
 """Aspect inspection of dosbox.conf files, backing the dosboxconf command."""
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 from unittest.util import safe_repr
 
 from ..shims.autoexec import (

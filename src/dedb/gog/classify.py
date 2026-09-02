@@ -4,9 +4,9 @@ metadata. Shared by `lsgog` and `downloadgog` - `downloadgog --all`
 downloads whatever this classifies as "dosbox".
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 from .client import FETCH_ERRORS, OfflineError
 from .downloader import local_dosbox_status

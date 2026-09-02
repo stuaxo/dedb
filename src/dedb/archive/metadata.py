@@ -1,11 +1,7 @@
-"""archive.org item metadata, cached globally by identifier.
+"""archive.org item metadata, cached by identifier under the XDG config dir.
 
-Mirrors dedb.gog.metadata: an item we've already looked up - including
-one we decided not to download - never needs re-fetching from
-archive.org on a later run, unless refresh=True is passed. Lives
-alongside dedbconf.toml under the XDG config directory, not in the
-downloads folder, since it covers every item we've ever looked at, not
-just downloaded ones.
+Mirrors `dedb.gog.metadata`: covers every item ever looked up (not just
+downloaded ones), so a lookup never repeats unless ``refresh=True``.
 """
 
 import json
@@ -24,9 +20,7 @@ class OfflineError(RuntimeError):
 
 
 class MetadataCache:
-    """On-disk JSON cache of archive.org item metadata. Loaded once, on
-    first use, and kept in memory after that. Written back only when a
-    new entry is added."""
+    """On-disk JSON cache of item metadata; loaded lazily, written on new entries."""
 
     def __init__(self, path: Path = CACHE_PATH):
         self.path = path
@@ -42,11 +36,10 @@ class MetadataCache:
         return self._entries
 
     def get(self, identifier: str, *, refresh: bool = False, offline: bool = False) -> ArchiveMetadata:
-        """Return cached metadata for an item, fetching it from
-        archive.org and caching it if this is the first time we've seen
-        it, or if refresh is requested. offline=True raises
-        OfflineError instead of fetching when there's no cached entry
-        to fall back on."""
+        """Cached metadata for an item, fetching + caching on a miss or ``refresh``.
+
+        :raises OfflineError: ``offline`` is set and there's no cached entry.
+        """
         entries = self._entries_loaded()
         if not refresh and identifier in entries:
             return entries[identifier]

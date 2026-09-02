@@ -1,8 +1,8 @@
 """Parsing logic for dosbox.conf files."""
 
 import configparser
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 
 def parse_dosbox_conf(path: Path) -> tuple[dict, list[str]]:

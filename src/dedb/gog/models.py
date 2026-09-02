@@ -4,10 +4,17 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from ..backends import short_target
+
 
 class OwnedGame(BaseModel):
     gamename: str
     product_id: str
+
+    @property
+    def target(self) -> str:
+        """`gog:<gamename>`."""
+        return short_target("gog", self.gamename)
 
 
 class GogProfile(BaseModel):

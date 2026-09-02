@@ -4,11 +4,12 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from ..backends import short_target
+
 
 class ArchiveItemInfo(BaseModel):
-    """DOS-emulation fields resolved from one archive.org item's
-    metadata (see dedb.archive.client.fetch_item), plus which of its
-    files to download. Not yet cached - see ArchiveMetadata."""
+    """One item's DOS-emulation fields plus the file to download (see
+    `fetch_item`). Uncached - see `ArchiveMetadata`."""
 
     identifier: str
     title: str | None = None
@@ -21,25 +22,25 @@ class ArchiveItemInfo(BaseModel):
 
 
 class ArchiveMetadata(ArchiveItemInfo):
-    """ArchiveItemInfo plus when it was fetched - the cached form,
-    copied into each downloaded item's metadata.json."""
+    """`ArchiveItemInfo` plus `fetched_at` - the cached/persisted form."""
 
     fetched_at: datetime
 
 
 class ArchiveFavorite(BaseModel):
-    """One entry in an archive.org user's public favorites, as returned by
-    the advancedsearch API - just enough to list and to build an
-    `archive://<identifier>` target."""
+    """One entry in an archive.org user's public favorites."""
 
     identifier: str
     title: str | None = None
     year: str | None = None
 
+    @property
+    def target(self) -> str:
+        """`archive:<identifier>`."""
+        return short_target("archive", self.identifier)
+
 
 class GameMetadataFile(BaseModel):
-    """Schema of downloads/<identifier>/metadata.json. Namespaced by
-    source, mirroring dedb.gog.models.GameMetadataFile, so other kinds
-    of per-game data can live alongside "archive" later."""
+    """Schema of downloads/<identifier>/metadata.json, namespaced by source."""
 
     archive: ArchiveMetadata

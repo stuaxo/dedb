@@ -1,5 +1,6 @@
 from pydantic import AliasPath
 
+
 def assert_validation_aliases_are_structural(model_cls):
     """Asserts that the validation_alias of every field in model_cls, if present,
     is an AliasPath that ends with the exact name of the field.
