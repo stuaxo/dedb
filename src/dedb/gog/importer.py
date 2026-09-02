@@ -7,7 +7,6 @@ from pathlib import Path
 
 import click
 
-from ..core import long_target
 from ..dosbox.converter import build as build_dosbox
 from ..dosbox.converter import convert as convert_dosbox
 from ..dosbox.models import DosemuConfig
@@ -41,11 +40,7 @@ def _resolve_targets(
     [(label, conf_files, working_dir), ...]), label being "default" or a
     slug. Raises if the game isn't downloaded, or a requested profile
     doesn't exist."""
-    if not layout.is_downloaded():
-        raise click.ClickException(
-            f"'{layout.gamename}' hasn't been downloaded yet. "
-            f"Run `dedb download {long_target('gog', layout.gamename)}` first."
-        )
+    layout.require_downloaded("gog")
 
     profiles = valid_profiles(layout.game)
 

@@ -34,6 +34,16 @@ def test_is_downloaded_needs_a_non_empty_game_dir(tmp_path):
     assert layout.is_downloaded()
 
 
+def test_require_downloaded_points_at_the_download_command(tmp_path):
+    layout = ArchiveLayout(tmp_path, "msdos_x")
+    with pytest.raises(click.ClickException, match=r"dedb download archive://msdos_x"):
+        layout.require_downloaded("archive")
+
+    layout.game.mkdir(parents=True)
+    (layout.game / "GAME.EXE").write_text("MZ")
+    layout.require_downloaded("archive")  # now a no-op
+
+
 def test_gog_profile_suffixed_paths(tmp_path):
     layout = GogLayout(tmp_path, "doom")
     assert layout.installer == layout.dir / "installer"

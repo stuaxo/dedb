@@ -12,6 +12,8 @@ from pathlib import Path
 
 import click
 
+from .backends import long_target
+
 # A download root with fewer parts than this - '/', '/home', a bare drive -
 # is almost certainly a misconfigured download_dir, not somewhere to rmtree.
 _MIN_SAFE_ROOT_PARTS = 3
@@ -49,6 +51,16 @@ class LayoutPaths:
 
     def is_downloaded(self) -> bool:
         return self.game.is_dir() and any(self.game.iterdir())
+
+    def require_downloaded(self, scheme: str) -> None:
+        """Raise a ``click.ClickException`` pointing at ``dedb download``
+        unless the game's files have already been extracted. ``scheme`` is
+        the owning backend's, only needed to spell the download command."""
+        if not self.is_downloaded():
+            raise click.ClickException(
+                f"'{self.name}' hasn't been downloaded yet. "
+                f"Run `dedb download {long_target(scheme, self.name)}` first."
+            )
 
     def is_converted(self) -> bool:
         return self.dosemu_conf.is_file()

@@ -49,11 +49,7 @@ def build_archive_game(layout: ArchiveLayout) -> tuple[DosemuConfig, list[str]]:
 def import_archive_game(
     layout: ArchiveLayout, output_dir: Path | None = None, *, force: bool = False
 ) -> None:
-    if not layout.is_downloaded():
-        raise click.ClickException(
-            f"'{layout.identifier}' hasn't been downloaded yet. Run "
-            f"`dedb download {long_target('archive', layout.identifier)}` first."
-        )
+    layout.require_downloaded("archive")
 
     target, userhook_lines = build_archive_game(layout)
     write_outputs(output_dir or layout.dosemu, target, userhook_lines, force=force)
