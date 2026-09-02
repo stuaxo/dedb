@@ -36,7 +36,7 @@ DEFAULT_SETTINGS_RESOURCE = "dedbconf.default.toml"
 # Logical [dosbox] dosbox= choice -> the executable name to run. Only
 # "dosbox" and "dosbox_staging" are actually tested; "dosbox_x" /
 # "dosbox_pure" are here for people who want to try them. "default"
-# probes PATH instead - see DosboxSettings.binary.
+# probes PATH instead - see DosboxSettings.get_dosbox_binary.
 _DOSBOX_BINARIES = {
     "dosbox": "dosbox",
     "dosbox_staging": "dosbox-staging",
@@ -61,7 +61,7 @@ class DosboxSettings(BaseModel):
             raise ValueError(f"must be one of {', '.join(_DOSBOX_CHOICES)}, got {value!r}")
         return value
 
-    def binary(self) -> str:
+    def get_dosbox_binary(self) -> str:
         """The DOSBox executable name to actually run. "default" returns
         the first of dosbox-staging / dosbox found on PATH, falling back
         to "dosbox" so a later FileNotFoundError still names the tool

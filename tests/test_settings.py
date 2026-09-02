@@ -65,14 +65,14 @@ def test_a_bad_dosbox_choice_falls_back_to_defaults_with_a_warning(capsys):
     assert "ignoring invalid" in capsys.readouterr().err
 
 
-# --- DosboxSettings.binary(): choice -> executable name ----------------
+# --- DosboxSettings.get_dosbox_binary(): choice -> executable name -----
 
 
-def test_binary_maps_an_explicit_choice_straight_through():
-    assert DosboxSettings(dosbox="dosbox_x").binary() == "dosbox-x"
+def test_get_dosbox_binary_maps_an_explicit_choice_straight_through():
+    assert DosboxSettings(dosbox="dosbox_x").get_dosbox_binary() == "dosbox-x"
 
 
-def test_binary_default_probes_path_in_order(monkeypatch):
+def test_get_dosbox_binary_default_probes_path_in_order(monkeypatch):
     seen = []
 
     def fake_which(name):
@@ -80,13 +80,13 @@ def test_binary_default_probes_path_in_order(monkeypatch):
         return name if name == "dosbox" else None  # only plain dosbox installed
 
     monkeypatch.setattr(settings.shutil, "which", fake_which)
-    assert DosboxSettings().binary() == "dosbox"
+    assert DosboxSettings().get_dosbox_binary() == "dosbox"
     assert seen == ["dosbox-staging", "dosbox"]  # staging tried first
 
 
-def test_binary_default_falls_back_to_dosbox_when_nothing_is_installed(monkeypatch):
+def test_get_dosbox_binary_default_falls_back_to_dosbox_when_nothing_is_installed(monkeypatch):
     monkeypatch.setattr(settings.shutil, "which", lambda _name: None)
-    assert DosboxSettings().binary() == "dosbox"  # so FileNotFoundError names it
+    assert DosboxSettings().get_dosbox_binary() == "dosbox"  # so FileNotFoundError names it
 
 
 def test_an_unknown_dosbox_choice_is_rejected_at_validation():

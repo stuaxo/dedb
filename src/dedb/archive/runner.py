@@ -29,7 +29,7 @@ def run_dosbox(
     # archive.org items have no launch profiles - `target` is unused, kept
     # only for a signature the core dispatcher shares with the gog runner.
     metadata = load_metadata(layout)
-    binary = get_settings().dosbox.binary()
+    binary = get_settings().dosbox.get_dosbox_binary()
 
     # No dosbox.conf for archive.org items - pass the synthetic autoexec as -c.
     cmd = [binary]

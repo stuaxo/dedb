@@ -48,7 +48,7 @@ def run_dosbox(
     verbose: bool = False,
 ) -> int:
     profile = target.profile
-    binary = get_settings().dosbox.binary()
+    binary = get_settings().dosbox.get_dosbox_binary()
 
     cmd = [binary]
     for conf in get_conf_files(layout.game, profile):
