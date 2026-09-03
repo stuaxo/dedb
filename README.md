@@ -1,6 +1,14 @@
-# dedb
+# de/db - DOSEMU/DOSBox interop tool
 
-DOSEMU2-DOSBOX importer and run games packaged for DOSBOX in DOSEMU2.
+Import and run games packaged for DOSBox in DOSEMU2.
+
+dedb is for testing DOSBox programs under DOSEMU2. As well as running the
+games, it shows what each one needs to run, which surfaces
+interoperability gaps.
+
+It provides fixes and shims where it can, though ideally these stop being
+needed over time as DOSEMU2 and its DOS utilities gain the features.
+
 
 At its core dedb translates a game's `dosbox.conf` + `[autoexec]` into a
 DOSEMU2 `dosemu.conf` + `userhook.bat`; see [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -82,6 +90,71 @@ $ dedb run tyrian_2000 -b gog --profile server --dosbox
 `-b <scheme>` with a bare id is `<scheme>://<id>`. `--profile` is `?profile=`.
 
 To add a backend, see [doc/backends.md](doc/backends.md).
+
+
+## Running a game
+
+`dedb run GAME --dosbox` or `--dosemu` launches the game, downloading it -
+and, for `--dosemu`, converting it - first if needed.
+
+| Option | Effect |
+|---|---|
+| `--dosbox` / `--dosemu` | which emulator to run (one is required) |
+| `--cmdline` | print the command that would run and stop; nothing is downloaded, converted or launched, and the game must already be downloaded |
+| `-v`, `--verbose` | print the command line before launching |
+| `--profile <slug>` | GOG launch profile (same as `gog:<id>?profile=<slug>`) |
+| `-b`, `--backend <scheme>` | read GAME as a bare id for this backend |
+| `--redownload` | re-download and re-extract even if already present |
+| `-r`, `--refreshmetadata` | re-fetch cached backend metadata first |
+| `--keep` | keep the installer/archive after extracting |
+
+Anything after `--` is passed straight to the emulator:
+
+```
+$ dedb run gog:tyrian_2000 --dosbox -- -fullscreen
+```
+
+
+## Converting a game
+
+The conversion turns a game's `dosbox.conf` + `[autoexec]` - or, for an
+archive.org item, its launch command line - into a DOSEMU2 `dosemu.conf`
++ `userhook.bat`. See [ARCHITECTURE.md](ARCHITECTURE.md) for how it
+works.
+
+`dedb dosboxconf` inspects the DOSBox side before converting:
+
+```
+$ dedb dosboxconf gog:tyrian_2000            # [autoexec], Sound Blaster, Gravis
+$ dedb dosboxconf gog:tyrian_2000 --issues   # what DOSEMU2 can't run as-is, by severity
+$ dedb dosboxconf gog:tyrian_2000 --cmdline  # the dosbox command `run --dosbox` would use
+```
+
+`-a` / `-s` / `-g` narrow the default output to `[autoexec]`,
+`[sblaster]` or `[gus]`; `-v` with `--issues` shows each autoexec line
+and its rewrite. SOURCES can be `dosbox.conf` paths instead of a game.
+
+`dedb dosemuconf` shows the converted output without writing it:
+
+```
+$ dedb dosemuconf gog:tyrian_2000            # dosemu.conf + userhook.bat
+$ dedb dosemuconf gog:tyrian_2000 --conf     # just dosemu.conf
+$ dedb dosemuconf gog:tyrian_2000 --userhook # just userhook.bat
+$ dedb dosemuconf gog:tyrian_2000 --issues   # the same block as `dosboxconf --issues`
+$ dedb dosemuconf gog:tyrian_2000 --cmdline  # the dosemu command `run --dosemu` would use
+```
+
+`dedb import` writes that output to disk. `dedb run --dosemu` does this
+on first use; `import` does it without running:
+
+```
+$ dedb import gog:tyrian_2000                # into the download's dosemu/ dir
+$ dedb import a.conf b.conf -o out/          # merge conf files (later wins) into out/
+$ dedb import gog:tyrian_2000 --refreshconf  # regenerate for an already-converted game
+```
+
+`-f` / `--force` overwrites an existing output dir; `--refreshconf`
+implies it.
 
 
 ## Shell completion
