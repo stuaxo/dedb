@@ -1,11 +1,9 @@
 """The dedb CLI.
 
-The root `cli` group, plus the commands that span every backend:
-`ls` / `run` / `download` / `rm` / `refreshmetadata`. Source apps
-(`dedb.dosbox` / `dedb.dosemu` / `dedb.gog` / `dedb.archive`, from
-`Settings.apps`) contribute the rest - `import` lives in `dedb.dosemu`;
-commands are registered flat on the root group and `--help` groups them
-per app, Django manage.py style.
+CLI is implemented with click, with commands in the root and then groups off
+it.
+
+The output is somewhat modelled on Djangos apps.
 """
 
 import fnmatch
@@ -30,9 +28,11 @@ from .core import (
 
 
 def _backend_option(func):
-    """`-b/--backend <scheme>`: read GAME as a bare id for that backend
-    rather than a <scheme>://<id> URL (the psql "components instead of a
-    URI" form)."""
+    """`-b/--backend <scheme>`: Specify a backend e.g. archive/gog
+
+    This is an alternative to using a <scheme>://<id>, allowing the use
+    of raw game identifiers which may be useful for scripts.
+    """
     return click.option(
         "--backend",
         "-b",
@@ -44,7 +44,10 @@ def _backend_option(func):
 
 def _download_options(func):
     """The --keep / --refreshmetadata / --redownload trio shared by `run`
-    and `download`."""
+    and `download`.
+
+    Allow files and metadata to be downloaded.
+    """
     func = click.option(
         "--keep", is_flag=True, help="Keep the installer/archive after extracting."
     )(func)
@@ -112,13 +115,14 @@ def run(
 ):
     """Run a game in DOSBox or DOSEMU2.
 
-    GAME is gog://<id>, archive://<id>, an archive.org URL, or a name you
-    have downloaded. It is downloaded, and for --dosemu converted, first
-    if needed. Arguments after `--` go straight to the emulator.
+    GAME is specified as <scheme>:<identifier> or -b <scheme> <identifier>,
+    or just <identifier> for downloaded games.
 
-    --cmdline prints the resulting command (a shell-pasteable line) and
-    stops, without running or converting anything. The game must already
-    be downloaded.
+    An emulator must be specified with --dosbox or --dosemu.
+
+    Arguments after `--` go straight to the emulator.
+
+    --cmdline shows the emulator commandline instead of running it.
     """
     emulator = _require_one_emulator(use_dosbox, use_dosemu)
     resolved = resolve_game(game, backend, profile=profile)
@@ -226,13 +230,14 @@ def rm(games, backend, yes):
 @click.argument("games", nargs=-1, shell_complete=_complete_game)
 @_backend_option
 def refreshmetadata(games, backend):
-    """Re-fetch backend metadata for downloaded games and rewrite each
-    metadata.json. Downloads nothing.
+    """Re-fetch backend metadata for games and rewriting each metadata.json.
 
-    With no GAME, refreshes every downloaded game. Each GAME is a
-    <scheme>://<id> URL, an archive.org URL, or a bare downloaded name
-    (or -b <scheme> with a bare id). A GAME that resolves but isn't
-    downloaded is skipped; an unrecognised GAME is an error.
+    If no games are specified, defaults to all downloaded games.
+
+    Games are specified with <scheme>:<id> or -b <scheme> <id>
+
+    Games that have not been downloaded are skipped.
+    Games that don't exist (can't be resolved) are an error.
     """
     registry = get_backends()
 
