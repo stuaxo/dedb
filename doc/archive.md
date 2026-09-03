@@ -2,16 +2,14 @@
 
 archive.org's DOS software library (e.g.
 https://archive.org/details/msdos_Electro_Man_1992) hosts thousands of
-DOS games and utilities, each playable in-browser via DOSBox. Every
-such item records, in its own metadata, which file to run - the tools
-here download that file, extract it, and let it run through DOSBox or
-DOSEMU2 the same way `gog`'s commands do for GOG games.
+in-browser DOSBox games. Each item's metadata names the file to run;
+dedb downloads and extracts it and runs it under DOSBox or DOSEMU2, the
+same as a GOG game.
 
-Unlike GOG, archive.org items aren't "owned" - there's no login. Address
-one by `archive://<identifier>`, or paste its full
-`https://archive.org/details/<identifier>` URL. `dedb lsarchive` can
-list an archive.org user's public favorites as a starting point (see
-Commands below).
+archive.org items aren't "owned" - there's no login. Address one by
+`archive://<identifier>` or its `https://archive.org/details/<identifier>`
+URL. `dedb lsarchive` lists an archive.org user's public favorites as a
+starting point.
 
 Each item lives at `<download_dir>/archive/<identifier>/`:
 

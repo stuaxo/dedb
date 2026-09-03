@@ -96,7 +96,7 @@ Example config:
 # Directory to download programs and games.
 # Backends get subdirectories off this e.g. 
 # <download_dir>/gog/, <download_dir>/archive/, ...
-download_dir = "/home/stu/dos/downloads"
+download_dir = "~/dos/download_dir"
 
 
 [dosbox]
@@ -168,13 +168,13 @@ Run tyrian_2000 in dosbox:
 
 ### Downloading in bulk
 
-`downloadgog --all` downloads every owned game that looks DOSBox-based;
-`downloadgog --game <id>` downloads just one.
+`dedb downloadgog --all` downloads every owned game that looks
+DOSBox-based; `dedb downloadgog --game <id>` downloads just one.
 
 
 ### More information:
 
-See `docs/gog.md` for more information on managing games from GOG.
+See [doc/gog.md](doc/gog.md) for more on managing GOG games.
 
 
 ## Archive.org
@@ -207,3 +207,5 @@ The username comes from the `[archive]` `archive_user` setting; if
 that isn't set you're prompted for it once and offered the chance to
 save it. Pass `--user <name>` to list someone else, `--all` to include
 non-DOS favorites, and `-1` for bare `archive:<id>` lines.
+
+See [doc/archive.md](doc/archive.md) for more on archive.org.

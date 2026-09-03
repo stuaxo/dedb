@@ -114,6 +114,10 @@ rewrites the lines it recognises, with a `Severity`:
 | `PARTIALLY_SUPPORTED` | runs after the rewrite, but behaves differently from DOSBox - `MOUNT` becomes `LREDIR`, `CHOICE` loses its flags |
 | `UNSUPPORTED` | no equivalent; commented out with `REM` so it does not error - `IMGMOUNT`, overlay mounts |
 
+`dedb dosboxconf CONF --issues` reports what a conf needs before you
+convert it. Deeper notes - drive mapping, the `C:` re-map limit, DPMI
+sizing - are in [doc/dosbox_to_dosemu.md](doc/dosbox_to_dosemu.md).
+
 
 ## Packages
 
