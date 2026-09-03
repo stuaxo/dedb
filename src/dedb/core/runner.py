@@ -57,17 +57,23 @@ def launch_dosemu(
     verbose: bool = False,
     dry_run: bool = False,
 ) -> int:
-    """Stage ``userhook_src`` as the game's userhook.bat and launch DOSEMU2
+    """Stage ``userhook_src`` into ``layout.userhook_dir`` and launch DOSEMU2
     with C: mapped to the extracted game directory. ``dry_run`` skips the
     staging and just prints the command (see ``launch``)."""
     if not dry_run:
         layout.dosemu_local.mkdir(parents=True, exist_ok=True)
+        layout.userhook_dir.mkdir(parents=True, exist_ok=True)
 
-        # DOSEMU2's boot chain (dosrc.d/4uhook.bat) auto-runs only
-        # %USERDRV%:\userhook.bat, and --Fdrive_c maps C: to layout.game -
-        # so the generated userhook has to be copied there before every
-        # launch (the active GOG launch profile can change between runs).
-        shutil.copyfile(userhook_src, layout.game / "userhook.bat")
+        # DOSEMU2's boot chain (dosrc.d/4uhook.bat) only auto-runs
+        # %USERDRV%:\userhook.bat, and %USERDRV% is pinned to the drive-C
+        # letter - so rather than write into the game dir (C:), stage the
+        # active profile's userhook under a fixed name in a dedb-owned dir,
+        # mount that dir as its own drive with -K, and run it with -E.
+        shutil.copyfile(userhook_src, layout.userhook_dir / "userhook.bat")
+
+        # Drop the stray userhook.bat older dedb versions copied into the
+        # game dir, so an upgrade leaves the game files clean.
+        (layout.game / "userhook.bat").unlink(missing_ok=True)
 
     cmd = [
         "dosemu",
@@ -78,11 +84,15 @@ def launch_dosemu(
         "--Fdrive_c",
         str(layout.game),
         # userhook.bat's LREDIR calls (see
-        # dedb.convert.autoexec.mount_lredir_shim) only ever target paths
-        # under the game's own directory - permit exactly that, nothing
-        # wider.
+        # dedb.convert.autoexec.mount_lredir_shim) and the -K hook drive
+        # only ever touch paths under this one game's tree - permit exactly
+        # that, nothing wider.
         "-I",
-        f'$_lredir_paths = "{layout.game}"',
+        f'$_lredir_paths = "{layout.dir}"',
+        "-K",
+        str(layout.userhook_dir),
+        "-E",
+        "USERHOOK.BAT",
         *extra_args,
     ]
     return launch(

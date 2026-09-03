@@ -39,15 +39,17 @@ DOSBox maps drives and disk images with `MOUNT` and `IMGMOUNT`. DOSEMU2
 has neither. dedb handles it three ways:
 
 - `C:` is set to the game directory with `--Fdrive_c`, before
-  `userhook.bat` runs.
+  `userhook.bat` runs. `userhook.bat` itself is staged into a dedb-owned
+  dir (`dosemu/hook/`) mounted as its own drive with `-K` - the game
+  directory is never written to.
 - simple secondary `MOUNT`s become `LREDIR -f`, via an autoexec shim.
 - `IMGMOUNT` and overlay `MOUNT`s have no equivalent - a shim comments
   them out.
 
-A further `MOUNT C` in the autoexec is commented out too: LREDIR has no
-overlay support, so re-mounting `C:` would re-map the drive `userhook.bat`
-is being read from. This breaks menu-driven packs (e.g. `catacombs_pack`)
-that re-point `C:` at subdirectories on the fly.
+A further `MOUNT C` in the autoexec is commented out too: `--Fdrive_c`
+maps C: as a fatfs disk and `LREDIR` (an mfs redirection) can't overlay
+it. This breaks menu-driven packs (e.g. `catacombs_pack`) that re-point
+`C:` at subdirectories on the fly.
 
 ## DPMI memory
 

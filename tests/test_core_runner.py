@@ -64,6 +64,7 @@ class _Layout(LayoutPaths):
 def test_launch_dosemu_stages_the_userhook_and_builds_the_argv(monkeypatch, tmp_path):
     layout = _Layout(tmp_path / "item")
     layout.game.mkdir(parents=True)
+    (layout.game / "userhook.bat").write_text("stale\n")  # left by an older dedb
     userhook_src = tmp_path / "userhook_mp.bat"
     userhook_src.write_text("echo hi\n")
 
@@ -79,16 +80,20 @@ def test_launch_dosemu_stages_the_userhook_and_builds_the_argv(monkeypatch, tmp_
         layout,
         dosemu_conf=tmp_path / "dosemu.conf",
         userhook_src=userhook_src,
-        extra_args=["-K", "."],
+        extra_args=["-fullscreen"],
     )
 
     assert rc == 0
-    assert (layout.game / "userhook.bat").read_text() == "echo hi\n"
+    # staged into the dedb-owned hook dir, under a fixed name, NOT in the game dir
+    assert (layout.userhook_dir / "userhook.bat").read_text() == "echo hi\n"
+    assert not (layout.game / "userhook.bat").exists()
     assert layout.dosemu_local.is_dir()
     cmd = seen["cmd"]
     assert cmd[:3] == ["dosemu", "-f", str(tmp_path / "dosemu.conf")]
-    assert cmd[-2:] == ["-K", "."]
-    assert f'$_lredir_paths = "{layout.game}"' in cmd
+    assert cmd[-1] == "-fullscreen"
+    assert f'$_lredir_paths = "{layout.dir}"' in cmd
+    k = cmd.index("-K")
+    assert cmd[k : k + 4] == ["-K", str(layout.userhook_dir), "-E", "USERHOOK.BAT"]
 
 
 def test_launch_dosemu_dry_run_does_not_stage_the_userhook(monkeypatch, tmp_path, capsys):
@@ -104,5 +109,6 @@ def test_launch_dosemu_dry_run_does_not_stage_the_userhook(monkeypatch, tmp_path
 
     assert rc == 0
     assert not (layout.game / "userhook.bat").exists()
+    assert not layout.userhook_dir.exists()
     assert not layout.dosemu_local.exists()
     assert f"dosemu -f {tmp_path / 'dosemu.conf'}" in capsys.readouterr().out

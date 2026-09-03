@@ -75,4 +75,6 @@ Pick one with `gog:<id>?profile=<slug>` or `--profile <slug>`.
 - `installer/` - the extracted GOG installer, deleted after extraction unless `--keep`
 - `game/` - extracted install
 - `metadata.json` - the shared metadata envelope (`dedb.core.metadata_file`); raw GOG metadata under `source`
-- `dosemu/` - generated `dosemu.conf` / `userhook.bat`
+- `dosemu/` - generated `dosemu.conf` / `userhook.bat` (`hook/` stages the active
+  `userhook.bat` as its own DOSEMU2 drive at launch)
+- `dosemu_local/` - DOSEMU2's per-game scratch dir (`--Flocal_dir`)

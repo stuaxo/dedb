@@ -12,6 +12,9 @@ dedb (0.0.13) unstable; urgency=medium
     If you have pinned `apps` in dedbconf.toml, add `"dedb.dosemu"`.
   * `dedb run --dosbox|--dosemu --cmdline` prints the emulator command it
     would run (a shell-pasteable line) and stops - no launch, no convert.
+  * `dedb run --dosemu` no longer writes `userhook.bat` into the game
+    directory - it is staged in a dedb-owned dir mounted as its own
+    DOSEMU2 drive, keeping the downloaded game immutable.
 
  -- Stuart Axon <stu.axon@gmail.com>  Wed, 03 Sep 2026 13:00:00 +0100
 

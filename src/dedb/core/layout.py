@@ -50,6 +50,13 @@ class LayoutPaths:
         return self.dir / "dosemu_local"
 
     @property
+    def userhook_dir(self) -> Path:
+        """A dedb-owned dir holding just ``userhook.bat`` for the active
+        launch. `launch_dosemu` mounts it as its own DOSEMU2 drive so the
+        game directory (C:) is never written to."""
+        return self.dosemu / "hook"
+
+    @property
     def staging(self) -> Path:
         """The single download-staging dir - the fetched installer/archive,
         removed after extraction unless ``--keep``. Each backend's layout

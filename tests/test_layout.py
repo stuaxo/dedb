@@ -18,6 +18,7 @@ def test_shared_paths_hang_off_the_item_dir(tmp_path):
         assert layout.dosemu == layout.dir / "dosemu"
         assert layout.dosemu_conf == layout.dir / "dosemu" / "dosemu.conf"
         assert layout.dosemu_local == layout.dir / "dosemu_local"
+        assert layout.userhook_dir == layout.dir / "dosemu" / "hook"
 
 
 def test_dir_is_keyed_by_each_source_s_own_id_field(tmp_path):

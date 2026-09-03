@@ -47,10 +47,8 @@ def mount_lredir_shim(working_dir: Path) -> SinglelineShim:
     against working_dir (see dedb.gog.profiles.get_working_dir).
 
     "MOUNT C ..." is commented out, not converted: --Fdrive_c already
-    maps C: to the game directory, and re-redirecting the drive
-    userhook.bat is currently reading from corrupts command.com's
-    position in that file (dosemu2 src/doc/README/lredir), truncating the
-    rest of the batch.
+    maps C: to the game directory as a fatfs disk, and LREDIR (an mfs
+    redirection) can't overlay it.
 
     Run unsupported_mount_option("overlay") first in the pipeline, so
     overlay mounts are already REM'd (first token "REM", not "mount") by
