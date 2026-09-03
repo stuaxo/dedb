@@ -2,9 +2,14 @@
 DOSEMU2 configuration formats.
 
 DosboxConfig and DosemuConfig each reflect one side only: field names,
-types and defaults match that side's own config file. dosbox_to_dosemu
-is the one place a DOSBox setting becomes a DOSEMU2 setting - renaming
-and unit conversion happen there, nowhere else."""
+types and defaults match that side's own config file. The ``TRANSLATIONS``
+table is the one place a DOSBox setting becomes a DOSEMU2 setting -
+renaming and unit conversion happen in it (via the ``_x_to_y`` helpers),
+nowhere else; ``dosbox_to_dosemu`` just applies it. ``dedb.dosbox.fieldmap``
+turns the table into the field map in ARCHITECTURE.md."""
+
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
@@ -52,7 +57,12 @@ class DosboxConfig(BaseModel):
         default="auto", validation_alias=AliasPath("joystick", "joysticktype")
     )
 
-    # Render/Video fields
+    # Render/Video fields. Parsed, but NOT translated (see
+    # UNTRANSLATED_DOSBOX_FIELDS): aspect-ratio correction, the scaler
+    # algorithm and the output backend are all host-side rendering
+    # choices with no DOSEMU2 equivalent - DOSEMU2 drives its own SDL
+    # backend. The longer note on DosemuConfig covers why $_video in
+    # particular must stay unset.
     aspect: bool = Field(default=False, validation_alias=AliasPath("render", "aspect"))
     scaler: str = Field(default="normal2x", validation_alias=AliasPath("render", "scaler"))
     output: str = Field(default="surface", validation_alias=AliasPath("sdl", "output"))
@@ -207,25 +217,78 @@ def _joystick_to_device(joysticktype: str) -> str:
     return "" if joysticktype.strip().lower() == "none" else "/dev/input/js0"
 
 
+@dataclass(frozen=True)
+class Translation:
+    """One DosboxConfig field crossing to a DosemuConfig field. ``via`` is
+    the rename/unit converter, or None when the value is copied unchanged;
+    ``note`` is a one-line gloss (the full rationale lives in ``via``'s
+    docstring)."""
+
+    source: str
+    target: str
+    via: "Callable[[object], object] | None" = None
+    note: str = ""
+
+
+# The complete DOSBox -> DOSEMU2 field map. dosbox_to_dosemu() applies it;
+# dedb.dosbox.fieldmap renders it (plus each model's own field metadata)
+# into the table in ARCHITECTURE.md - so the doc can't drift from here.
+TRANSLATIONS: tuple[Translation, ...] = (
+    Translation("fullscreen", "X_fullscreen"),
+    Translation(
+        "cycles",
+        "cpuspeed",
+        _cycles_to_cpuspeed,
+        "bare number kept as MHz; max / auto / anything else -> 0 (auto)",
+    ),
+    Translation(
+        "core",
+        "cpu_vm",
+        _core_to_cpu_vm,
+        "'normal' -> emulated, otherwise kvm (DOSEMU2 runs near-native)",
+    ),
+    Translation(
+        "memsize",
+        "dpmi",
+        _memsize_to_dpmi_kb,
+        "floored to DOSEMU2's 128 MB DPMI default, then MB -> KB",
+    ),
+    Translation(
+        "sbtype",
+        "sound",
+        _sbtype_to_sound_enabled,
+        "any SoundBlaster type -> sound on; 'none' -> off",
+    ),
+    Translation("sbbase", "sb_base", _sbbase_to_hex, "decimal-looking port string parsed as hex"),
+    Translation("irq", "sb_irq"),
+    Translation("dma", "sb_dma"),
+    Translation("hdma", "sb_hdma"),
+    Translation("gus", "gus"),
+    Translation("mpu401", "mpu401_base", _mpu401_to_base, "'none' -> 0, otherwise 0x330"),
+    Translation("mpu401", "mpu401_irq", _mpu401_to_irq, "'none' -> 0, otherwise 9"),
+    Translation(
+        "pcspeaker", "speaker", _pcspeaker_to_speaker, "on -> 'emulated', off -> '' (disabled)"
+    ),
+    Translation(
+        "serial1", "com1", _serial_to_com, "always '' - DOSEMU2 needs a real host device path"
+    ),
+    Translation(
+        "joysticktype", "joystick", _joystick_to_device, "'none' -> '', otherwise /dev/input/js0"
+    ),
+)
+
+# Read into DosboxConfig but deliberately not carried across - see the
+# "Render/Video fields" note on DosboxConfig.
+UNTRANSLATED_DOSBOX_FIELDS: tuple[str, ...] = ("aspect", "scaler", "output")
+
+
 def dosbox_to_dosemu(dosbox: DosboxConfig) -> DosemuConfig:
-    """Translate a DosboxConfig into a DosemuConfig. The only place
-    DOSBox's field names and units become DOSEMU2's."""
-    return DosemuConfig(
-        X_fullscreen=dosbox.fullscreen,
-        cpuspeed=_cycles_to_cpuspeed(dosbox.cycles),
-        cpu_vm=_core_to_cpu_vm(dosbox.core),
-        dpmi=_memsize_to_dpmi_kb(dosbox.memsize),
-        sound=_sbtype_to_sound_enabled(dosbox.sbtype),
-        sb_base=_sbbase_to_hex(dosbox.sbbase),
-        sb_irq=dosbox.irq,
-        sb_dma=dosbox.dma,
-        sb_hdma=dosbox.hdma,
-        gus=dosbox.gus,
-        mpu401_base=_mpu401_to_base(dosbox.mpu401),
-        mpu401_irq=_mpu401_to_irq(dosbox.mpu401),
-        speaker=_pcspeaker_to_speaker(dosbox.pcspeaker),
-        com1=_serial_to_com(dosbox.serial1),
-        joystick=_joystick_to_device(dosbox.joysticktype),
-        # dosbox.output is intentionally not translated - see the
-        # "Render/Video fields" note on DosemuConfig.
-    )
+    """Translate a DosboxConfig into a DosemuConfig - the one place
+    DOSBox's field names and units become DOSEMU2's, driven by
+    ``TRANSLATIONS``."""
+
+    def crossed(t: Translation) -> object:
+        raw = getattr(dosbox, t.source)
+        return t.via(raw) if t.via is not None else raw
+
+    return DosemuConfig(**{t.target: crossed(t) for t in TRANSLATIONS})
