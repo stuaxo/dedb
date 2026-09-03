@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import click
+from click.shell_completion import CompletionItem
 
 from ..core import complete_target, get_backends, resolve_game
 from .converter import build as build_config
@@ -99,8 +100,6 @@ def _complete_source(ctx, param, incomplete):
     """SOURCES is dosbox.conf paths or one game ref: complete `<scheme>:<id>`
     targets (honouring `-b`), and - unless a scheme is already typed - fall
     back to file paths."""
-    from click.shell_completion import CompletionItem
-
     targets = complete_target(incomplete, backend=ctx.params.get("backend"))
     if _is_game_ref(incomplete) or ctx.params.get("backend"):
         return targets
