@@ -26,7 +26,7 @@ downloads - feeds it or manages its inputs.
  dosbox*.conf ──┐
                 ├─parse─▶ raw dict ─validate─▶ DosboxConfig ─dosbox_to_dosemu─▶ DosemuConfig ─render─▶ dosemu.conf
  dosbox argv ───┘   │
-              [autoexec] lines ──────────── autoexec_shims (Workaround pipeline) ─────────────────▶ userhook.bat
+              [autoexec] lines ──────────── convert_autoexec (SHIMS routing table) ────────────────▶ userhook.bat
 ```
 
 The input is `dosbox.conf` file(s) - `dedb.convert.parser` - or a `dosbox`
@@ -35,10 +35,10 @@ archive.org item has no `.conf`, only the command line emularity
 synthesises from its `emulator_start`. Both parse to the same
 `(section dict, autoexec lines)` pair.
 
-It lives in `dedb.convert` (`parser`, `cmdline`, `models`, `converter`,
-`autoexec`, `issues`, `fieldmap`), a standalone library with no
-dependency on the rest of dedb. The apps import conversion only from
-there.
+It lives in `dedb.convert` (`parser`, `cmdline`, `tokens`, `models`,
+`mounts`, `converter`, `autoexec`, `issues`, `fieldmap`), a standalone
+library with no dependency on the rest of dedb. The apps import
+conversion only from there.
 
 
 ### Pydantic models represent formats and conversions
@@ -108,21 +108,25 @@ Read into DosboxConfig but not translated:
 
 ### The autoexec
 
-`[autoexec]` is a list of commands to run at `DOSBOX` startup.
-DOSBOX commands such as MOUNT and IMGMOUNT aren't available on DOSEMU2,
-so shims are used to rewrite or comment them out where equivalents don't
-yet exist.
+`[autoexec]` is a list of commands to run at `DOSBOX` startup, carried on
+`DosboxConfig.autoexec`. DOSBOX commands such as `MOUNT` and `IMGMOUNT`
+aren't available on DOSEMU2, so shims rewrite or comment them out where
+equivalents don't yet exist. The converted lines are saved to
+`userhook.bat`.
 
-The converted output is saved to `userhook.bat`.
-
-`dedb.convert.autoexec` holds a list of shims, each one a function that
-rewrites the lines it recognises, with a `Severity`:
+`dedb.convert.autoexec` is a declarative routing table, `SHIMS`: a list of
+`(regex, handler, name)`. `check_autoexec_line` matches one line against
+it, first hit wins; the handler returns the rewritten line, a `Severity`,
+and a one-line summary. `convert_autoexec` runs the whole autoexec for
+`userhook.bat`; `diagnose_autoexec` runs the same pass to report what
+changed (the shim is its own detector, so the report can't drift from the
+file).
 
 | Severity | Meaning |
 |---|---|
 | `SUPPORTED` | rewritten to a working DOSEMU2 equivalent |
-| `PARTIALLY_SUPPORTED` | runs after the rewrite, but behaves differently from DOSBox - `MOUNT` becomes `LREDIR`, `CHOICE` loses its flags |
-| `UNSUPPORTED` | no equivalent; commented out with `REM` so it does not error - `IMGMOUNT`, overlay mounts |
+| `PARTIALLY_SUPPORTED` | runs after the rewrite, but behaves differently from DOSBox - a secondary `MOUNT` becomes `LREDIR` |
+| `UNSUPPORTED` | no equivalent; commented out with `REM` so it does not error - `IMGMOUNT`, overlay mounts, a `MOUNT C:` (`--Fdrive_c` already maps C:) |
 
 `dedb dosboxconf CONF --issues` reports what a conf needs before you
 convert it; `dedb dosemuconf CONF` (or a `gog:` / `archive:` game) shows

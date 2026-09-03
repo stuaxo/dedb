@@ -1,9 +1,11 @@
 """Tests for dedb.dosbox.inspector, focused on the --issues report.
 
-The issues report reuses the autoexec workaround shims as its detector
-(see test_shims for the detector itself), so what it lists always
-matches what actually lands in userhook.bat.
+The issues report reuses the autoexec shims as its detector (see
+test_autoexec for the detector itself), so what it lists always matches
+what actually lands in userhook.bat.
 """
+
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -23,17 +25,17 @@ def test_inspect_issues_default_is_the_compact_set_format(write_conf):
             "[issues]",
             "Commands not supported as-is under DOSEMU2:",
             "'imgmount'",
-            "Commands only partially supported:",
-            "'choice'",
             "'mount'",
         ]
     )
 
 
-def test_inspect_issues_bands_are_ordered_most_severe_first(write_conf):
-    conf = write_conf(_MIXED_AUTOEXEC)
+def test_inspect_issues_bands_are_ordered_most_severe_first(write_conf, tmp_path: Path):
+    # IMGMOUNT -> unsupported; a secondary MOUNT with a working_dir ->
+    # partially supported (rewritten to LREDIR).
+    conf = write_conf("[autoexec]\nIMGMOUNT E disk.img\nMOUNT D SAVES\ngame.exe\n")
 
-    out = inspect([conf], issues=True)
+    out = inspect([conf], issues=True, working_dir=tmp_path)
 
     assert out.index("not supported as-is") < out.index("only partially supported")
 
@@ -108,8 +110,8 @@ def test_dosboxconf_issues_flag(write_conf, launcher_profile_conf):
     result = CliRunner().invoke(dosboxconf, [str(conf), "--issues"])
 
     assert result.exit_code == 0
-    assert "Commands only partially supported:" in result.output
-    assert "'choice'" in result.output
+    assert "Commands not supported as-is under DOSEMU2:" in result.output
+    assert "'overlay-mount'" in result.output
     # compact by default - no per-line rewrites
     assert "->" not in result.output
 
@@ -120,5 +122,4 @@ def test_dosboxconf_issues_verbose_flag(write_conf, launcher_profile_conf):
     result = CliRunner().invoke(dosboxconf, [str(conf), "--issues", "-v"])
 
     assert result.exit_code == 0
-    assert "CHOICE /C123" in result.output
-    assert "->" in result.output
+    assert 'MOUNT C ".."  ->  REM MOUNT C ".."' in result.output

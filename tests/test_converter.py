@@ -42,7 +42,7 @@ def test_build_applies_shims_to_the_merged_autoexec(write_conf, launcher_profile
     _target, userhook_lines = build([conf])
 
     assert 'REM MOUNT C ".."' in userhook_lines
-    assert "CHOICE Which program do you want to run?:" in userhook_lines
+    assert "CHOICE /C123 /S Which program do you want to run?: /N" in userhook_lines  # untouched
 
 
 @pytest.mark.parametrize("give_working_dir", [True, False])

@@ -7,7 +7,7 @@ files, a few flags, and a trailing program. This module turns that argv
 into the *same* ``(nested_section_dict, autoexec_lines)`` pair
 ``dedb.convert.parser`` produces from a .conf, so it flows through the
 existing ``DosboxConfig.model_validate`` -> ``dosbox_to_dosemu`` ->
-``autoexec_shims`` pipeline unchanged.
+``convert_autoexec`` pipeline unchanged.
 
 Two kinds of thing arrive on a DOSBox command line:
 
@@ -23,10 +23,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .autoexec import split_command
 from .converter import build_from_parsed
 from .models import DosboxConfig, DosemuConfig
 from .parser import parse_dosbox_confs
+from .tokens import split_command
 
 # The options this module reads, each taking one value and repeatable.
 # `-fullscreen` and `-noautoexec` (bare, non-repeating) are handled inline

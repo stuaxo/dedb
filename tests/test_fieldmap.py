@@ -21,9 +21,12 @@ def test_every_dosemu_field_is_filled_by_exactly_one_translation():
     assert len(targets) == len(set(targets))  # no field written twice
 
 
-def test_every_dosbox_field_is_translated_or_explicitly_not():
+def test_every_dosbox_setting_is_translated_or_explicitly_not():
     accounted = {t.source for t in TRANSLATIONS} | set(UNTRANSLATED_DOSBOX_FIELDS)
-    assert accounted == set(DosboxConfig.model_fields)
+    # `autoexec` is the [autoexec] command list, not a scalar setting -
+    # the shim pipeline (dedb.convert.autoexec) handles it, not TRANSLATIONS.
+    settings = {name for name in DosboxConfig.model_fields if name != "autoexec"}
+    assert accounted == settings
 
 
 def test_translation_sources_and_untranslated_do_not_overlap():

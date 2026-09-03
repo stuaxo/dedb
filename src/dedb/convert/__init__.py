@@ -11,29 +11,22 @@ never reach into the submodules.
 
     parser      parse_dosbox_conf / parse_dosbox_confs (a .conf -> parsed pair)
     cmdline     parse_dosbox_argv (a `dosbox` argv -> the same pair)
+    tokens      split_command (tokenise a DOS command string)
     models      DosboxConfig / DosemuConfig / dosbox_to_dosemu / TRANSLATIONS
-    autoexec    the shims + autoexec_shims / diagnose_autoexec
+    mounts      resolve_mounts / MountPoint (the MOUNT targets in an autoexec)
+    autoexec    the shims + convert_autoexec / diagnose_autoexec
     converter   build / build_from_parsed / build_from_argv / write_outputs / convert
+    issues      render_issues (the `--issues` text block)
     fieldmap    the ARCHITECTURE.md field-map generator (python -m dedb.convert.fieldmap)
 """
 
 from .autoexec import (
-    SEVERITY_BLURB,
-    SEVERITY_HEADING,
-    SEVERITY_ORDER,
+    SHIMS,
     AutoexecIssue,
-    ResolvedMount,
     Severity,
-    Workaround,
-    active_workarounds,
-    autoexec_shims,
-    choice_shim,
+    check_autoexec_line,
+    convert_autoexec,
     diagnose_autoexec,
-    mount_lredir_shim,
-    resolve_mounts,
-    split_command,
-    unsupported_command,
-    unsupported_mount_option,
 )
 from .cmdline import (
     DosboxCommandLine,
@@ -51,32 +44,29 @@ from .models import (
     Translation,
     dosbox_to_dosemu,
 )
+from .mounts import MountPoint, resolve_mounts
 from .parser import parse_dosbox_conf, parse_dosbox_confs
+from .tokens import split_command
 
 __all__ = [
-    "SEVERITY_BLURB",
-    "SEVERITY_HEADING",
-    "SEVERITY_ORDER",
+    "SHIMS",
     "TRANSLATIONS",
     "UNTRANSLATED_DOSBOX_FIELDS",
     "AutoexecIssue",
     "DosboxCommandLine",
     "DosboxConfig",
     "DosemuConfig",
-    "ResolvedMount",
+    "MountPoint",
     "Severity",
     "Translation",
-    "Workaround",
-    "active_workarounds",
-    "autoexec_shims",
     "build",
     "build_from_argv",
     "build_from_parsed",
-    "choice_shim",
+    "check_autoexec_line",
     "convert",
+    "convert_autoexec",
     "diagnose_autoexec",
     "dosbox_to_dosemu",
-    "mount_lredir_shim",
     "parse_dosbox_argv",
     "parse_dosbox_command_line",
     "parse_dosbox_conf",
@@ -84,7 +74,5 @@ __all__ = [
     "render_issues",
     "resolve_mounts",
     "split_command",
-    "unsupported_command",
-    "unsupported_mount_option",
     "write_outputs",
 ]

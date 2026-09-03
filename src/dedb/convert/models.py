@@ -10,9 +10,11 @@ turns the table into the field map in ARCHITECTURE.md."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
+from .mounts import MountPoint, resolve_mounts
 from .validators import coerce_int, istruthy
 
 # DOSEMU2's documented default for $_dpmi (0x20000 Kb,
@@ -67,10 +69,21 @@ class DosboxConfig(BaseModel):
     scaler: str = Field(default="normal2x", validation_alias=AliasPath("render", "scaler"))
     output: str = Field(default="surface", validation_alias=AliasPath("sdl", "output"))
 
+    # The [autoexec] block: an ordered list of DOS command lines, kept
+    # verbatim. Unlike every other field this isn't a section/key lookup,
+    # so it carries no AliasPath - the parser passes it in by name.
+    autoexec: list[str] = Field(default_factory=list)
+
     coerce_bool = field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")(
         istruthy
     )
     coerce_int = field_validator("memsize", "irq", "dma", "hdma", mode="before")(coerce_int)
+
+    def get_mounts(self, working_dir: Path) -> list[MountPoint]:
+        """Every ``MOUNT`` command in the autoexec, each target resolved
+        against ``working_dir`` into a host path (see
+        ``dedb.convert.mounts``). IMGMOUNT and unmounts are skipped."""
+        return resolve_mounts(self.autoexec, working_dir)
 
     @classmethod
     def config_keys_by_section(cls) -> dict[str, dict[str, str]]:
@@ -84,7 +97,8 @@ class DosboxConfig(BaseModel):
         by_section: dict[str, dict[str, str]] = {}
         for name, field in cls.model_fields.items():
             alias = field.validation_alias
-            assert isinstance(alias, AliasPath)  # every DosboxConfig field has one
+            if not isinstance(alias, AliasPath):
+                continue  # `autoexec` - a verbatim list, not a section/key value
             by_section.setdefault(alias.path[0], {})[alias.path[-1]] = name
         return by_section
 

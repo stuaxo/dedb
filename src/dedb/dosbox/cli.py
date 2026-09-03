@@ -91,8 +91,12 @@ def dosboxconf(
             return
         argv, working_dir = be.dosbox_command_line(game)
     else:
-        argv = [token for source in sources for token in ("-conf", str(existing_conf(source)))]
-        working_dir = None
+        conf_paths = [existing_conf(source) for source in sources]
+        argv = [token for path in conf_paths for token in ("-conf", str(path))]
+        # No game context, so no recorded workingDir - resolve MOUNT
+        # targets against the first conf's own directory, the way GOG's
+        # no-profile fallback does.
+        working_dir = conf_paths[0].parent
         if cmdline:
             click.echo(render_cmdline([get_settings().dosbox.get_dosbox_binary(), *argv]))
             return

@@ -32,11 +32,13 @@ def test_right_model_aliases_only_add_the_prefix(model_cls, prefix):
     assert_serialization_aliases_add_only_prefix(model_cls, prefix)
 
 
-def test_config_keys_by_section_has_one_entry_per_field():
+def test_config_keys_by_section_has_one_entry_per_section_mapped_field():
     by_section = DosboxConfig.config_keys_by_section()
 
     field_names = [name for keys in by_section.values() for name in keys.values()]
-    assert sorted(field_names) == sorted(DosboxConfig.model_fields)
+    # `autoexec` is a verbatim list, not a section/key value, so it has no
+    # AliasPath and is not part of this map.
+    assert sorted(field_names) == sorted(n for n in DosboxConfig.model_fields if n != "autoexec")
 
 
 def test_config_keys_by_section_maps_a_section_key_pair_to_its_field_name():
@@ -45,6 +47,23 @@ def test_config_keys_by_section_maps_a_section_key_pair_to_its_field_name():
     assert by_section["sdl"]["fullscreen"] == "fullscreen"
     assert by_section["cpu"]["cycles"] == "cycles"
     assert by_section["dosbox"]["memsize"] == "memsize"
+
+
+def test_autoexec_defaults_to_empty_and_is_populated_by_name():
+    assert DosboxConfig().autoexec == []
+    assert DosboxConfig.model_validate({"autoexec": ["c:", "GAME.EXE"]}).autoexec == [
+        "c:",
+        "GAME.EXE",
+    ]
+
+
+def test_get_mounts_resolves_the_autoexec_mounts_against_a_working_dir(tmp_path):
+    config = DosboxConfig(autoexec=["MOUNT D SAVES", "IMGMOUNT E disk.img", "GAME.EXE"])
+
+    mounts = config.get_mounts(tmp_path)
+
+    assert [(m.dos_drive, m.dos_path) for m in mounts] == [("D", "SAVES")]
+    assert mounts[0].host_path == (tmp_path / "SAVES").resolve()
 
 
 @pytest.mark.parametrize(

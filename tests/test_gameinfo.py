@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from dedb.convert.autoexec import split_command
+from dedb.convert import split_command
 from dedb.gog.gameinfo import _conf_basenames, parse_profiles
 
 

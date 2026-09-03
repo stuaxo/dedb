@@ -147,7 +147,7 @@ def test_build_from_argv_folds_config_set_into_the_dosemu_conf():
     assert target.cpuspeed == 3000
 
 
-def test_build_from_argv_applies_autoexec_shims():
+def test_build_from_argv_converts_the_autoexec():
     _target, userhook_lines = build_from_argv(["-c", "mount c .", "-c", "doom.exe"])
 
     assert "REM mount c ." in userhook_lines  # MOUNT with no working_dir is commented out

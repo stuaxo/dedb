@@ -95,7 +95,7 @@ def import_target(sources, output_dir, profile, backend, force, refreshconf):
             raise click.UsageError("--output-dir is required when importing dosbox.conf files.")
         if profile is not None or refreshconf:
             raise click.UsageError("--profile / --refreshconf apply to a game, not to conf files.")
-        convert_config(paths, output_dir, force=force)
+        convert_config(paths, output_dir, force=force, working_dir=paths[0].parent)
         click.echo(f"Imported {', '.join(str(p) for p in paths)} -> '{output_dir}'")
         return
 
@@ -176,11 +176,14 @@ def dosemuconf(sources, backend, profile, conf, userhook, issues, verbose, cmdli
             issues_block = None
     else:
         paths = [existing_conf(s) for s in sources]
-        target, userhook_lines = build_config(paths)
+        # No game context - resolve MOUNT targets against the first conf's
+        # own directory (matches GOG's no-profile fallback).
+        working_dir = paths[0].parent
+        target, userhook_lines = build_config(paths, working_dir)
         entries = [("default", target.model_dump_dosemurc(), userhook_lines)]
         if issues:
             _, autoexec = parse_dosbox_confs(paths)
-            issues_block = render_issues(autoexec, None, verbose=verbose)
+            issues_block = render_issues(autoexec, working_dir, verbose=verbose)
         else:
             issues_block = None
 

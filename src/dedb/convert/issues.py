@@ -7,20 +7,37 @@ block shared by ``dedb dosboxconf --issues`` and ``dedb dosemuconf
 from collections.abc import Sequence
 from pathlib import Path
 
-from .autoexec import (
-    SEVERITY_BLURB,
-    SEVERITY_HEADING,
-    SEVERITY_ORDER,
-    AutoexecIssue,
-    diagnose_autoexec,
+from .autoexec import AutoexecIssue, Severity, diagnose_autoexec
+
+# Most severe first - the order the report groups its bands in.
+SEVERITY_ORDER: tuple[Severity, ...] = (
+    Severity.UNSUPPORTED,
+    Severity.PARTIALLY_SUPPORTED,
+    Severity.SUPPORTED,
 )
+
+# One-line gloss on each severity, shown after the heading in the
+# verbose (`--issues -v`) report.
+SEVERITY_BLURB: dict[Severity, str] = {
+    Severity.SUPPORTED: "translated to a DOSEMU2 equivalent",
+    Severity.PARTIALLY_SUPPORTED: "still runs, but not identically to DOSBox",
+    Severity.UNSUPPORTED: "no DOSEMU2 equivalent - commented out; the game may misbehave",
+}
+
+# Heading for each severity's block in the default (compact) `--issues`
+# report, phrased as the set of commands that band contains.
+SEVERITY_HEADING: dict[Severity, str] = {
+    Severity.SUPPORTED: "Commands translated to a DOSEMU2 equivalent:",
+    Severity.PARTIALLY_SUPPORTED: "Commands only partially supported:",
+    Severity.UNSUPPORTED: "Commands not supported as-is under DOSEMU2:",
+}
 
 
 def _format_issues(issues: Sequence[AutoexecIssue], *, verbose: bool = False) -> str:
     """Default: one block per severity band - a heading, then one
-    triggered workaround name per line (repr()'d, the way a set diff
-    reads). verbose additionally lists every offending autoexec line and
-    what it is rewritten to."""
+    triggered shim name per line (repr()'d, the way a set diff reads).
+    verbose additionally lists every offending autoexec line and what it
+    is rewritten to."""
     lines = ["[issues]"]
     if not issues:
         lines.append("(none)")

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from .autoexec import autoexec_shims
+from .autoexec import convert_autoexec
 from .models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
 from .parser import parse_dosbox_confs
 
@@ -19,8 +19,9 @@ def build_from_parsed(
     parse to that pair and share this step. working_dir, if known, lets
     the mount shim resolve MOUNT's relative paths into LREDIR calls;
     without it MOUNT lines are commented out."""
-    target = dosbox_to_dosemu(DosboxConfig.model_validate(raw_dict))
-    return target, autoexec_shims(autoexec_commands, working_dir)
+    dosbox = DosboxConfig.model_validate({**raw_dict, "autoexec": list(autoexec_commands)})
+    target = dosbox_to_dosemu(dosbox)
+    return target, convert_autoexec(dosbox.autoexec, conf=dosbox, working_dir=working_dir)
 
 
 def build(

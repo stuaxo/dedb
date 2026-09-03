@@ -46,7 +46,7 @@ def dosemu_argv(
         "--Fdrive_c",
         str(layout.game),
         # userhook.bat's LREDIR calls (see
-        # dedb.convert.autoexec.mount_lredir_shim) and the -K hook drive
+        # dedb.convert.autoexec.shim_mount) and the -K hook drive
         # only ever touch paths under this one game's tree - permit exactly
         # that, nothing wider.
         "-I",
