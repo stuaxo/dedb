@@ -10,6 +10,19 @@ from .models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
 from .parser import parse_dosbox_confs
 
 
+def build_from_parsed(
+    raw_dict: dict, autoexec_commands: Sequence[str], working_dir: Path | None = None
+) -> tuple[DosemuConfig, list[str]]:
+    """Transform an already-parsed (section_dict, autoexec_lines) pair -
+    however it was parsed - into (dosemu_config, userhook_lines). The
+    dosbox.conf and the `dosbox` command line (dedb.dosbox.cmdline) both
+    parse to that pair and share this step. working_dir, if known, lets
+    the mount shim resolve MOUNT's relative paths into LREDIR calls;
+    without it MOUNT lines are commented out."""
+    target = dosbox_to_dosemu(DosboxConfig.model_validate(raw_dict))
+    return target, autoexec_shims(autoexec_commands, working_dir)
+
+
 def build(
     input_files: Sequence[Path], working_dir: Path | None = None
 ) -> tuple[DosemuConfig, list[str]]:
@@ -17,15 +30,8 @@ def build(
     later files overriding earlier ones, the same rule DOSBox uses for
     multiple -conf files) into (dosemu_config, userhook_lines). Same
     content convert() writes to disk, without writing anything.
-    userhook_lines has shims already applied (see dedb.shims.autoexec).
-    working_dir, if known, lets the mount shim resolve MOUNT's relative
-    paths into LREDIR calls; without it MOUNT lines are commented out."""
-    raw_dict, autoexec_commands = parse_dosbox_confs(input_files)
-
-    dosbox_config = DosboxConfig.model_validate(raw_dict)
-    target = dosbox_to_dosemu(dosbox_config)
-
-    return target, autoexec_shims(autoexec_commands, working_dir)
+    userhook_lines has shims already applied (see dedb.shims.autoexec)."""
+    return build_from_parsed(*parse_dosbox_confs(input_files), working_dir)
 
 
 def write_outputs(

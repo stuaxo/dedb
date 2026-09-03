@@ -119,11 +119,15 @@ class BackendBase:
         per launch profile (GOG), or a single ("default", ...) entry."""
         raise NotImplementedError
 
-    def dosbox_sources(self, target: Target) -> "tuple[list, object]":
-        """The dosbox.conf file(s) for ``target`` and the working directory
-        their relative MOUNTs resolve against, for `dedb dosboxconf`.
-        Backends whose games have no dosbox.conf (archive.org) raise."""
-        raise click.ClickException(f"{self.scheme}:// games have no dosbox.conf to inspect.")
+    def dosbox_command_line(self, target: Target) -> "tuple[list[str], object]":
+        """The `dosbox` command line for ``target`` (``[argv, working_dir]``)
+        and the working directory its relative paths resolve against, for
+        `dedb dosboxconf`. A GOG game's is ``-conf`` files; an archive.org
+        item's is the emularity-style ``-c`` command line. Backends that
+        can't produce one raise."""
+        raise click.ClickException(
+            f"Can't inspect a {self.scheme}:// game's DOSBox command line."
+        )
 
 
 def _closest_name(value: str, names: "list[str]") -> "str | None":

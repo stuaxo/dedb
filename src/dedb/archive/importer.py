@@ -1,8 +1,10 @@
 """Build a DOSEMU2 config + userhook for a downloaded archive.org item.
 
-archive.org items ship no dosbox.conf - just an ``emulator_start`` path. So
-rather than parsing, this uses DOSBox's built-in defaults and synthesizes the
-autoexec directly (mount C:, cd, run) - what archive.org's own player does.
+archive.org items ship no dosbox.conf - just an ``emulator_start`` path.
+emularity launches them by synthesizing a `dosbox` command line (mount C:,
+cd, run); ``dosbox_argv`` rebuilds that command line and
+``dedb.dosbox.cmdline.build_from_argv`` runs it through the same models a
+GOG game's dosbox.conf goes through.
 """
 
 from pathlib import Path
@@ -10,10 +12,9 @@ from pathlib import Path
 import click
 
 from ..core import GameMetadataFile, long_target
-from ..dosbox.converter import build as build_dosbox_defaults
+from ..dosbox.cmdline import build_from_argv
 from ..dosbox.converter import write_outputs
 from ..dosbox.models import DosemuConfig
-from ..shims.autoexec import autoexec_shims
 from .layout import ArchiveLayout
 from .models import ArchiveMetadata
 
@@ -39,12 +40,21 @@ def autoexec_commands(emulator_start: str) -> list[str]:
     return commands
 
 
+def dosbox_argv(metadata: ArchiveMetadata) -> list[str]:
+    """The `dosbox` command line for this item - what emularity synthesizes
+    from emulator_start (mount C:, cd, run), as a list of `-c` commands.
+    The single source of the archive command line, shared by the importer
+    and the runner."""
+    argv: list[str] = []
+    for command in autoexec_commands(metadata.emulator_start):
+        argv += ["-c", command]
+    return argv
+
+
 def build_archive_game(layout: ArchiveLayout) -> tuple[DosemuConfig, list[str]]:
     """Like `import_archive_game` but returns the content instead of writing it."""
     metadata = load_metadata(layout)
-    target, _defaults_userhook = build_dosbox_defaults([])
-    userhook_lines = autoexec_shims(autoexec_commands(metadata.emulator_start), layout.game)
-    return target, userhook_lines
+    return build_from_argv(dosbox_argv(metadata), working_dir=layout.game)
 
 
 def import_archive_game(

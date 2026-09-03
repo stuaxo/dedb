@@ -295,17 +295,51 @@ def test_dosboxconf_target_mode(tmp_path, monkeypatch, args):
     conf = tmp_path / "x.conf"
     conf.write_text("[sblaster]\nsbtype=sb16\n", encoding="cp437")
     monkeypatch.setattr(
-        "dedb.gog.backend.GogBackend.dosbox_sources", lambda self, target: ([conf], None)
+        "dedb.gog.backend.GogBackend.dosbox_command_line",
+        lambda self, target: (["-conf", str(conf)], None),
     )
     result = CliRunner().invoke(dosboxconf, [*args, "-s"])
     assert result.exit_code == 0
     assert "sbtype=sb16" in result.output
 
 
-def test_dosboxconf_archive_target_has_no_conf():
+def test_dosboxconf_archive_target_reads_the_emularity_command_line(download_dir, monkeypatch):
+    """archive.org items have no dosbox.conf - dosboxconf renders the
+    synthetic emularity command line instead (issues, autoexec, defaults)."""
+    from datetime import datetime, timezone
+
+    from dedb.archive.models import ArchiveMetadata
+    from dedb.core import GameMetadataFile, get_backends
+
+    layout = get_backends()["archive"].layout("msdos_Foo")
+    layout.game.mkdir(parents=True)
+    (layout.game / "GAME.EXE").write_text("MZ")
+    metadata = ArchiveMetadata(
+        identifier="msdos_Foo",
+        emulator="dosbox",
+        emulator_ext="zip",
+        emulator_start="FOO/GAME.EXE",
+        download_filename="x.zip",
+        download_url="https://archive.org/download/x/x.zip",
+        fetched_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    layout.metadata_json.write_text(
+        GameMetadataFile(
+            scheme="archive", identifier="msdos_Foo", source=metadata.model_dump(mode="json")
+        ).model_dump_json()
+    )
+
+    result = CliRunner().invoke(dosboxconf, ["archive://msdos_Foo"])
+    assert result.exit_code == 0
+    assert "[autoexec]" in result.output
+    assert "GAME.EXE" in result.output
+    assert "[sblaster]" in result.output
+
+
+def test_dosboxconf_archive_target_needs_a_download(download_dir):
     result = CliRunner().invoke(dosboxconf, ["archive://msdos_Foo"])
     assert result.exit_code != 0
-    assert "no dosbox.conf" in result.output
+    assert "download" in result.output.lower()
 
 
 # --- refreshmetadata ---------------------------------------------
