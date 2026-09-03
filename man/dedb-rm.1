@@ -1,0 +1,21 @@
+.TH "DEDB RM" "1" "2026-01-01" "0.0.14" "dedb rm Manual"
+.SH NAME
+dedb\-rm \- Delete one or more downloaded games' directory trees.
+.SH SYNOPSIS
+.B dedb rm
+[OPTIONS] GAMES...
+.SH DESCRIPTION
+Delete one or more downloaded games' directory trees.
+.PP
+Each GAME is a <scheme>://<id> URL, a bare downloaded name, or a
+shell wildcard (*, ?, [...]) matched against downloaded names -
+optionally scheme-qualified, e.g. 'gog:tyrian*'. One confirmation
+covers the whole set (skip it with -y).
+.PP
+.SH OPTIONS
+.TP
+\fB\-b,\fP \-\-backend SCHEME
+Read GAME as a bare id for this backend, rather than a <scheme>://<id> URL.
+.TP
+\fB\-y,\fP \-\-yes
+Remove without prompting.

@@ -186,6 +186,16 @@ echo 'source ~/.dedb-complete.bash' >> ~/.bashrc
 ```
 
 
+## Man pages
+
+The Debian package installs a man page per command: `man dedb` for the
+overview, `man dedb-run`, `man dedb-import` and so on for each. They are
+generated from the command's `--help`, so they carry the same text.
+
+A pip install gets no man pages; use `dedb --help` / `dedb <command>
+--help`.
+
+
 ## Configuration
 
 The dedb config file is `~/.config/dedb/dedbconf.toml`.

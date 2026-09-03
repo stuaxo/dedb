@@ -45,6 +45,21 @@ uv run python completions/_generate.py
 
 `test_completion.py` fails until you do.
 
+## Man pages
+
+`man/dedb*.1` are installed by the Debian package
+(debian/python3-dedb.manpages). They are click-man's output, one page
+per command, rendered from the click CLI by `dedb.manpage`.
+
+Regenerate them after a command or option change, or a version bump
+(the version shows in the `.TH` header):
+
+```bash
+uv run python man/_generate.py
+```
+
+`test_manpage.py` fails until you do.
+
 ## Local builds
 
 To build the Debian package locally:

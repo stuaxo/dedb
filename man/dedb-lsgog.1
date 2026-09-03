@@ -1,0 +1,24 @@
+.TH "DEDB LSGOG" "1" "2026-01-01" "0.0.14" "dedb lsgog Manual"
+.SH NAME
+dedb\-lsgog \- List owned GOG games and whether they look DOSBox-based, without downloading...
+.SH SYNOPSIS
+.B dedb lsgog
+[OPTIONS]
+.SH DESCRIPTION
+List owned GOG games and whether they look DOSBox-based, without downloading anything.
+.SH OPTIONS
+.TP
+\fB\-1\fP
+Just `gog:<id>` per line - no classification column.
+.TP
+\fB\-\-dos\fP / \-\-all
+--dos (default): only DOSBox-based games. --all: every owned game.
+.TP
+\fB\-r,\fP \-\-refreshmetadata
+Re-fetch GOG dependency metadata instead of using the cached copy.
+.TP
+\fB\-\-offline\fP
+Don't contact GOG at all - use only local files and cached metadata.
+.TP
+\fB\-v,\fP \-\-verbose
+Print each network request to GOG as it happens.

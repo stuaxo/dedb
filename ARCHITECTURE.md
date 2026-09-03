@@ -172,6 +172,7 @@ mapping, the `C:` re-map limit, DPMI sizing - are in
 |----------------|------------------------------------------------------------------|
 | `dedb.cli`     | the root group + the cross-cutting commands (ls / run / download / rm / refreshmetadata / completion) |
 | `dedb.completion` | shell completion scripts for the `completion` command       |
+| `dedb.manpage` | renders the committed man pages from the click CLI (build/test only) |
 | `dedb.core`    | the framework the apps plug into                                 |
 | `dedb.convert` | the DOSBox↔DOSEMU2 conversion engine above - a standalone library |
 | `dedb.dosbox`  | the `dosboxconf` command (reads through `dedb.convert`)          |
