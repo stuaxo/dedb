@@ -12,7 +12,7 @@ never reach into the submodules.
     parser      parse_dosbox_conf / parse_dosbox_confs (a .conf -> parsed pair)
     cmdline     parse_dosbox_argv (a `dosbox` argv -> the same pair)
     tokens      split_command (tokenise a DOS command string)
-    models      DosboxConfig / DosemuConfig / dosbox_to_dosemu / TRANSLATIONS
+    models      DosboxConfig -> DosemuConfigFromDosbox -> DosemuConfig / dosbox_to_dosemu
     mounts      resolve_mounts / MountPoint (the MOUNT targets in an autoexec)
     autoexec    the shims + autoexec_as_userhook / diagnose_autoexec
     converter   build / build_from_parsed / build_from_argv / write_outputs / convert
@@ -37,11 +37,9 @@ from .cmdline import (
 from .converter import build, build_from_parsed, convert, write_outputs
 from .issues import render_issues
 from .models import (
-    TRANSLATIONS,
-    UNTRANSLATED_DOSBOX_FIELDS,
     DosboxConfig,
     DosemuConfig,
-    Translation,
+    DosemuConfigFromDosbox,
     dosbox_to_dosemu,
 )
 from .mounts import MountPoint, resolve_mounts
@@ -50,15 +48,13 @@ from .tokens import split_command
 
 __all__ = [
     "SHIMS",
-    "TRANSLATIONS",
-    "UNTRANSLATED_DOSBOX_FIELDS",
     "AutoexecIssue",
     "DosboxCommandLine",
     "DosboxConfig",
     "DosemuConfig",
+    "DosemuConfigFromDosbox",
     "MountPoint",
     "Severity",
-    "Translation",
     "autoexec_as_userhook",
     "autoexec_line_to_userhook_line",
     "build",

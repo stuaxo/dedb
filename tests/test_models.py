@@ -1,13 +1,18 @@
 """Tests for dedb.convert.models.
 
 DosboxConfig mirrors dosbox.conf's own vocabulary; DosemuConfig mirrors
-dosemu.conf's. dosbox_to_dosemu is the only place field names and units
-cross from one side to the other.
+dosemu.conf's. DosemuConfigFromDosbox is the translation layer between
+them, and dosbox_to_dosemu runs the pipeline.
 """
 
 import pytest
 
-from dedb.convert.models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
+from dedb.convert.models import (
+    DosboxConfig,
+    DosemuConfig,
+    DosemuConfigFromDosbox,
+    dosbox_to_dosemu,
+)
 from dedb.testing.model_naming import (
     assert_serialization_aliases_add_only_prefix,
     assert_validation_aliases_are_structural,
@@ -207,6 +212,25 @@ def test_dosbox_to_dosemu_does_not_emit_video():
     dosemu2 equivalent, so it is not translated and $_video is left out
     of the rendered conf entirely (dosemu2 defaults it to "vga")."""
     assert not hasattr(dosbox_to_dosemu(DosboxConfig(output="opengl")), "video")
+
+
+def test_translation_model_reads_dosbox_field_names_and_converts():
+    """DosemuConfigFromDosbox reads a DosboxConfig dump: its aliases are
+    DosboxConfig field names, its validators do the conversion."""
+    mid = DosemuConfigFromDosbox.model_validate(
+        DosboxConfig(cycles="4000", memsize=8, mpu401="none").model_dump()
+    )
+
+    assert mid.cpuspeed == 4000
+    assert mid.dpmi == 131072  # 8 -> floored to 128 MB -> KB
+    assert mid.mpu401_base == 0 and mid.mpu401_irq == 0
+
+
+def test_translation_model_drops_unsupported_fields_from_the_dump():
+    mid = DosemuConfigFromDosbox.model_validate(DosboxConfig(output="opengl").model_dump())
+
+    assert "output" not in mid.model_dump()
+    assert set(mid.model_dump()) == set(DosemuConfig.model_fields)
 
 
 @pytest.fixture

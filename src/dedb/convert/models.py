@@ -1,16 +1,26 @@
-"""Pydantic V2 models forming the anti-corruption layer between DOSBox and
-DOSEMU2 configuration formats.
+"""Pydantic V2 models for the DOSBox -> DOSEMU2 config translation.
 
-DosboxConfig and DosemuConfig each reflect one side only: field names,
-types and defaults match that side's own config file. The ``TRANSLATIONS``
-table is the one place a DOSBox setting becomes a DOSEMU2 setting -
-renaming and unit conversion happen in it (via the ``_x_to_y`` helpers),
-nowhere else; ``dosbox_to_dosemu`` just applies it. ``dedb.convert.fieldmap``
-turns the table into the field map in ARCHITECTURE.md."""
+Three models, a pipeline:
 
-from collections.abc import Callable
-from dataclasses import dataclass
+* ``DosboxConfig`` - the source. Fields, types and defaults are
+  dosbox.conf's own; ``validation_alias`` locates each value in the
+  parsed section dict. Answers questions about dosbox.conf.
+* ``DosemuConfigFromDosbox`` - the translation. Its fields are
+  ``DosemuConfig``'s, each ``validation_alias``'d to the ``DosboxConfig``
+  field it comes from; a ``mode="before"`` validator does the unit/format
+  conversion. ``Unsupported`` marks a dosbox setting read but deliberately
+  not carried across.
+* ``DosemuConfig`` - the destination. Fields, types and rendering are
+  dosemu.conf's own; ``serialization_alias`` is the ``$_`` variable name.
+  Answers questions about dosemu.conf.
+
+``dosbox_to_dosemu`` runs the pipeline. ``dedb.convert.fieldmap`` reads
+``DosemuConfigFromDosbox`` to generate the field map in ARCHITECTURE.md,
+and ``test_fieldmap.py`` checks the three models line up.
+"""
+
 from pathlib import Path
+from typing import Annotated, Any
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
@@ -59,12 +69,11 @@ class DosboxConfig(BaseModel):
         default="auto", validation_alias=AliasPath("joystick", "joysticktype")
     )
 
-    # Render/Video fields. Parsed, but NOT translated (see
-    # UNTRANSLATED_DOSBOX_FIELDS): aspect-ratio correction, the scaler
-    # algorithm and the output backend are all host-side rendering
-    # choices with no DOSEMU2 equivalent - DOSEMU2 drives its own SDL
-    # backend. The longer note on DosemuConfig covers why $_video in
-    # particular must stay unset.
+    # Render/Video fields. Parsed so a `config -set` targeting them isn't
+    # flagged as unknown, but deliberately not translated (see the
+    # Unsupported fields on DosemuConfigFromDosbox): aspect-ratio
+    # correction, the scaler algorithm and the output backend are all
+    # host-side rendering choices with no DOSEMU2 equivalent.
     aspect: bool = Field(default=False, validation_alias=AliasPath("render", "aspect"))
     scaler: str = Field(default="normal2x", validation_alias=AliasPath("render", "scaler"))
     output: str = Field(default="surface", validation_alias=AliasPath("sdl", "output"))
@@ -88,12 +97,11 @@ class DosboxConfig(BaseModel):
     @classmethod
     def config_keys_by_section(cls) -> dict[str, dict[str, str]]:
         """``{section: {key: field_name}}`` for every modelled dosbox.conf
-        item, read from each field's ``validation_alias`` - the same walk
-        ``dedb.convert.fieldmap`` does (``alias.path[0]`` is the section,
-        ``alias.path[-1]`` the key). Lets a caller building a config from
-        somewhere other than a .conf file (e.g. a command line's
-        ``config -set section key=value``) check a section/key pair is one
-        this model actually reads."""
+        item, read from each field's ``validation_alias`` (``alias.path[0]``
+        is the section, ``alias.path[-1]`` the key). Lets a caller building
+        a config from somewhere other than a .conf file (e.g. a command
+        line's ``config -set section key=value``) check a section/key pair
+        is one this model actually reads."""
         by_section: dict[str, dict[str, str]] = {}
         for name, field in cls.model_fields.items():
             alias = field.validation_alias
@@ -155,12 +163,8 @@ class DosemuConfig(BaseModel):
         on/off are keywords, plain decimal integers are valid).
 
         $_X_fullscreen: start DOSEMU2 in fullscreen.
-        $_cpuspeed: CPU speed in MHz for TSC calibration; 0 = auto,
-          matching the convention dosbox_to_dosemu uses for DOSBox's
-          auto/max cycles, though the two settings measure different
-          things.
-        $_dpmi: DPMI pool size in Kb - already converted/floored by
-          dosbox_to_dosemu.
+        $_cpuspeed: CPU speed in MHz for TSC calibration; 0 = auto.
+        $_dpmi: DPMI pool size in Kb - already converted/floored upstream.
         """
         lines = []
         for name, field in type(self).model_fields.items():
@@ -175,6 +179,12 @@ class DosemuConfig(BaseModel):
                 rendered = f"({value})"
             lines.append(f"{field.serialization_alias} = {rendered}")
         return "\n".join(lines) + "\n"
+
+
+# --- Converters: one DOSBox value -> its DOSEMU2 form. Wired as
+# mode="before" validators on DosemuConfigFromDosbox. Each docstring is
+# the full rationale; the field's `description` is the one-line gloss the
+# field map prints.
 
 
 def _cycles_to_cpuspeed(cycles: str) -> int:
@@ -247,78 +257,82 @@ def _joystick_to_device(joysticktype: str) -> str:
     return "" if joysticktype.strip().lower() == "none" else "/dev/input/js0"
 
 
-@dataclass(frozen=True)
-class Translation:
-    """One DosboxConfig field crossing to a DosemuConfig field. ``via`` is
-    the rename/unit converter, or None when the value is copied unchanged;
-    ``note`` is a one-line gloss (the full rationale lives in ``via``'s
-    docstring)."""
-
-    source: str
-    target: str
-    via: "Callable[[object], object] | None" = None
-    note: str = ""
+# A DOSBox setting dedb reads (so `config -set` targeting it isn't flagged
+# as unknown) but has no DOSEMU2 equivalent for. The value is dropped:
+# excluded from model_dump, so it never reaches DosemuConfig.
+Unsupported = Annotated[Any, Field(default=None, exclude=True)]
 
 
-# The complete DOSBox -> DOSEMU2 field map. dosbox_to_dosemu() applies it;
-# dedb.convert.fieldmap renders it (plus each model's own field metadata)
-# into the table in ARCHITECTURE.md - so the doc can't drift from here.
-TRANSLATIONS: tuple[Translation, ...] = (
-    Translation("fullscreen", "X_fullscreen"),
-    Translation(
-        "cycles",
-        "cpuspeed",
-        _cycles_to_cpuspeed,
-        "bare number kept as MHz; max / auto / anything else -> 0 (auto)",
-    ),
-    Translation(
-        "core",
-        "cpu_vm",
-        _core_to_cpu_vm,
-        "'normal' -> emulated, otherwise kvm (DOSEMU2 runs near-native)",
-    ),
-    Translation(
-        "memsize",
-        "dpmi",
-        _memsize_to_dpmi_kb,
-        "floored to DOSEMU2's 128 MB DPMI default, then MB -> KB",
-    ),
-    Translation(
-        "sbtype",
-        "sound",
-        _sbtype_to_sound_enabled,
-        "any SoundBlaster type -> sound on; 'none' -> off",
-    ),
-    Translation("sbbase", "sb_base", _sbbase_to_hex, "decimal-looking port string parsed as hex"),
-    Translation("irq", "sb_irq"),
-    Translation("dma", "sb_dma"),
-    Translation("hdma", "sb_hdma"),
-    Translation("gus", "gus"),
-    Translation("mpu401", "mpu401_base", _mpu401_to_base, "'none' -> 0, otherwise 0x330"),
-    Translation("mpu401", "mpu401_irq", _mpu401_to_irq, "'none' -> 0, otherwise 9"),
-    Translation(
-        "pcspeaker", "speaker", _pcspeaker_to_speaker, "on -> 'emulated', off -> '' (disabled)"
-    ),
-    Translation(
-        "serial1", "com1", _serial_to_com, "always '' - DOSEMU2 needs a real host device path"
-    ),
-    Translation(
-        "joysticktype", "joystick", _joystick_to_device, "'none' -> '', otherwise /dev/input/js0"
-    ),
-)
+class DosemuConfigFromDosbox(BaseModel):
+    """The translation layer: ``DosemuConfig``'s fields, each read from
+    the ``DosboxConfig`` field its ``validation_alias`` names and put
+    through a ``mode="before"`` validator. ``dosbox_to_dosemu`` feeds it
+    ``DosboxConfig.model_dump()`` and builds a ``DosemuConfig`` from the
+    result. Field order matches the field map in ARCHITECTURE.md."""
 
-# Read into DosboxConfig but deliberately not carried across - see the
-# "Render/Video fields" note on DosboxConfig.
-UNTRANSLATED_DOSBOX_FIELDS: tuple[str, ...] = ("aspect", "scaler", "output")
+    model_config = ConfigDict(populate_by_name=True)
+
+    X_fullscreen: bool = Field(validation_alias="fullscreen")
+    cpuspeed: int = Field(
+        validation_alias="cycles",
+        description="bare number kept as MHz; max / auto / anything else -> 0 (auto)",
+    )
+    cpu_vm: str = Field(
+        validation_alias="core",
+        description="'normal' -> emulated, otherwise kvm (DOSEMU2 runs near-native)",
+    )
+    dpmi: int = Field(
+        validation_alias="memsize",
+        description="floored to DOSEMU2's 128 MB DPMI default, then MB -> KB",
+    )
+    sound: bool = Field(
+        validation_alias="sbtype",
+        description="any SoundBlaster type -> sound on; 'none' -> off",
+    )
+    sb_base: int = Field(
+        validation_alias="sbbase", description="decimal-looking port string parsed as hex"
+    )
+    sb_irq: int = Field(validation_alias="irq")
+    sb_dma: int = Field(validation_alias="dma")
+    sb_hdma: int = Field(validation_alias="hdma")
+    gus: bool = Field(validation_alias="gus")
+    mpu401_base: int = Field(validation_alias="mpu401", description="'none' -> 0, otherwise 0x330")
+    mpu401_irq: int = Field(validation_alias="mpu401", description="'none' -> 0, otherwise 9")
+    speaker: str = Field(
+        validation_alias="pcspeaker", description="on -> 'emulated', off -> '' (disabled)"
+    )
+    com1: str = Field(
+        validation_alias="serial1", description="always '' - DOSEMU2 needs a real host device path"
+    )
+    joystick: str = Field(
+        validation_alias="joysticktype", description="'none' -> '', otherwise /dev/input/js0"
+    )
+
+    aspect: Unsupported = Field(validation_alias="aspect")
+    scaler: Unsupported = Field(validation_alias="scaler")
+    output: Unsupported = Field(validation_alias="output")
+
+    _cpuspeed = field_validator("cpuspeed", mode="before")(_cycles_to_cpuspeed)
+    _cpu_vm = field_validator("cpu_vm", mode="before")(_core_to_cpu_vm)
+    _dpmi = field_validator("dpmi", mode="before")(_memsize_to_dpmi_kb)
+    _sound = field_validator("sound", mode="before")(_sbtype_to_sound_enabled)
+    _sb_base = field_validator("sb_base", mode="before")(_sbbase_to_hex)
+    _mpu401_base = field_validator("mpu401_base", mode="before")(_mpu401_to_base)
+    _mpu401_irq = field_validator("mpu401_irq", mode="before")(_mpu401_to_irq)
+    _speaker = field_validator("speaker", mode="before")(_pcspeaker_to_speaker)
+    _com1 = field_validator("com1", mode="before")(_serial_to_com)
+    _joystick = field_validator("joystick", mode="before")(_joystick_to_device)
+
+    @classmethod
+    def translated_fields(cls) -> list[str]:
+        """The field names that map to a DosemuConfig field (i.e. not the
+        Unsupported ones)."""
+        return [name for name, field in cls.model_fields.items() if not field.exclude]
 
 
 def dosbox_to_dosemu(dosbox: DosboxConfig) -> DosemuConfig:
-    """Translate a DosboxConfig into a DosemuConfig - the one place
-    DOSBox's field names and units become DOSEMU2's, driven by
-    ``TRANSLATIONS``."""
-
-    def crossed(t: Translation) -> object:
-        raw = getattr(dosbox, t.source)
-        return t.via(raw) if t.via is not None else raw
-
-    return DosemuConfig(**{t.target: crossed(t) for t in TRANSLATIONS})
+    """Translate a DosboxConfig into a DosemuConfig through the
+    DosemuConfigFromDosbox layer - field aliases rename, validators
+    convert, Unsupported settings drop out."""
+    translated = DosemuConfigFromDosbox.model_validate(dosbox.model_dump())
+    return DosemuConfig(**translated.model_dump())
