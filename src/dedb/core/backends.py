@@ -125,9 +125,7 @@ class BackendBase:
         `dedb dosboxconf`. A GOG game's is ``-conf`` files; an archive.org
         item's is the emularity-style ``-c`` command line. Backends that
         can't produce one raise."""
-        raise click.ClickException(
-            f"Can't inspect a {self.scheme}:// game's DOSBox command line."
-        )
+        raise click.ClickException(f"Can't inspect a {self.scheme}:// game's DOSBox command line.")
 
 
 def _closest_name(value: str, names: "list[str]") -> "str | None":
