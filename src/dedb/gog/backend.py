@@ -59,8 +59,10 @@ class GogBackend(BackendBase):
             for label, (_conf_files, config, userhook_lines) in results.items()
         ]
 
-    def dosbox_sources(self, target: Target):
+    def dosbox_command_line(self, target: Target):
         from .profiles import get_conf_files, get_working_dir
 
         game = self.layout(target.identifier).game
-        return get_conf_files(game, target.profile), get_working_dir(game, target.profile)
+        conf_files = get_conf_files(game, target.profile)
+        argv = [token for conf in conf_files for token in ("-conf", str(conf))]
+        return argv, get_working_dir(game, target.profile)

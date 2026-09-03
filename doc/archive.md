@@ -28,10 +28,14 @@ An archive.org DOS item's metadata carries three fields:
 - `emulator_ext` — the extension of the file to download (currently only `zip` is supported)
 - `emulator_start` — the path, relative to that file's root, of the executable to run (e.g. `ElectroM/EM.EXE`)
 
-There's no `dosbox.conf`. `dedb import` uses DOSBox's default settings and builds
-an autoexec from `emulator_start`: mount the item root as `C:`, `cd` to the
-game's directory, run the file. `dedb dosboxconf archive://<id>` has nothing to
-show.
+There's no `dosbox.conf`. emularity launches an item by synthesising a `dosbox`
+command line from `emulator_start`: mount the item root as `C:`, `cd` to the
+game's directory, run the file. dedb rebuilds that command line and runs it
+through the same models a GOG game's `dosbox.conf` goes through
+(`dedb.dosbox.cmdline`), so `dedb import` produces `dosemu.conf` (DOSBox
+defaults) plus `userhook.bat`, and `dedb dosboxconf archive://<id>` shows the
+autoexec, the settings and any conversion issues - the item must be downloaded
+first.
 
 
 ## Configuration

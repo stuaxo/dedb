@@ -12,7 +12,7 @@ import click
 from ..core import get_backends, resolve_game
 from .converter import build as build_config
 from .converter import convert as convert_config
-from .inspector import inspect as inspect_conf
+from .inspector import inspect_command_line
 
 CONF_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 
@@ -132,31 +132,33 @@ def dosboxconf(
     issues: bool,
     verbose: bool,
 ) -> None:
-    """Show aspects of dosbox.conf(s), merged in order.
+    """Show aspects of a DOSBox config, from dosbox.conf(s) or a game's
+    launch command line.
 
     SOURCES is one or more dosbox.conf paths, or a single downloaded game
-    ('gog://<id>', or a bare id with --backend) whose resolved conf(s) are
-    shown. With none of -a/-s/-g given, those three aspects are shown;
-    --issues is always opt-in.
+    ('gog://<id>' / 'archive://<id>', or a bare id with --backend) whose
+    resolved DOSBox command line is shown - an archive.org item has no
+    dosbox.conf, just the emularity command line. With none of -a/-s/-g
+    given, those three aspects are shown; --issues is always opt-in.
     """
     if backend is not None or (len(sources) == 1 and "://" in sources[0]):
         if len(sources) != 1:
             raise click.UsageError("Pass a single game when using a scheme or --backend.")
         game = resolve_game(sources[0], backend, profile=profile)
-        conf_files, working_dir = get_backends()[game.scheme].dosbox_sources(game)
+        argv, working_dir = get_backends()[game.scheme].dosbox_command_line(game)
     else:
-        conf_files = [_existing_conf(source) for source in sources]
+        argv = [token for source in sources for token in ("-conf", str(_existing_conf(source)))]
         working_dir = None
 
     click.echo(
-        inspect_conf(
-            conf_files,
+        inspect_command_line(
+            argv,
+            working_dir=working_dir if issues else None,
             autoexec=autoexec,
             sblaster=sblaster,
             gus=gus,
             issues=issues,
             verbose=verbose,
-            working_dir=working_dir if issues else None,
         )
     )
 

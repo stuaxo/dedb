@@ -62,7 +62,9 @@ profile).
    drives your `Downloader`), `refresh_metadata` and `iter_local_games`.
    `dedb rm` works off `layout` + `dedb.core.remove_downloads` directly.
    Override `identifier_from_url` if the backend has its own URL form, and
-   `dosbox_sources` if its games ship a `dosbox.conf`.
+   `dosbox_command_line` (returns `(argv, working_dir)`) so `dedb dosboxconf`
+   can inspect a game - a GOG game's is its `-conf` files, an archive.org
+   item's is the emularity `-c` command line.
 
    `local_game(identifier)` assembles a `dedb.core.LocalGame` (identity, title,
    classification, launch profiles, converted?) from the download's `metadata.json`

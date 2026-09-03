@@ -23,13 +23,21 @@ downloads - feeds it or manages its inputs.
 ## The conversion
 
 ```
- dosbox*.conf ─parse─▶ raw dict ─validate─▶ DosboxConfig ─dosbox_to_dosemu─▶ DosemuConfig ─render─▶ dosemu.conf
-                          │
+ dosbox*.conf ──┐
+                ├─parse─▶ raw dict ─validate─▶ DosboxConfig ─dosbox_to_dosemu─▶ DosemuConfig ─render─▶ dosemu.conf
+ dosbox argv ───┘   │
               [autoexec] lines ──────────── autoexec_shims (Workaround pipeline) ─────────────────▶ userhook.bat
 ```
 
-It lives in `dedb.dosbox` (`parser`, `models`, `converter`, `inspector`)
-and `dedb.shims.autoexec` and purely is concerned with conversion.
+The input is `dosbox.conf` file(s) - `dedb.dosbox.parser` - or a `dosbox`
+command line - `dedb.dosbox.cmdline`. A GOG game has `.conf` files; an
+archive.org item has no `.conf`, only the command line emularity
+synthesises from its `emulator_start`. Both parse to the same
+`(section dict, autoexec lines)` pair.
+
+It lives in `dedb.dosbox` (`parser`, `cmdline`, `models`, `converter`,
+`inspector`) and `dedb.shims.autoexec` and purely is concerned with
+conversion.
 
 
 ### Pydantic models represent formats and conversions
@@ -39,9 +47,10 @@ models.
 
 DOSBOX Format:
 
-`DosboxConfig` has fields based on a `dosbox.conf` file. dedb only reads
-`dosbox.conf`; `dedb.dosbox.parser` does that (it is not quite an ini
-file).
+`DosboxConfig` has fields based on a `dosbox.conf` file. `dedb.dosbox.parser`
+reads `dosbox.conf` (it is not quite an ini file); `dedb.dosbox.cmdline`
+reads the equivalent settings off a `dosbox` command line (`-conf`,
+`-set`, `config -set` via `-c`).
 
 Fields in `DosboxConfig` map to where they are in `dosbox.conf` by
 section and field, e.g. `cycles` is in the `[cpu]` section. A field
@@ -157,7 +166,8 @@ Commands:
 
 [dosbox]:
   importdosbox  Import one or more dosbox.conf files into a DOSEMU2 config.
-  dosboxconf    Show aspects of dosbox.conf(s), merged in order.
+  dosboxconf    Show aspects of a DOSBox config, from dosbox.conf(s) or a
+                game's launch command line.
 
 [gog]:
   downloadgog  Download and extract DOSBox-based owned games from GOG.

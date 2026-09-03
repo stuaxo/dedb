@@ -7,7 +7,20 @@ from pathlib import Path
 import click
 import pytest
 
-from dedb.dosbox.converter import build, convert
+from dedb.dosbox.converter import build, build_from_parsed, convert
+
+
+def test_build_from_parsed_is_the_shared_seam_for_conf_and_argv():
+    """build() and dedb.dosbox.cmdline.build_from_argv both feed a parsed
+    (section_dict, autoexec_lines) pair through this one step."""
+    target, userhook_lines = build_from_parsed(
+        {"cpu": {"cycles": "max"}, "sdl": {"fullscreen": "true"}},
+        ["MOUNT C .", "game.exe"],
+    )
+
+    assert target.X_fullscreen is True
+    assert target.cpuspeed == 0
+    assert userhook_lines == ["REM MOUNT C .", "game.exe"]  # no working_dir -> MOUNT commented
 
 
 def test_build_merges_profiles_into_a_single_config(

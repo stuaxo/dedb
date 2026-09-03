@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ..core import Target, get_settings, launch, launch_dosemu
-from .importer import autoexec_commands, import_archive_game, load_metadata
+from .importer import dosbox_argv, import_archive_game, load_metadata
 from .layout import ArchiveLayout
 
 
@@ -31,11 +31,9 @@ def run_dosbox(
     metadata = load_metadata(layout)
     binary = get_settings().dosbox.get_dosbox_binary()
 
-    # No dosbox.conf for archive.org items - pass the synthetic autoexec as -c.
-    cmd = [binary]
-    for command in autoexec_commands(metadata.emulator_start):
-        cmd += ["-c", command]
-    cmd += extra_args
+    # No dosbox.conf for archive.org items - pass emularity's synthetic
+    # command line (mount C:, cd, run) as -c commands.
+    cmd = [binary, *dosbox_argv(metadata), *extra_args]
 
     return launch(
         cmd,

@@ -23,8 +23,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..shims.autoexec import autoexec_shims, split_command
-from .models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
+from ..shims.autoexec import split_command
+from .converter import build_from_parsed
+from .models import DosboxConfig, DosemuConfig
 from .parser import parse_dosbox_confs
 
 # The options this module reads, each taking one value and repeatable.
@@ -191,7 +192,6 @@ def build_from_argv(
     argv: Sequence[str], working_dir: Path | None = None, *, base_dir: Path | None = None
 ) -> tuple[DosemuConfig, list[str]]:
     """The argv analogue of ``dedb.dosbox.converter.build``: a `dosbox`
-    command line -> ``(DosemuConfig, userhook_lines)`` with shims applied."""
-    raw_dict, autoexec_commands = parse_dosbox_argv(argv, base_dir=base_dir)
-    target = dosbox_to_dosemu(DosboxConfig.model_validate(raw_dict))
-    return target, autoexec_shims(autoexec_commands, working_dir)
+    command line -> ``(DosemuConfig, userhook_lines)`` with shims applied,
+    through the same models as a dosbox.conf."""
+    return build_from_parsed(*parse_dosbox_argv(argv, base_dir=base_dir), working_dir)

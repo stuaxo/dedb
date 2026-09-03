@@ -8,7 +8,7 @@ matches what actually lands in userhook.bat.
 from click.testing import CliRunner
 
 from dedb.dosbox.cli import dosboxconf
-from dedb.dosbox.inspector import inspect
+from dedb.dosbox.inspector import inspect, inspect_command_line
 
 _MIXED_AUTOEXEC = "[autoexec]\nIMGMOUNT E disk.img\nMOUNT C ..\nCHOICE /C:YN Continue?\ngame.exe\n"
 
@@ -72,6 +72,34 @@ def test_inspect_issues_reports_none_for_a_clean_conf(write_conf):
 
     assert inspect([conf], issues=True) == "[issues]\n(none)"
     assert inspect([conf], issues=True, verbose=True) == "[issues]\n(none)"
+
+
+def test_inspect_command_line_reads_config_set_and_autoexec_from_an_argv():
+    """An emularity-style / -conf-less command line renders the same way a
+    dosbox.conf does - config -set folds into the sections, plain -c
+    commands are the autoexec."""
+    out = inspect_command_line(
+        [
+            "-c",
+            "config -set sblaster sbtype=sb16",
+            "-c",
+            "MOUNT C .",
+            "-c",
+            "GAME.EXE",
+        ],
+        sblaster=True,
+        autoexec=True,
+    )
+
+    assert "[sblaster]\nsbtype=sb16" in out
+    assert "[autoexec]\nMOUNT C .\nGAME.EXE" in out
+
+
+def test_inspect_command_line_reports_issues_from_the_synthetic_autoexec():
+    out = inspect_command_line(["-c", "IMGMOUNT E disk.img", "-c", "GAME.EXE"], issues=True)
+
+    assert "not supported as-is" in out
+    assert "'imgmount'" in out
 
 
 def test_dosboxconf_issues_flag(write_conf, launcher_profile_conf):

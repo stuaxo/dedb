@@ -23,7 +23,7 @@ from dedb.archive import client as archive_client
 from dedb.archive import downloader
 from dedb.archive.client import ArchiveClient, _resolve_drive_c_archive, fetch_item
 from dedb.archive.downloader import ArchiveDownloader, _extract_zip
-from dedb.archive.importer import autoexec_commands
+from dedb.archive.importer import autoexec_commands, dosbox_argv
 from dedb.archive.models import ArchiveFavorite, ArchiveMetadata
 
 FIXTURES = Path(__file__).parent / "fixtures" / "archive"
@@ -126,6 +126,29 @@ def test_autoexec_commands(emulator_start, expected):
     assert autoexec_commands(emulator_start) == expected
 
 
+def _metadata(emulator_start: str) -> ArchiveMetadata:
+    return ArchiveMetadata(
+        identifier=DOS_ITEM_ID,
+        emulator="dosbox",
+        emulator_ext="zip",
+        emulator_start=emulator_start,
+        download_filename="x.zip",
+        download_url="https://archive.org/download/x/x.zip",
+        fetched_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+
+
+@pytest.mark.parametrize(
+    ("emulator_start", "expected"),
+    [
+        ("ElectroM/EM.EXE", ["-c", "MOUNT C .", "-c", "C:", "-c", "CD ElectroM", "-c", "EM.EXE"]),
+        ("GAME.EXE", ["-c", "MOUNT C .", "-c", "C:", "-c", "GAME.EXE"]),
+    ],
+)
+def test_dosbox_argv_is_the_synthetic_command_line_as_c_flags(emulator_start, expected):
+    assert dosbox_argv(_metadata(emulator_start)) == expected
+
+
 # --- import_archive_game: writing the DOSEMU2 config pair -------------
 
 
@@ -164,6 +187,18 @@ def test_import_archive_game_writes_the_conf_and_userhook(tmp_path):
     assert (layout.dosemu / "dosemu.conf").is_file()
     userhook = (layout.dosemu / "userhook.bat").read_text(encoding="cp437")
     assert "EM.EXE" in userhook
+
+
+def test_build_archive_game_runs_the_command_line_through_the_models(tmp_path):
+    from dedb.archive.importer import build_archive_game
+    from dedb.dosbox.models import DosemuConfig
+
+    layout = _downloaded_item(tmp_path)
+    target, userhook_lines = build_archive_game(layout)
+
+    assert isinstance(target, DosemuConfig)  # went through DosboxConfig -> dosbox_to_dosemu
+    assert target.dpmi == 131072  # DOSBox default memsize, floored + converted
+    assert userhook_lines[-1] == "EM.EXE"  # emulator_start, shimmed autoexec
 
 
 def test_import_archive_game_refuses_to_overwrite_without_force(tmp_path):
