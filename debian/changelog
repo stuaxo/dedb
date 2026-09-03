@@ -10,6 +10,8 @@ dedb (0.0.13) unstable; urgency=medium
   * The DOSBox->DOSEMU2 conversion engine moved to a standalone
     `dedb.convert` library; `import` moved to a new `dedb.dosemu` app.
     If you have pinned `apps` in dedbconf.toml, add `"dedb.dosemu"`.
+  * `dedb run --dosbox|--dosemu --cmdline` prints the emulator command it
+    would run (a shell-pasteable line) and stops - no launch, no convert.
 
  -- Stuart Axon <stu.axon@gmail.com>  Wed, 03 Sep 2026 13:00:00 +0100
 

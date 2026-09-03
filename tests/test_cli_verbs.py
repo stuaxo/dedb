@@ -74,6 +74,23 @@ def test_run_propagates_nonzero_exit(download_dir, spy_run):
     assert CliRunner().invoke(cli, ["run", "gog://x", "--dosbox"]).exit_code == 3
 
 
+def test_run_cmdline_passes_dry_run_through_without_downloading(download_dir, spy_run):
+    (download_dir / "gog" / "x" / "game" / "sub").mkdir(parents=True)  # is_downloaded() -> True
+
+    result = CliRunner().invoke(cli, ["run", "gog://x", "--dosbox", "--cmdline"])
+
+    assert result.exit_code == 0
+    assert spy_run["run"]["dry_run"] is True
+    assert "ensure" not in spy_run  # --cmdline never calls ensure_downloaded
+
+
+def test_run_cmdline_errors_when_not_downloaded(download_dir, spy_run):
+    result = CliRunner().invoke(cli, ["run", "gog://x", "--dosbox", "--cmdline"])
+
+    assert result.exit_code == 1
+    assert "hasn't been downloaded" in result.output
+
+
 def test_run_requires_exactly_one_emulator(download_dir, spy_run):
     result = CliRunner().invoke(cli, ["run", "gog://x"])
     assert result.exit_code == 2
