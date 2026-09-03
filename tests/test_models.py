@@ -32,6 +32,21 @@ def test_right_model_aliases_only_add_the_prefix(model_cls, prefix):
     assert_serialization_aliases_add_only_prefix(model_cls, prefix)
 
 
+def test_config_keys_has_one_entry_per_field():
+    keys = DosboxConfig.config_keys()
+
+    assert len(keys) == len(DosboxConfig.model_fields)
+    assert set(keys.values()) == set(DosboxConfig.model_fields)
+
+
+def test_config_keys_maps_a_section_key_pair_to_its_field_name():
+    keys = DosboxConfig.config_keys()
+
+    assert keys[("sdl", "fullscreen")] == "fullscreen"
+    assert keys[("cpu", "cycles")] == "cycles"
+    assert keys[("dosbox", "memsize")] == "memsize"
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
