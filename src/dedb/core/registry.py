@@ -7,7 +7,6 @@ Depends on ``_registry`` (the bare dict) and ``settings``, never on
 here at module level.
 """
 
-from collections import OrderedDict
 from importlib import import_module
 
 from . import settings
@@ -25,7 +24,7 @@ def get_apps() -> dict[str, list]:
     }
 
 
-def get_backends() -> "OrderedDict[str, object]":
+def get_backends() -> dict[str, object]:
     """Import each app's optional `backend` module (which self-registers via
     dedb.core.register_backend) and return the registry, keyed by scheme
     (== app short name) in Settings.apps order. Apps without a backend module
@@ -40,7 +39,7 @@ def get_backends() -> "OrderedDict[str, object]":
             if exc.name != f"{dotted_path}.backend":
                 raise
 
-    backends: OrderedDict[str, object] = OrderedDict()
+    backends: dict[str, object] = {}
     for dotted_path in app_paths:
         short_name = dotted_path.rsplit(".", 1)[-1]
         if short_name in _REGISTRY:
