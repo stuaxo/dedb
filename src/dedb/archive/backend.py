@@ -23,6 +23,19 @@ class ArchiveBackend(BackendBase):
         match = _ITEM_URL_RE.match(url)
         return match.group(1) if match else None
 
+    def completion_ids(self):
+        import json
+
+        from .metadata import CACHE_PATH
+
+        ids = dict(super().completion_ids())
+        try:
+            for identifier, meta in json.loads(CACHE_PATH.read_text()).items():
+                ids.setdefault(identifier, (meta or {}).get("title") or "cached")
+        except (OSError, ValueError, AttributeError):
+            pass  # no metadata cache yet, or an unreadable one
+        return sorted(ids.items())
+
     def local_game(self, identifier: str):
         from ..core import GameMetadataFile, LaunchProfile, LocalGame
 

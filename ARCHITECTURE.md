@@ -133,6 +133,7 @@ sizing - are in [doc/dosbox_to_dosemu.md](doc/dosbox_to_dosemu.md).
 | Package        | What                                                              |
 |----------------|------------------------------------------------------------------|
 | `dedb.cli`     | the root group + the cross-cutting commands (ls / run / download / import / rm / refreshmetadata / completion) |
+| `dedb.completion` | shell completion scripts for the `completion` command       |
 | `dedb.core`    | the framework the apps plug into                                 |
 | `dedb.dosbox`  | the conversion above, plus the `importdosbox` / `dosboxconf` commands |
 | `dedb.shims`   | autoexec shims (used by the conversion)                          |

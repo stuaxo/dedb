@@ -1,8 +1,16 @@
 _dedb_completion() {
     local IFS=$'\n'
-    local response
+    local response cur words cword
 
-    response=$(env COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD=$COMP_CWORD _DEDB_COMPLETE=bash_complete $1)
+    if type _get_comp_words_by_ref &>/dev/null; then
+        _get_comp_words_by_ref -n : cur words cword
+    else
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        words=("${COMP_WORDS[@]}")
+        cword=$COMP_CWORD
+    fi
+
+    response=$(env COMP_WORDS="${words[*]}" COMP_CWORD="$cword" _DEDB_COMPLETE=bash_complete "$1")
 
     for completion in $response; do
         IFS=',' read type value <<< "$completion"
@@ -14,9 +22,13 @@ _dedb_completion() {
             COMPREPLY=()
             compopt -o default
         elif [[ $type == 'plain' ]]; then
-            COMPREPLY+=($value)
+            COMPREPLY+=("$value")
         fi
     done
+
+    if type __ltrim_colon_completions &>/dev/null; then
+        __ltrim_colon_completions "$cur"
+    fi
 
     return 0
 }

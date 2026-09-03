@@ -88,6 +88,12 @@ The Debian package installs tab completion for bash, zsh and fish. bash
 also needs the `bash-completion` package (a recommended dependency).
 Start a new shell to pick it up.
 
+Completion covers commands and options, and completes a GAME argument to
+`gog:<id>` / `archive:<id>` targets it can name from local data - games
+you have downloaded, your GOG library (once `lsgog` has cached it) and
+archive.org items dedb has already fetched metadata for. It never hits
+the network.
+
 For a pip install, print the script and put it where your shell reads
 completions:
 

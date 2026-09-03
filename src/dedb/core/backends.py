@@ -20,7 +20,7 @@ import click
 
 from . import downloads, settings
 from .local import LocalGame
-from .refs import Target, long_target
+from .refs import Target, long_target, short_target
 from .registry import get_backends
 
 
@@ -69,6 +69,14 @@ class BackendBase:
     def iter_local_games(self) -> "list[LocalGame]":
         """A :class:`LocalGame` for every download under this backend."""
         return [self.local_game(name) for name in self.local_names()]
+
+    def completion_ids(self) -> "list[tuple[str, str]]":
+        """``(identifier, description)`` pairs this backend can offer to
+        shell completion. Local data only - never the network, and cheap
+        enough to run on every <Tab>. The default is the downloaded
+        games; a backend with a local catalogue (a cached owned-games
+        list, a metadata cache) adds to it in a subclass."""
+        return [(name, "downloaded") for name in self.local_names()]
 
     # --- actions -------------------------------------------------------
 
@@ -214,6 +222,57 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
         f"'{value}' is downloaded under multiple backends ({', '.join(found)}).\n"
         f"Disambiguate with a scheme, e.g. {long_target(found[0], value)}"
     )
+
+
+def complete_target(incomplete: str, *, backend: "str | None" = None) -> "list":
+    """Shell-completion candidates for a game reference, as click
+    ``CompletionItem``s. Built from local data only (each backend's
+    :meth:`BackendBase.completion_ids` - downloads and local catalogues,
+    never the network):
+
+    * ``-b <scheme>`` given: bare ids for that backend.
+    * ``incomplete`` is ``<scheme>:<partial>``: ``<scheme>:<id>`` targets.
+    * otherwise: the ``gog:`` / ``archive:`` prefixes and every
+      ``<scheme>:<id>`` target that matches.
+
+    Any error yields ``[]`` - a completion callback must not raise."""
+    from click.shell_completion import CompletionItem
+
+    try:
+        registry = get_backends()
+
+        if backend is not None:
+            be = registry.get(backend)
+            return (
+                []
+                if be is None
+                else [
+                    CompletionItem(ident, help=desc or None)
+                    for ident, desc in be.completion_ids()
+                    if ident.startswith(incomplete)
+                ]
+            )
+
+        scheme, sep, rest = incomplete.partition(":")
+        if sep and scheme in registry:
+            rest = rest.lstrip("/")  # tolerate the gog://<id> form too
+            return [
+                CompletionItem(short_target(scheme, ident), help=desc or None)
+                for ident, desc in registry[scheme].completion_ids()
+                if ident.startswith(rest)
+            ]
+
+        items = []
+        for sch, be in registry.items():
+            if f"{sch}:".startswith(incomplete):
+                items.append(CompletionItem(f"{sch}:"))
+            for ident, desc in be.completion_ids():
+                target = short_target(sch, ident)
+                if target.startswith(incomplete):
+                    items.append(CompletionItem(target, help=desc or None))
+        return items
+    except Exception:
+        return []
 
 
 def resolve_game(
