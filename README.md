@@ -52,7 +52,7 @@ For more ls options:
 | `https://archive.org/details/<name>` | an archive.org item, by URL                   |
 | `<name>`                             | a downloaded game by name                     |
 | `<pattern>` (`rm` only)              | a `*`/`?`/`[]` wildcard over downloaded names (optionally `gog:<pattern>`) |
-| `path/to/dosbox.conf` (`import` / `dosboxconf` / `dosemuconf`) | a dosbox.conf on disk, converted directly (`import` merges several, writes to `-o`) |
+| `path/to/dosbox.conf` (`import` / `dosboxconf` / `dosemuconf` only) | a dosbox.conf on disk - several are merged; `import` writes the result to `-o`, the `*conf` commands print it |
 
 Examples:
 

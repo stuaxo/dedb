@@ -49,18 +49,18 @@ profile).
        scheme: str = "myscheme"
        supports_profile: bool = False
        layout_cls = GameLayout
-       runner_module = "dedb.myscheme.runner"
+       runner_module = "dedb.myscheme.runner"  # exposes run_dosbox / run_dosemu
        downloader_module = "dedb.myscheme.downloader"  # exposes make_downloader(layout)
 
-       def run(self, target: Target, layout, *, emulator, extra_args, verbose) -> int: ...
-       def convert(self, target: Target, *, output_dir=None, force=False): ...
+       def _import(self, layout, target, output_dir, *, force): ...  # write dosemu.conf + userhook.bat
        def build(self, target: Target): ...  # [(label, dosemu_conf_text, userhook_lines)]
        def local_game(self, identifier: str): ...  # -> dedb.core.LocalGame
    ```
 
-   `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `run`,
-   `convert`, `ensure_downloaded` (which resolves `downloader_module` and
-   drives your `Downloader`), `refresh_metadata` and `iter_local_games`.
+   `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `run`
+   (dispatches to `runner_module`), `convert` (calls your `_import`),
+   `ensure_downloaded` (resolves `downloader_module` and drives your
+   `Downloader`), `refresh_metadata` and `iter_local_games`.
    `dedb rm` works off `layout` + `dedb.core.remove_downloads` directly.
    Override `identifier_from_url` if the backend has its own URL form, and
    `dosbox_command_line` (returns `(argv, working_dir)`) so `dedb dosboxconf`
