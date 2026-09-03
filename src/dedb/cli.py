@@ -46,20 +46,18 @@ def _download_options(func):
     """The --keep / --refreshmetadata / --redownload trio shared by `run`
     and `download`."""
     func = click.option(
-        "--keep", is_flag=True, default=False, help="Keep the installer/archive after extracting."
+        "--keep", is_flag=True, help="Keep the installer/archive after extracting."
     )(func)
     func = click.option(
         "--refreshmetadata",
         "-r",
         "refresh_metadata",
         is_flag=True,
-        default=False,
         help="Re-fetch cached backend metadata instead of using the cached copy.",
     )(func)
     func = click.option(
         "--redownload",
         is_flag=True,
-        default=False,
         help="Re-download and re-extract even if already present.",
     )(func)
     return func
@@ -77,26 +75,14 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
     return "dosbox" if use_dosbox else "dosemu"
 
 
-def _run(
-    game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload
-) -> None:
-    """Download (if needed) and launch a resolved game; exit non-zero if the emulator does."""
-    layout = backend.ensure_downloaded(
-        game.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
-    )
-    exit_code = backend.run(game, layout, emulator=emulator, extra_args=extra_args, verbose=verbose)
-    if exit_code != 0:
-        sys.exit(exit_code)
-
-
 # --- run / download ----------------------------------------------------
 
 
 @click.command("run")
 @click.argument("game", shell_complete=_complete_game)
 @click.argument("emulator_args", nargs=-1, type=click.UNPROCESSED)
-@click.option("--dosbox", "use_dosbox", is_flag=True, default=False, help="Run in DOSBox.")
-@click.option("--dosemu", "use_dosemu", is_flag=True, default=False, help="Run in DOSEMU2.")
+@click.option("--dosbox", "use_dosbox", is_flag=True, help="Run in DOSBox.")
+@click.option("--dosemu", "use_dosemu", is_flag=True, help="Run in DOSEMU2.")
 @click.option(
     "--profile",
     default=None,
@@ -104,13 +90,10 @@ def _run(
 )
 @_backend_option
 @_download_options
-@click.option(
-    "--verbose", "-v", is_flag=True, default=False, help="Print the command line before launching."
-)
+@click.option("--verbose", "-v", is_flag=True, help="Print the command line before launching.")
 @click.option(
     "--cmdline",
     is_flag=True,
-    default=False,
     help="Print the command --dosbox/--dosemu would run and stop "
     "(needs the game downloaded; writes nothing).",
 )
@@ -144,16 +127,15 @@ def run(
         cmd, cwd = be.cmdline(resolved, emulator=emulator, extra_args=emulator_args)
         click.echo(render_cmdline(cmd, cwd))
         return
-    _run(
-        resolved,
-        be,
-        emulator=emulator,
-        extra_args=emulator_args,
-        verbose=verbose,
-        keep=keep,
-        refresh_metadata=refresh_metadata,
-        redownload=redownload,
+
+    layout = be.ensure_downloaded(
+        resolved.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
     )
+    exit_code = be.run(
+        resolved, layout, emulator=emulator, extra_args=emulator_args, verbose=verbose
+    )
+    if exit_code != 0:
+        sys.exit(exit_code)
 
 
 @click.command("download")
@@ -207,7 +189,7 @@ def _rm_glob_hits(pattern: str, backend: "str | None", registry) -> list:
 @click.command("rm")
 @click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
-@click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting.")
+@click.option("--yes", "-y", is_flag=True, help="Remove without prompting.")
 def rm(games, backend, yes):
     """Delete one or more downloaded games' directory trees.
 
@@ -229,12 +211,9 @@ def rm(games, backend, yes):
             target = resolve_game(game, backend)
             pairs.append((registry[target.scheme], target.identifier))
 
-    seen: set = set()
-    layouts = []
-    for be, identifier in pairs:
-        if (be.scheme, identifier) not in seen:
-            seen.add((be.scheme, identifier))
-            layouts.append(be.layout(identifier))
+    # A name can match several patterns; de-duplicate, keeping first-seen order.
+    unique = {(be.scheme, identifier): be for be, identifier in pairs}
+    layouts = [be.layout(identifier) for (_, identifier), be in unique.items()]
 
     if layouts:
         remove_downloads(layouts, assume_yes=yes)
@@ -279,11 +258,10 @@ def refreshmetadata(games, backend):
     by_scheme: dict = {}
     for be, identifier in wanted:
         by_scheme.setdefault(be.scheme, []).append(identifier)
-
     for scheme, identifiers in by_scheme.items():
         registry[scheme].refresh_metadata(identifiers)
 
-    done = sum(len(ids) for ids in by_scheme.values())
+    done = len(wanted)
     click.echo(f"Refreshed metadata for {done} game{'' if done == 1 else 's'}")
 
 
@@ -357,14 +335,12 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     "--short",
     "short",
     is_flag=True,
-    default=False,
     help="Bare name; `<scheme>:` prefix only when >1 backend owns the name. (default)",
 )
 @click.option(
     "-1",
     "names_only",
     is_flag=True,
-    default=False,
     help="Bare names only, deduplicated.",
 )
 @click.option(
@@ -372,7 +348,6 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     "--long",
     "qualified",
     is_flag=True,
-    default=False,
     help="Every entry as a full `<scheme>:<id>` target (pasteable into `dedb run`).",
 )
 @click.option(
@@ -380,14 +355,13 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     "--verbose",
     "verbose",
     is_flag=True,
-    default=False,
     help="Columns: target, title, classification, converted?, launch profiles.",
 )
 def list_downloads(
     backends: list[str], short: bool, names_only: bool, qualified: bool, verbose: bool
 ) -> None:
     """List downloaded games."""
-    if sum([bool(short), names_only, qualified, verbose]) > 1:
+    if sum([short, names_only, qualified, verbose]) > 1:
         raise click.UsageError("Choose at most one of -s / -1 / -l / -v.")
 
     games = _local_games(backends)
@@ -408,8 +382,8 @@ def list_downloads(
         if names_only:
             click.echo(name)
             continue
+        qualify = qualified or len(owners[name]) > 1
         for scheme in owners[name]:
-            qualify = qualified or len(owners[name]) > 1
             click.echo(short_target(scheme, name) if qualify else name)
 
 
