@@ -1,3 +1,18 @@
+dedb (0.0.11) unstable; urgency=medium
+
+  * `dedb dosboxconf` now works for `archive://` items, rendered from
+    archive.org's launch metadata - no dosbox.conf needed. The item
+    must be downloaded first.
+  * `dedb dosboxconf` accepts the `gog:<id>` / `archive:<id>` colon form,
+    not only `<scheme>://<id>`.
+  * `dedb ls` filters backends with `-b` / `--backend` instead of
+    `--type`, matching `run` / `download` / `import` / `rm`.
+  * archive.org items are converted through the same model pipeline as
+    GOG games (the DOSBox command line emularity synthesises from
+    `emulator_start`); generated output is unchanged.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Thu, 03 Sep 2026 11:00:00 +0100
+
 dedb (0.0.10) unstable; urgency=medium
 
   * Rename the [archive] `favorites_user` setting to `archive_user`. An
