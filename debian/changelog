@@ -1,3 +1,15 @@
+dedb (0.0.10) unstable; urgency=medium
+
+  * Rename the [archive] `favorites_user` setting to `archive_user`. An
+    old `favorites_user` line is ignored - rename it by hand.
+  * A fresh dedbconf.toml no longer pins `apps`, so apps added in a later
+    dedb are picked up without editing the config.
+  * `dedb --help` lists the cross-cutting commands under "Commands:"
+    instead of a "[dedb]" group.
+  * Bring doc/ and ARCHITECTURE.md up to date.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Thu, 03 Sep 2026 03:15:00 +0100
+
 dedb (0.0.9) unstable; urgency=medium
 
   * New `dedb refreshmetadata [GAME]...`: re-fetch backend metadata and
