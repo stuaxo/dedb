@@ -20,36 +20,44 @@ def _extract_zip(zip_path: Path, dest: Path) -> None:
 
 
 class ArchiveDownloader(Downloader):
-    def _prepare(self, layout, *, refresh: bool) -> ArchiveMetadata:
+    def __init__(self, layout) -> None:
+        super().__init__(layout)
+        self._metadata: ArchiveMetadata | None = None
+
+    def _prepare(self, *, refresh: bool) -> None:
+        name = self.layout.name
         try:
-            metadata = get_metadata(layout.name, refresh=refresh)
+            metadata = get_metadata(name, refresh=refresh)
         except NotDosItemError as exc:
             raise click.ClickException(str(exc)) from exc
         except (LookupError, *FETCH_ERRORS) as exc:
             raise click.ClickException(
-                f"Could not fetch archive.org metadata for '{layout.name}': {exc}"
+                f"Could not fetch archive.org metadata for '{name}': {exc}"
             ) from exc
 
         if metadata.emulator.lower() != "dosbox":
             raise click.ClickException(
-                f"'{layout.name}' is an archive.org '{metadata.emulator}' item, "
+                f"'{name}' is an archive.org '{metadata.emulator}' item, "
                 "not DOSBox - not supported."
             )
         if metadata.emulator_ext != "zip":
             raise click.ClickException(
-                f"'{layout.name}' ships a .{metadata.emulator_ext} archive - "
+                f"'{name}' ships a .{metadata.emulator_ext} archive - "
                 "only .zip items are supported so far."
             )
-        return metadata
+        self._metadata = metadata
 
-    def _fetch(self, layout, metadata: ArchiveMetadata) -> None:
+    def _fetch(self) -> None:
+        layout = self.layout
         layout.download.mkdir(parents=True, exist_ok=True)
-        ArchiveClient().download(layout.name, metadata.download_filename, layout.download)
+        ArchiveClient().download(layout.name, self._metadata.download_filename, layout.download)
 
-    def _extract(self, layout, metadata: ArchiveMetadata) -> None:
-        _extract_zip(layout.download / metadata.download_filename, layout.game)
+    def _extract(self) -> None:
+        _extract_zip(self.layout.download / self._metadata.download_filename, self.layout.game)
 
-    def _write_metadata(self, layout, metadata: ArchiveMetadata, *, refresh: bool) -> None:
+    def _write_metadata(self, *, refresh: bool) -> None:
+        layout = self.layout
+        metadata = self._metadata
         emulator = metadata.emulator.lower()
         envelope = GameMetadataFile(
             scheme="archive",
@@ -62,3 +70,8 @@ class ArchiveDownloader(Downloader):
             source=metadata.model_dump(mode="json"),
         )
         layout.metadata_json.write_text(envelope.model_dump_json(indent=2))
+
+
+def make_downloader(layout) -> ArchiveDownloader:
+    """The backend seam (see ``BackendBase.downloader_module``)."""
+    return ArchiveDownloader(layout)

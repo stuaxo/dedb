@@ -82,18 +82,16 @@ def downloadgog(
         )
 
     click.echo(f"Using download directory: {download_dir}")
-    downloader = GogDownloader(product_ids=product_id_by_name, merge_save=merge_save)
     for gamename in targets:
         click.echo("-" * 40)
         if gamename not in product_id_by_name:
             click.echo(f"'{gamename}' not found in your GOG library - skipping")
             continue
-        downloader.ensure(
+        GogDownloader(
             GogLayout(download_dir, gamename),
-            keep=keep,
-            refresh_metadata=refresh_metadata,
-            redownload=redownload,
-        )
+            product_ids=product_id_by_name,
+            merge_save=merge_save,
+        ).run(keep=keep, refresh_metadata=refresh_metadata, redownload=redownload)
 
     click.echo("-" * 40)
     click.echo(f"Done. Games extracted to {download_dir}/<game>/game/")

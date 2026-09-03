@@ -15,17 +15,13 @@ class ArchiveBackend(BackendBase):
     supports_profile: bool = False
     layout_cls = ArchiveLayout
     runner_module = "dedb.archive.runner"
+    downloader_module = "dedb.archive.downloader"
 
     def identifier_from_url(self, url: str):
         from .client import _ITEM_URL_RE
 
         match = _ITEM_URL_RE.match(url)
         return match.group(1) if match else None
-
-    def _downloader(self):
-        from .downloader import ArchiveDownloader
-
-        return ArchiveDownloader()
 
     def local_game(self, identifier: str):
         from ..core import GameMetadataFile, LaunchProfile, LocalGame

@@ -1,8 +1,9 @@
 """GOG backend: `gog://<gamename>` targets.
 
 Registered into the dedb.core registry; imported by dedb.core.get_backends().
-The runner / importer imports are function-local to keep
-dedb.core -> dedb.gog.backend import-light and cycle-free.
+``runner_module`` / ``downloader_module`` are dotted strings, and the
+importer imports are function-local, to keep dedb.core -> dedb.gog.backend
+import-light and cycle-free.
 """
 
 from dataclasses import dataclass
@@ -18,11 +19,7 @@ class GogBackend(BackendBase):
     supports_profile: bool = True
     layout_cls = GogLayout
     runner_module = "dedb.gog.runner"
-
-    def _downloader(self):
-        from .downloader import GogDownloader
-
-        return GogDownloader()
+    downloader_module = "dedb.gog.downloader"
 
     def local_game(self, identifier: str):
         from ..core import GameMetadataFile, LaunchProfile, LocalGame

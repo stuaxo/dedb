@@ -9,6 +9,7 @@ game, company or product name (see tests/conftest.py).
 
 import json
 from datetime import datetime, timezone
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -62,7 +63,7 @@ def test_gog_local_game_reads_launch_profiles_and_flags_from_metadata(downloads,
         ],
         converted=True,
     )
-    GogBackend()._downloader()  # no-op, just proves the backend imports
+    assert callable(import_module(GogBackend().downloader_module).make_downloader)  # seam resolves
     layout.metadata_json.write_text(
         GameMetadataFile(
             scheme="gog",

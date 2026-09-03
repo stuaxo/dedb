@@ -215,7 +215,9 @@ def stub_metadata(stub_get_item, monkeypatch):
 def _prepare(tmp_path):
     from dedb.archive.layout import ArchiveLayout
 
-    return ArchiveDownloader()._prepare(ArchiveLayout(tmp_path, DOS_ITEM_ID), refresh=False)
+    dl = ArchiveDownloader(ArchiveLayout(tmp_path, DOS_ITEM_ID))
+    dl._prepare(refresh=False)
+    return dl._metadata
 
 
 def test_prepare_returns_the_resolved_metadata(tmp_path, stub_metadata):

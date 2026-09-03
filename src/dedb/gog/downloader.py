@@ -93,12 +93,19 @@ class GogDownloader(Downloader):
     library lookup during a bulk `downloadgog`."""
 
     def __init__(
-        self, *, product_ids: dict[str, str] | None = None, merge_save: bool = True
+        self,
+        layout: GogLayout,
+        *,
+        product_ids: dict[str, str] | None = None,
+        merge_save: bool = True,
     ) -> None:
+        super().__init__(layout)
         self._product_ids = product_ids
         self.merge_save = merge_save
+        self._product_id: str | None = None
 
-    def _prepare(self, layout: GogLayout, *, refresh: bool) -> str:
+    def _prepare(self, *, refresh: bool) -> None:
+        layout = self.layout
         if self._product_ids is not None:
             product_id = self._product_ids.get(layout.name)
         else:
@@ -108,9 +115,10 @@ class GogDownloader(Downloader):
             )
         if product_id is None:
             raise click.ClickException(f"'{layout.name}' not found in your GOG library")
-        return product_id
+        self._product_id = product_id
 
-    def _fetch(self, layout: GogLayout, product_id: str) -> bool:
+    def _fetch(self) -> bool:
+        layout = self.layout
         # lgogdownloader always nests its output under a game-id directory of
         # its own; download into a holding dir and flatten that into installer/.
         holding_dir = layout.dir / ".installer_download"
@@ -134,21 +142,23 @@ class GogDownloader(Downloader):
             return False
         return True
 
-    def _extract(self, layout: GogLayout, product_id: str) -> None:
+    def _extract(self) -> None:
+        layout = self.layout
         installer_exe = find_installer_exe(layout.installer)
         subprocess.run(["innoextract", "-d", str(layout.game), str(installer_exe)], check=True)
 
-    def _post_extract(self, layout: GogLayout) -> None:
+    def _post_extract(self) -> None:
         if self.merge_save:
-            merge_support_save_data(layout)
-        create_missing_mount_dirs(layout)
+            merge_support_save_data(self.layout)
+        create_missing_mount_dirs(self.layout)
 
-    def _write_metadata(self, layout: GogLayout, product_id: str, *, refresh: bool) -> None:
+    def _write_metadata(self, *, refresh: bool) -> None:
         """metadata.json records the dependency/classification info and the
         launch profiles, with the raw GogMetadata (playTasks included)
         kept under ``source``."""
+        layout = self.layout
         try:
-            metadata = get_metadata(layout.name, product_id, refresh=refresh)
+            metadata = get_metadata(layout.name, self._product_id, refresh=refresh)
         except FETCH_ERRORS as exc:
             print(f"Could not fetch metadata for {layout.name}: {exc}")
             return
@@ -162,3 +172,8 @@ class GogDownloader(Downloader):
             source=metadata.model_copy(update={"profiles": profiles}).model_dump(mode="json"),
         )
         layout.metadata_json.write_text(envelope.model_dump_json(indent=2))
+
+
+def make_downloader(layout: GogLayout) -> GogDownloader:
+    """The backend seam (see ``BackendBase.downloader_module``)."""
+    return GogDownloader(layout)
