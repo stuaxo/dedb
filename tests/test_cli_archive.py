@@ -26,7 +26,7 @@ FIXTURES = Path(__file__).parent / "fixtures" / "archive"
 def configured_user(monkeypatch):
     monkeypatch.setattr(
         "dedb.core.settings.get_settings",
-        lambda: Settings(archive={"favorites_user": "someuser"}),
+        lambda: Settings(archive={"archive_user": "someuser"}),
     )
 
 
@@ -82,7 +82,7 @@ def test_prompts_for_an_unconfigured_user_and_offers_to_save(stub_search, answer
 
     assert result.exit_code == 0
     assert "collection:fav-prompteduser" in stub_search["query"]
-    assert load_settings().archive.favorites_user == saved
+    assert load_settings().archive.archive_user == saved
 
 
 @pytest.mark.parametrize(

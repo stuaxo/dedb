@@ -86,7 +86,7 @@ class DosboxSettings(BaseModel):
 class ArchiveSettings(BaseModel):
     # archive.org screen name whose public favorites `lsarchive` lists.
     # When unset, `lsarchive` prompts for it and offers to save it here.
-    favorites_user: str | None = None
+    archive_user: str | None = None
 
 
 class Settings(BaseModel):
@@ -176,8 +176,8 @@ def get_settings() -> Settings:
     return load_settings()
 
 
-def save_archive_favorites_user(username: str) -> None:
-    """Write ``favorites_user`` into the ``[archive]`` section of the
+def save_archive_user(username: str) -> None:
+    """Write ``archive_user`` into the ``[archive]`` section of the
     on-disk config, preserving its comments and creating the file or the
     section as needed. Raises OSError if the file can't be written."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -189,7 +189,7 @@ def save_archive_favorites_user(username: str) -> None:
     )
     # json.dumps yields a double-quoted string with the same escaping a
     # TOML basic string uses for the characters that can appear here.
-    new_line = f"favorites_user = {json.dumps(username)}"
+    new_line = f"archive_user = {json.dumps(username)}"
 
     in_archive = False
     for i, line in enumerate(lines):
@@ -197,7 +197,7 @@ def save_archive_favorites_user(username: str) -> None:
         if stripped.startswith("[") and stripped.endswith("]"):
             in_archive = stripped == "[archive]"
             continue
-        if in_archive and stripped.split("=", 1)[0].strip() == "favorites_user":
+        if in_archive and stripped.split("=", 1)[0].strip() == "archive_user":
             lines[i] = new_line
             break
     else:

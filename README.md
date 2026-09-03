@@ -111,7 +111,7 @@ dosbox = "default"
 [archive]
 # archive.org screen name whose public favorites `dedb lsarchive` lists.
 # Left unset, `lsarchive` prompts for it and offers to save it here.
-favorites_user = "your-archive-org-username"
+archive_user = "your-archive-org-username"
 ```
 
 
@@ -203,7 +203,7 @@ archive:msdos_Commander_Keen_3_-_Keen_Must_Die_1990   Commander Keen 3 - Keen Mu
 archive:msdos_Electro_Man_1992                        Electro Man (1992)
 ```
 
-The username comes from the `[archive]` `favorites_user` setting; if
+The username comes from the `[archive]` `archive_user` setting; if
 that isn't set you're prompted for it once and offered the chance to
 save it. Pass `--user <name>` to list someone else, `--all` to include
 non-DOS favorites, and `-1` for bare `archive:<id>` lines.

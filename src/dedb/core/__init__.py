@@ -40,7 +40,7 @@ from .settings import (
     Settings,
     get_settings,
     load_settings,
-    save_archive_favorites_user,
+    save_archive_user,
     scheme_config_path,
 )
 
@@ -71,7 +71,7 @@ __all__ = [
     "require_download_dir",
     "resolve",
     "resolve_game",
-    "save_archive_favorites_user",
+    "save_archive_user",
     "scheme_config_path",
     "short_target",
 ]
