@@ -21,7 +21,7 @@ def build_from_parsed(
     LREDIR calls; it defaults to the current directory."""
     dosbox = DosboxConfig.model_validate({**raw_dict, "autoexec": list(autoexec_commands)})
     target = dosbox_to_dosemu(dosbox)
-    return target, autoexec_as_userhook(dosbox.autoexec, conf=dosbox, working_dir=working_dir)
+    return target, autoexec_as_userhook(dosbox.autoexec, working_dir=working_dir)
 
 
 def build(

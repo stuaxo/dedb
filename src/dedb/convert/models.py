@@ -34,16 +34,13 @@ MIN_DPMI_MEMORY_MB = 128
 
 
 class DosboxConfig(BaseModel):
-    """Flat model of the subset of dosbox.conf this app reads. Field
-    names, types and defaults match DOSBox's own dosbox.conf - no
-    DOSEMU2 concepts here.
+    """Represents fields in dosbox.conf
 
-    validation_alias locates each value in dosbox.conf's nested section
-    structure; populate_by_name still allows building an instance
-    directly from its own field names (e.g. in tests), since the leaf of
-    each alias already matches the field name - the alias is structural,
-    not a rename."""
+    Field names and types should match those in dosbox.conf
 
+    The data structure is flaat, validation_alias is used to
+    pull data from the sections of the dosbox.conf.
+    """
     model_config = ConfigDict(populate_by_name=True)
 
     fullscreen: bool = Field(default=False, validation_alias=AliasPath("sdl", "fullscreen"))
@@ -78,15 +75,14 @@ class DosboxConfig(BaseModel):
     scaler: str = Field(default="normal2x", validation_alias=AliasPath("render", "scaler"))
     output: str = Field(default="surface", validation_alias=AliasPath("sdl", "output"))
 
-    # The [autoexec] block: an ordered list of DOS command lines, kept
-    # verbatim. Unlike every other field this isn't a section/key lookup,
-    # so it carries no AliasPath - the parser passes it in by name.
+    # [autoexec]
+    # Each entry in autoexec is a line in the autoexec.bat
     autoexec: list[str] = Field(default_factory=list)
 
-    coerce_bool = field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")(
+    _coerce_bool = field_validator("fullscreen", "gus", "pcspeaker", "aspect", mode="before")(
         istruthy
     )
-    coerce_int = field_validator("memsize", "irq", "dma", "hdma", mode="before")(coerce_int)
+    _coerce_int = field_validator("memsize", "irq", "dma", "hdma", mode="before")(coerce_int)
 
     def get_mounts(self, working_dir: Path) -> list[MountPoint]:
         """Every ``MOUNT`` command in the autoexec, each target resolved
@@ -106,7 +102,8 @@ class DosboxConfig(BaseModel):
         for name, field in cls.model_fields.items():
             alias = field.validation_alias
             if not isinstance(alias, AliasPath):
-                continue  # `autoexec` - a verbatim list, not a section/key value
+                continue
+
             by_section.setdefault(alias.path[0], {})[alias.path[-1]] = name
         return by_section
 
@@ -114,18 +111,23 @@ class DosboxConfig(BaseModel):
 class DosemuConfig(BaseModel):
     """Model of DOSEMU2 conf settings.
 
-    In general, settings here should have names and units based off
-    those in dosemu.conf.
+    Settings here should have names and units consistent with
+    dosemu.conf but without the `$_` prefix.
 
-    Field names don't carry the `$_` prefix themselves; each field's
-    serialization_alias is dosemu.conf's actual variable name (with the
-    prefix) and is the only place that prefix is added - see
-    model_dump_dosemurc."""
+    Fields use serialization_alias to the dosemu.conf native
+    name with it's `$_` prefix.
 
-    X_fullscreen: bool = Field(serialization_alias="$_X_fullscreen")
-    cpuspeed: int = Field(serialization_alias="$_cpuspeed")
+    See `model_dump_dosemurc` to see where `dosemu.conf`
+    is written."""
+
+    X_fullscreen: bool = Field(serialization_alias="$_X_fullscreen", description="Enable fullscreen mode.")
+
+    cpuspeed: int = Field(serialization_alias="$_cpuspeed",
+                          description="CPU speed in MHz for TSC calibration; 0 = auto.")
+
     cpu_vm: str = Field(serialization_alias="$_cpu_vm")
-    dpmi: int = Field(serialization_alias="$_dpmi")
+    dpmi: int = Field(serialization_alias="$_dpmi",
+                      description="DPMI pool size in Kb.")
 
     # Sound fields
     sound: bool = Field(serialization_alias="$_sound")
@@ -144,23 +146,19 @@ class DosemuConfig(BaseModel):
     # Joystick fields
     joystick: str = Field(serialization_alias="$_joystick")
 
-    # Render/Video fields
+    # Render/Video fields:
     #
     # No $_video field: dosemu2's $_video is the emulated video *adapter*
     # style (one of vga/ega/mda/mga/cga/none), not a display backend.
-    # DOSBox's `output` (surface/opengl/texture/...) selects a host
-    # rendering surface and has no dosemu2 equivalent - dosemu2 chooses
-    # its own backend (SDL) and defaults $_video to "vga", which is what
-    # DOS games want anyway. Emitting `$_video = "X"` (the old DOSEMU1
-    # spelling for "use X") actually breaks dosemu2: its built-in
-    # global.conf expands $_video into `video { X }`, a parse error that
-    # aborts startup.
 
     def model_dump_dosemurc(self) -> str:
-        """Render as a DOSEMU2 config file: `$_var = (n)` for
-        numeric/boolean values, `$_var = "s"` for strings
-        (/etc/dosemu/dosemu.conf, dosemu2's src/base/init/lexer.l - bare
-        on/off are keywords, plain decimal integers are valid).
+        """Render as a DOSEMU2 `dosemu.conf`:
+
+        # numeric / boolean values:
+        `$_var = (n)`
+
+        # strings values:
+        `$_var = "s"`
 
         $_X_fullscreen: start DOSEMU2 in fullscreen.
         $_cpuspeed: CPU speed in MHz for TSC calibration; 0 = auto.
@@ -181,21 +179,18 @@ class DosemuConfig(BaseModel):
         return "\n".join(lines) + "\n"
 
 
-# A DOSBox setting dedb reads (so `config -set` targeting it isn't flagged
-# as unknown) but has no DOSEMU2 equivalent for. The value is dropped:
-# excluded from model_dump, so it never reaches DosemuConfig.
 Unsupported = Annotated[Any, Field(default=None, exclude=True)]
+"""DOSBox setting that is not currently output as a DOSEMU2 setting"""
 
 
 class DosemuConfigFromDosbox(BaseModel):
-    """The translation layer: ``DosemuConfig``'s fields, each read from
-    the ``DosboxConfig`` field its ``validation_alias`` names and put
-    through a ``mode="before"`` validator that does the unit/format
-    conversion. ``dosbox_to_dosemu`` feeds it ``DosboxConfig.model_dump()``
-    and builds a ``DosemuConfig`` from the result. Field order matches the
-    field map in ARCHITECTURE.md; each field's ``description`` is the
-    one-line gloss the map prints, the validator's docstring the rationale."""
+    """Pydantic model to translate ``DosboxConfig`` to ``DosemuConfig``.
 
+    Fields are named to match the destination model (``DosemuConfig``),
+    and validation_alias is set to match the source model (``DosboxConfig``).
+
+    validators are used to convert units and formats from DOSBox to DOSEMU2.
+    """
     model_config = ConfigDict(populate_by_name=True)
 
     X_fullscreen: bool = Field(validation_alias="fullscreen")

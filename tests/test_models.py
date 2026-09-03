@@ -234,57 +234,30 @@ def test_translation_model_drops_unsupported_fields_from_the_dump():
 
 
 @pytest.fixture
-def default_dosemu_kwargs():
-    return {
-        "X_fullscreen": False,
-        "cpuspeed": 0,
-        "cpu_vm": "kvm",
-        "dpmi": 131072,
-        "sound": True,
-        "sb_base": 0x220,
-        "sb_irq": 7,
-        "sb_dma": 1,
-        "sb_hdma": 5,
-        "gus": False,
-        "mpu401_base": 0x330,
-        "mpu401_irq": 9,
-        "speaker": "emulated",
-        "com1": "",
-        "joystick": "/dev/input/js0",
-    }
+def dosemu():
+    """A fully-populated DosemuConfig - the translated DOSBox defaults."""
+    return dosbox_to_dosemu(DosboxConfig())
 
 
 @pytest.mark.parametrize(("fullscreen", "rendered"), [(True, "on"), (False, "off")])
-def test_model_dump_dosemurc_renders_fullscreen_as_on_off(
-    fullscreen: bool, rendered: str, default_dosemu_kwargs
-):
-    kwargs = default_dosemu_kwargs.copy()
-    kwargs["X_fullscreen"] = fullscreen
-    target = DosemuConfig(**kwargs)
-
-    output = target.model_dump_dosemurc()
+def test_model_dump_dosemurc_renders_fullscreen_as_on_off(fullscreen, rendered, dosemu):
+    output = dosemu.model_copy(update={"X_fullscreen": fullscreen}).model_dump_dosemurc()
 
     assert f"$_X_fullscreen = ({rendered})" in output.splitlines()
 
 
-def test_model_dump_dosemurc_renders_dpmi_without_further_conversion(default_dosemu_kwargs):
+def test_model_dump_dosemurc_renders_dpmi_without_further_conversion(dosemu):
     """dpmi is already in DOSEMU2's units by the time it reaches
     DosemuConfig; model_dump_dosemurc must not scale it again."""
-    kwargs = default_dosemu_kwargs.copy()
-    kwargs["dpmi"] = 262144
-    target = DosemuConfig(**kwargs)
-
-    output = target.model_dump_dosemurc()
+    output = dosemu.model_copy(update={"dpmi": 262144}).model_dump_dosemurc()
 
     assert "$_dpmi = (262144)" in output.splitlines()
 
 
-def test_model_dump_dosemurc_full_output(default_dosemu_kwargs):
-    kwargs = default_dosemu_kwargs.copy()
-    kwargs.update({"X_fullscreen": True, "cpuspeed": 3000, "dpmi": 131072})
-    target = DosemuConfig(**kwargs)
-
-    output = target.model_dump_dosemurc()
+def test_model_dump_dosemurc_full_output(dosemu):
+    output = dosemu.model_copy(
+        update={"X_fullscreen": True, "cpuspeed": 3000, "dpmi": 131072}
+    ).model_dump_dosemurc()
 
     assert "$_X_fullscreen = (on)" in output.splitlines()
     assert "$_cpuspeed = (3000)" in output.splitlines()

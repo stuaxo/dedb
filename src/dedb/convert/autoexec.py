@@ -103,7 +103,7 @@ def get_shims() -> list[tuple[re.Pattern[str], Handler, str]]:
 
 
 def autoexec_line_to_userhook_line(
-    line: str, conf: Any | None = None, working_dir: Path | None = None
+    line: str, working_dir: Path | None = None
 ) -> tuple[str, tuple[str, Severity, str] | None]:
     """Run one line through the shims.
 
@@ -122,21 +122,19 @@ def autoexec_line_to_userhook_line(
         if match is None:
             continue
         rewritten, severity, summary = handler(
-            line=clean, conf=conf, working_dir=working_dir, **match.groupdict()
+            line=clean, working_dir=working_dir, **match.groupdict()
         )
         return rewritten, (name, severity, summary)
 
     return line, None
 
 
-def autoexec_as_userhook(
-    autoexec: list[str], conf: Any | None = None, working_dir: Path | None = None
-) -> list[str]:
+def autoexec_as_userhook(autoexec: list[str], working_dir: Path | None = None) -> list[str]:
     """Every autoexec line rewritten for ``userhook.bat`` - each line
     unchanged unless a shim recognised it. ``working_dir`` (default: the
     current directory) is where a relative ``MOUNT`` path is resolved
     from, when the shim rewrites it to ``LREDIR``."""
-    return [autoexec_line_to_userhook_line(line, conf, working_dir)[0] for line in autoexec]
+    return [autoexec_line_to_userhook_line(line, working_dir)[0] for line in autoexec]
 
 
 def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> list[AutoexecIssue]:
