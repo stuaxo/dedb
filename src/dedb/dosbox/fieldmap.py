@@ -99,10 +99,9 @@ def _table(rows: list[Row]) -> str:
 def render_markdown() -> str:
     return (
         f"{START}\n\n"
-        f"**Settings** - every one of DosemuConfig's "
-        f"{len(DosemuConfig.model_fields)} fields, and where it comes from in dosbox.conf:\n\n"
+        f"Every DosemuConfig field, and where it comes from in dosbox.conf:\n\n"
         f"{_table(translated_rows())}\n"
-        f"**Read into DosboxConfig but not carried across:**\n\n"
+        f"Read into DosboxConfig but not translated:\n\n"
         f"{_table(untranslated_rows())}\n"
         f"{END}"
     )
