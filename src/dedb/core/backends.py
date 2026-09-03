@@ -17,6 +17,7 @@ from importlib import import_module
 from urllib.parse import parse_qs, urlparse
 
 import click
+from click.shell_completion import CompletionItem
 
 from . import downloads, settings
 from .local import LocalGame
@@ -236,8 +237,6 @@ def complete_target(incomplete: str, *, backend: "str | None" = None) -> "list":
       ``<scheme>:<id>`` target that matches.
 
     Any error yields ``[]`` - a completion callback must not raise."""
-    from click.shell_completion import CompletionItem
-
     try:
         registry = get_backends()
 
