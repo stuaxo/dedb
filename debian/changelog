@@ -1,3 +1,23 @@
+dedb (0.0.9) unstable; urgency=medium
+
+  * New `dedb refreshmetadata [GAME]...`: re-fetch backend metadata and
+    rewrite each metadata.json without re-downloading the game. With no
+    GAME it does this for every downloaded game.
+  * `dedb download`, `import` and `rm` now take more than one GAME.
+  * `dedb rm` accepts shell wildcards matched against downloaded names
+    (e.g. `dedb rm 'gog:tyrian*'`), and asks once to confirm the set.
+  * `dedb ls -v`: a column view (target, title, classification,
+    converted?, launch profiles).
+  * metadata.json is now one versioned envelope shared by both backends;
+    existing downloads are upgraded in place on the next download,
+    import or refreshmetadata, with no re-download.
+  * `dedb refreshmetadata` and `dedb download --refreshmetadata` no
+    longer do a per-game GOG library lookup - the product id comes from
+    the existing metadata.json.
+  * Add ARCHITECTURE.md.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Thu, 03 Sep 2026 02:41:13 +0100
+
 dedb (0.0.8) unstable; urgency=medium
 
   * Add `dedb lsarchive`: list an archive.org user's public favorites as
