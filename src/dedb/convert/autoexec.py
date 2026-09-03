@@ -1,14 +1,11 @@
-"""Autoexec shims: rewrite the lines of a game's autoexec that DOSEMU2
-can't run as-is, for ``userhook.bat``. Real DOSBox (launched via ``-conf``)
-never sees them.
+"""Rewrite the autoexec commands DOSEMU2 can't run as-is, for
+``userhook.bat``. Real DOSBox runs the autoexec straight from ``-conf``
+and never sees these rewrites.
 
-Declarative. ``SHIMS`` routes an autoexec line - by regex - to a handler
-that returns ``(rewritten_line, severity, summary)``.
-``check_autoexec_line`` is the single matcher; ``convert_autoexec``
-rewrites a whole autoexec for ``userhook.bat`` and ``diagnose_autoexec``
-reports what it changed and why (backing ``dedb dosboxconf --issues``).
-The shim is also the detector - a line it rewrites is, by definition, one
-that needed working around - so the report can't drift from the file.
+``SHIMS`` is a list of ``(regex, handler, name)``. ``check_autoexec_line``
+applies the first handler whose regex matches a line; ``convert_autoexec``
+runs a whole autoexec through it, and ``diagnose_autoexec`` reports what
+changed, for ``dedb dosboxconf --issues``.
 """
 
 import re
@@ -20,15 +17,16 @@ from typing import Any
 
 
 class Severity(IntEnum):
-    """How well DOSEMU2 copes with the DOS command a shim covers. Numbered
-    most-severe first, so sorting a report orders its bands worst-to-best.
-    Each member's ``__doc__`` is the one-line gloss the report prints."""
+    """How well DOSEMU2 copes with the command a shim covers. Numbered
+    most-severe first, so sorting orders a report worst-to-best; each
+    member's ``__doc__`` is the gloss the verbose report prints."""
 
     UNSUPPORTED = 1, "no DOSEMU2 equivalent - commented out; the game may misbehave"
     PARTIALLY_SUPPORTED = 2, "still runs, but not identically to DOSBox"
     SUPPORTED = 3, "translated to a DOSEMU2 equivalent"
 
     def __new__(cls, value: int, doc: str) -> "Severity":
+        """Split ``value, gloss`` so each member keeps its gloss as ``__doc__``."""
         member = int.__new__(cls, value)
         member._value_ = value
         member.__doc__ = doc
@@ -47,18 +45,8 @@ class AutoexecIssue:
     rewritten: str
 
 
-# A handler's return: the line as it should appear in userhook.bat, how
-# well DOSEMU2 copes, and a one-line note on the limitation.
 ShimResult = tuple[str, Severity, str]
-# Callable[..., ShimResult], but the **kwargs shape defeats a precise hint.
 Handler = Any
-
-
-# --- Shims -------------------------------------------------------------
-#
-# Each takes the matched line plus the routing regex's named groups (and
-# `conf` / `working_dir` as keywords), and returns a ShimResult. Extra
-# keywords it doesn't use are swallowed by **_.
 
 
 def shim_imgmount(line: str, **_: Any) -> ShimResult:
@@ -99,12 +87,6 @@ def shim_mount(line: str, drive: str, dos_path: str, working_dir: Path, **_: Any
         "MOUNT rewritten to LREDIR (a C: mount is dropped - --Fdrive_c already maps C:)",
     )
 
-
-# --- Routing table ---------------------------------------------------
-#
-# (pattern, handler, name), tried in order - first match wins. The
-# overlay and imgmount patterns come before the plain-mount one so
-# `MOUNT ... -t overlay` and `IMGMOUNT` never fall through to shim_mount.
 
 SHIMS: list[tuple[str, Handler, str]] = [
     (r"^\s*@?imgmount\b", shim_imgmount, "imgmount"),
