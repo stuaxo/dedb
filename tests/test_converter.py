@@ -1,5 +1,5 @@
 """Tests for dedb.convert.converter: the parser, models and shims wired
-together into build() / build_from_parsed() / convert().
+together into build() / build_from_config() / convert().
 """
 
 from pathlib import Path
@@ -7,16 +7,19 @@ from pathlib import Path
 import click
 import pytest
 
-from dedb.convert.converter import build, build_from_parsed, convert
+from dedb.convert.converter import build, build_from_config, convert
+from dedb.convert.models import DosboxConfig
 
 
-def test_build_from_parsed_is_the_shared_seam_for_conf_and_argv():
-    """build() and dedb.convert.cmdline.build_from_argv both feed a parsed
-    (section_dict, autoexec_lines) pair through this one step."""
-    target, userhook_lines = build_from_parsed(
+def test_build_from_config_is_the_shared_seam_for_conf_and_argv():
+    """build() and dedb.convert.cmdline.build_from_argv both build a
+    DosboxConfig and feed it through this one step."""
+    dosbox = DosboxConfig.from_sections(
         {"cpu": {"cycles": "max"}, "sdl": {"fullscreen": "true"}},
         ["MOUNT C .", "game.exe"],
     )
+
+    target, userhook_lines = build_from_config(dosbox)
 
     assert target.X_fullscreen is True
     assert target.cpuspeed == 0

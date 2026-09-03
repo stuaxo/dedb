@@ -26,7 +26,7 @@ def _format_autoexec(commands: Sequence[str]) -> str:
 
 
 def _render(
-    config: dict,
+    sections: dict,
     autoexec_commands: Sequence[str],
     *,
     autoexec: bool,
@@ -54,9 +54,9 @@ def _render(
     if autoexec:
         blocks.append(_format_autoexec(autoexec_commands))
     if sblaster:
-        blocks.append(_format_section("sblaster", config.get("sblaster", {})))
+        blocks.append(_format_section("sblaster", sections.get("sblaster", {})))
     if gus:
-        blocks.append(_format_section("gus", config.get("gus", {})))
+        blocks.append(_format_section("gus", sections.get("gus", {})))
 
     return "\n\n".join(blocks)
 

@@ -15,7 +15,7 @@ never reach into the submodules.
     models      DosboxConfig -> DosemuConfigFromDosbox -> DosemuConfig / dosbox_to_dosemu
     mounts      resolve_mounts / MountPoint (the MOUNT targets in an autoexec)
     autoexec    the shims + autoexec_as_userhook / diagnose_autoexec
-    converter   build / build_from_parsed / build_from_argv / write_outputs / convert
+    converter   build / build_from_config / build_from_argv / write_outputs / convert
     issues      render_issues (the `--issues` text block)
     fieldmap    the ARCHITECTURE.md field-map generator (python -m dedb.convert.fieldmap)
 """
@@ -34,7 +34,7 @@ from .cmdline import (
     parse_dosbox_argv,
     parse_dosbox_command_line,
 )
-from .converter import build, build_from_parsed, convert, write_outputs
+from .converter import build, build_from_config, convert, write_outputs
 from .issues import render_issues
 from .models import (
     DosboxConfig,
@@ -59,7 +59,7 @@ __all__ = [
     "autoexec_line_to_userhook_line",
     "build",
     "build_from_argv",
-    "build_from_parsed",
+    "build_from_config",
     "convert",
     "diagnose_autoexec",
     "dosbox_to_dosemu",

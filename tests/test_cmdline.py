@@ -20,7 +20,7 @@ from dedb.convert.cmdline import (
 
 
 @pytest.mark.parametrize(
-    ("argv", "config", "autoexec"),
+    ("argv", "sections", "autoexec"),
     [
         pytest.param(
             ["-c", "config -set sdl fullscreen=true", "-c", "config -set cpu cycles=max"],
@@ -87,8 +87,8 @@ from dedb.convert.cmdline import (
         ),
     ],
 )
-def test_parse_dosbox_argv(argv: list[str], config: dict, autoexec: list[str]):
-    assert parse_dosbox_argv(argv) == (config, autoexec)
+def test_parse_dosbox_argv(argv: list[str], sections: dict, autoexec: list[str]):
+    assert parse_dosbox_argv(argv) == (sections, autoexec)
 
 
 def test_host_side_flags_are_recognised_and_dropped():
@@ -106,7 +106,7 @@ def test_config_set_for_a_key_not_in_the_model_is_still_folded_but_flagged():
     across."""
     result = parse_dosbox_command_line(["-c", "config -set sdl priority=higher"])
 
-    assert result.config == {"sdl": {"priority": "higher"}}
+    assert result.sections == {"sdl": {"priority": "higher"}}
     assert result.unmodelled == [("sdl", "priority")]
 
 

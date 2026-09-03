@@ -19,6 +19,7 @@ Three models, a pipeline:
 and ``test_fieldmap.py`` checks the three models line up.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -83,6 +84,12 @@ class DosboxConfig(BaseModel):
         istruthy
     )
     _coerce_int = field_validator("memsize", "irq", "dma", "hdma", mode="before")(coerce_int)
+
+    @classmethod
+    def from_sections(cls, sections: dict, autoexec: Sequence[str] = ()) -> "DosboxConfig":
+        """Build from the parser's ``(section dict, autoexec lines)`` output
+        (``dedb.convert.parser`` / ``dedb.convert.cmdline``)."""
+        return cls.model_validate({**sections, "autoexec": list(autoexec)})
 
     def get_mounts(self, working_dir: Path) -> list[MountPoint]:
         """Every ``MOUNT`` command in the autoexec, each target resolved

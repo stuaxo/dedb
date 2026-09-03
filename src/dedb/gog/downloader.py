@@ -87,8 +87,7 @@ def create_missing_mount_dirs(layout: GogLayout) -> None:
         confs_by_working_dir = [(conf_files, conf_files[0].parent)] if conf_files else []
 
     for conf_files, working_dir in confs_by_working_dir:
-        config, autoexec = parse_dosbox_confs(conf_files)
-        dosbox = DosboxConfig.model_validate({**config, "autoexec": autoexec})
+        dosbox = DosboxConfig.from_sections(*parse_dosbox_confs(conf_files))
         for mount in dosbox.get_mounts(working_dir):
             if mount.host_path.is_relative_to(layout.game) and not mount.host_path.exists():
                 mount.host_path.mkdir(parents=True, exist_ok=True)
