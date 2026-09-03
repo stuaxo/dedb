@@ -62,14 +62,15 @@ def test_ls_long_qualifies_every_entry(downloads):
     ]
 
 
-def test_ls_filtered_to_one_backend(downloads):
-    result = CliRunner().invoke(cli, ["ls", "--type=gog"])
+@pytest.mark.parametrize("args", [["-b", "gog"], ["--backend=gog"]])
+def test_ls_filtered_to_one_backend(downloads, args):
+    result = CliRunner().invoke(cli, ["ls", *args])
 
     assert result.output.splitlines() == ["alpha_game", "beta_game"]
 
 
 def test_ls_unknown_backend_errors(downloads):
-    result = CliRunner().invoke(cli, ["ls", "--type=bogus"])
+    result = CliRunner().invoke(cli, ["ls", "-b", "bogus"])
 
     assert result.exit_code == 2
     assert "unknown backend 'bogus'" in result.output
