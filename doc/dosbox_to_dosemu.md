@@ -15,10 +15,10 @@ severity band:
 
 ```
 [issues]
-Commands not supported as-is under DOSEMU2:
+Commands unsupported:
 'imgmount'
-Commands only partially supported:
-'choice'
+'mount'
+Commands partially supported:
 'mount'
 ```
 

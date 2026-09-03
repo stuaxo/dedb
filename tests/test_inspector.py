@@ -23,7 +23,7 @@ def test_inspect_issues_default_is_the_compact_set_format(write_conf):
     assert out == "\n".join(
         [
             "[issues]",
-            "Commands not supported as-is under DOSEMU2:",
+            "Commands unsupported:",
             "'imgmount'",
             "'mount'",
         ]
@@ -37,7 +37,7 @@ def test_inspect_issues_bands_are_ordered_most_severe_first(write_conf, tmp_path
 
     out = inspect([conf], issues=True, working_dir=tmp_path)
 
-    assert out.index("not supported as-is") < out.index("only partially supported")
+    assert out.index("Commands unsupported:") < out.index("Commands partially supported:")
 
 
 def test_inspect_issues_verbose_shows_each_rewrite(write_conf):
@@ -100,7 +100,7 @@ def test_inspect_command_line_reads_config_set_and_autoexec_from_an_argv():
 def test_inspect_command_line_reports_issues_from_the_synthetic_autoexec():
     out = inspect_command_line(["-c", "IMGMOUNT E disk.img", "-c", "GAME.EXE"], issues=True)
 
-    assert "not supported as-is" in out
+    assert "Commands unsupported:" in out
     assert "'imgmount'" in out
 
 
@@ -110,7 +110,7 @@ def test_dosboxconf_issues_flag(write_conf, launcher_profile_conf):
     result = CliRunner().invoke(dosboxconf, [str(conf), "--issues"])
 
     assert result.exit_code == 0
-    assert "Commands not supported as-is under DOSEMU2:" in result.output
+    assert "Commands unsupported:" in result.output
     assert "'overlay-mount'" in result.output
     # compact by default - no per-line rewrites
     assert "->" not in result.output

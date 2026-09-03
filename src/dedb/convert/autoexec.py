@@ -13,25 +13,26 @@ that needed working around - so the report can't drift from the file.
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import IntEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 
-class Severity(Enum):
-    """How well DOSEMU2 copes with the DOS command a shim covers.
+class Severity(IntEnum):
+    """How well DOSEMU2 copes with the DOS command a shim covers. Numbered
+    most-severe first, so sorting a report orders its bands worst-to-best.
+    Each member's ``__doc__`` is the one-line gloss the report prints."""
 
-    ``SUPPORTED``           - translated to a working DOSEMU2 equivalent.
-    ``PARTIALLY_SUPPORTED`` - still runs after the shim, but not
-                              identically to real DOSBox.
-    ``UNSUPPORTED``         - no equivalent; the shim only comments it out
-                              so it doesn't error. The game may misbehave.
-    """
+    UNSUPPORTED = 1, "no DOSEMU2 equivalent - commented out; the game may misbehave"
+    PARTIALLY_SUPPORTED = 2, "still runs, but not identically to DOSBox"
+    SUPPORTED = 3, "translated to a DOSEMU2 equivalent"
 
-    SUPPORTED = "supported"
-    PARTIALLY_SUPPORTED = "partially supported"
-    UNSUPPORTED = "unsupported"
+    def __new__(cls, value: int, doc: str) -> "Severity":
+        member = int.__new__(cls, value)
+        member._value_ = value
+        member.__doc__ = doc
+        return member
 
 
 @dataclass(frozen=True)
