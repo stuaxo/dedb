@@ -1,12 +1,24 @@
 # Architecture
 
-dedb converts a DOSBox game's configuration so the game runs under
-DOSEMU2. A DOSBox game - a GOG re-release, say - ships one or more
-`dosbox*.conf` files and an `[autoexec]` section. DOSEMU2 needs a
-`dosemu.conf` of `$_`-prefixed variables and a `userhook.bat` of DOS
-commands. dedb does that translation. The rest of the code - fetching
-installers, caching upstream metadata, listing and removing downloads -
-feeds it or manages its inputs.
+dedb takes a DOSBOX game or programs configuration and outputs a
+config file or commandline for DOSEMU2.
+
+Inputs can be:
+
+- A `GOG` game, which ships one or more `dosbox*.conf` files,
+  containing an `[autoexec]` section.
+- An `archive.org` item for their online DOS emulator, these
+  have metadata containing commandline options for DOSBOX.
+
+Output is:
+
+- A `dosemu.conf` file, containing `$_`-prefixed variables.
+- A `userhook.bat` file, containing DOS commands.
+
+dedb does that translation.  The rest of the code - fetching
+installers, caching upstream metadata, listing and removing
+downloads - feeds it or manages its inputs.
+
 
 ## The conversion
 
@@ -17,30 +29,33 @@ feeds it or manages its inputs.
 ```
 
 It lives in `dedb.dosbox` (`parser`, `models`, `converter`, `inspector`)
-and `dedb.shims.autoexec`. It does no network I/O and knows nothing about
-backends.
+and `dedb.shims.autoexec` and purely is concerned with conversion.
 
-### The models
 
-`dedb.dosbox.models` has two Pydantic models. Each describes one config
-format and nothing of the other.
+### Pydantic models represent formats and conversions
 
-`DosboxConfig` matches `dosbox.conf`: field names, types and defaults are
-DOSBox's. A field's `validation_alias` is an `AliasPath` that locates the
-value in the parsed INI (`[cpu] cycles` -> `cycles`). The alias never
-renames - its last segment is the field name, checked by
-`tests/model_naming.py`.
+Reading, translation (conversion) and writing is all defined by pydantic
+models.
 
-`DosemuConfig` matches `dosemu.conf`. A field's `serialization_alias` is
-the `$_` variable name. That alias is the only place the `$_` prefix
-appears; `model_dump_dosemurc` renders the file from it.
+DOSBOX Format:
 
-The two models meet in one function, `dosbox_to_dosemu`. It applies the
-`TRANSLATIONS` table: one row per field that crosses, naming the source
-field, the target field and the converter (`_x_to_y`, or `None` for a
-straight copy). Renames and unit changes happen in the converters and
-nowhere else. Fields DOSBox has that do not cross are listed in
-`UNTRANSLATED_DOSBOX_FIELDS`.
+`DosboxConfig` has fields based on a `dosbox.conf` file. dedb only reads
+`dosbox.conf`; `dedb.dosbox.parser` does that (it is not quite an ini
+file).
+
+Fields in `DosboxConfig` map to where they are in `dosbox.conf` by
+section and field, e.g. `cycles` is in the `[cpu]` section. A field
+always has the same name as its dosbox field.
+
+DOSEMU Format:
+
+`DosemuConfig` has fields based on a `dosemu.conf` file, and
+`model_dump_dosemurc` writes one (also not quite an ini file).
+
+Converting DOSBOX to DOSEMU:
+
+`dosbox_to_dosemu` performs the conversion and returns a `DosemuConfig`.
+
 
 ### The field map
 
@@ -83,10 +98,15 @@ Read into DosboxConfig but not translated:
 
 ### The autoexec
 
-`[autoexec]` is a list of DOS commands, not a set of fields. DOSEMU2 runs
-most of them unchanged. `dedb.shims.autoexec` holds a list of
-`Workaround`s - each one a function that rewrites the lines it
-recognises, with a `Severity`:
+`[autoexec]` is a list of commands to run at `DOSBOX` startup.
+DOSBOX commands such as MOUNT and IMGMOUNT aren't available on DOSEMU2,
+so shims are used to rewrite or comment them out where equivalents don't
+yet exist.
+
+The converted output is saved to `userhook.bat`.
+
+`dedb.shims.autoexec` holds a list of shims, each one a function that
+rewrites the lines it recognises, with a `Severity`:
 
 | Severity | Meaning |
 |---|---|
@@ -94,35 +114,52 @@ recognises, with a `Severity`:
 | `PARTIALLY_SUPPORTED` | runs after the rewrite, but behaves differently from DOSBox - `MOUNT` becomes `LREDIR`, `CHOICE` loses its flags |
 | `UNSUPPORTED` | no equivalent; commented out with `REM` so it does not error - `IMGMOUNT`, overlay mounts |
 
-The shims run on `userhook.bat` only. DOSBox launched with `-conf` never
-sees them. `diagnose_autoexec`, behind `dedb dosboxconf --issues`, runs
-the same `Workaround` list and reports every line a shim changed, so the
-report matches what the conversion does.
 
-### Wiring and reuse
+## apps
 
-`dedb.dosbox.converter` runs the parser, models and shims together:
-`build()` returns the `(DosemuConfig, userhook_lines)` pair,
-`write_outputs()` writes the two files, `convert()` does both. Both
-backends call it:
+dedb is split into "apps":
 
-- GOG (`dedb.gog.importer`) parses the game's `dosbox*.conf` for each
-  launch profile and converts each to its own `dosemu[_<slug>].conf` /
-  `userhook[_<slug>].bat`.
-- archive.org (`dedb.archive.importer`) items have no `dosbox.conf`. It
-  converts DOSBox's built-in defaults and builds the autoexec
-  (`MOUNT C .`, `cd`, run) from the item's `emulator_start`.
+| Name    | Function                                    |
+|---------|---------------------------------------------|
+| `core`    | Shared functionality                        |
+| `dedb`    | Core CLI                                    |
+| `dosbox`  | DOSBox-specific, e.g. convert dosbox.conf   |
+| `shims`   | DOSBox-specific shims                       |
+| `gog`     | List and download games from GOG            |
+| `archive` | List and download programs from Archive.org |
+| `testing` | Test support                                |
 
-## The rest
 
-| Area | Modules | Role |
-|---|---|---|
-| Backends | `dedb.core.backends`, `dedb.gog.*`, `dedb.archive.*` | Resolve a `gog://` or `archive://` reference, fetch and extract the installer or zip, write `metadata.json`. See [doc/backends.md](doc/backends.md). |
-| Download pipeline | `dedb.core.downloader` | Template for skip / redownload / refresh-metadata / fetch -> extract -> write metadata. Backends fill the hooks. |
-| Downloaded-program model | `dedb.core.local`, `dedb.core.metadata_file` | One `GameDescription` base. Persisted as the `metadata.json` envelope, read back as the `dedb ls` view. |
-| Metadata cache | `dedb.core.metadata_cache`, `dedb.{gog,archive}.metadata` | On-disk cache of GOG / archive.org metadata, keyed by id. |
-| CLI | `dedb.dedb.verbs`, `dedb.dedb.cli`, `dedb.dosbox.cli` | Wiring over the above. |
+When you run `dedb --help` the command lines are grouped by the app that provides them:
 
-`dedb.core` is the framework the apps (`dosbox`, `gog`, `archive`) plug
-into. An app imports from `dedb.core`, never from another app - except
-that `gog` and `archive` both import `dedb.dosbox.converter`.
+```sh
+$ dedb --help
+Usage: dedb [OPTIONS] COMMAND [ARGS]...
+
+  dedb: DOSEMU2 configuration tooling.
+
+Options:
+  --help  Show this message and exit.
+
+[dedb]:
+  ls               List downloaded games.
+  run              Run a game in DOSBox or DOSEMU2.
+  download         Download and extract one or more games.
+  import           Create DOSEMU2 config(s) for one or more downloaded
+                   programs.
+  rm               Delete one or more downloaded games' directory trees.
+  refreshmetadata  Re-fetch backend metadata for downloaded games and rewrite
+                   each metadata.json.
+
+[dosbox]:
+  importdosbox  Import one or more dosbox.conf files into a DOSEMU2 config.
+  dosboxconf    Show aspects of dosbox.conf(s), merged in order.
+
+[gog]:
+  downloadgog  Download and extract DOSBox-based owned games from GOG.
+  lsgog        List owned GOG games and whether they look DOSBox-based,
+               without...
+
+[archive]:
+  lsarchive  List an archive.org user's favorites as `archive:<id>` targets.
+```
