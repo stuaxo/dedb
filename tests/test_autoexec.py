@@ -63,10 +63,12 @@ def test_shim_mount_drops_the_c_drive(line: str, expected: str):
     assert (rewritten, severity) == (expected, Severity.UNSUPPORTED)
 
 
-def test_shim_mount_without_a_working_dir_comments_the_line_out():
-    rewritten, severity, _summary = shim_mount("MOUNT D GAME", drive="D", dos_path="GAME")
+def test_check_autoexec_line_defaults_a_missing_working_dir_to_cwd(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
 
-    assert (rewritten, severity) == ("REM MOUNT D GAME", Severity.UNSUPPORTED)
+    rewritten, _hit = check_autoexec_line("MOUNT D SAVES")
+
+    assert rewritten == f"LREDIR -f D: {(tmp_path / 'SAVES').resolve()}"
 
 
 def test_shim_mount_with_a_working_dir_rewrites_to_lredir(tmp_path: Path):

@@ -76,32 +76,18 @@ def shim_overlay_mount(line: str, **_: Any) -> ShimResult:
     )
 
 
-def shim_mount(
-    line: str,
-    drive: str,
-    dos_path: str,
-    working_dir: Path | None = None,
-    **_: Any,
-) -> ShimResult:
+def shim_mount(line: str, drive: str, dos_path: str, working_dir: Path, **_: Any) -> ShimResult:
     """``MOUNT`` -> DOSEMU2's ``LREDIR``, resolving the DOS-relative path
     against ``working_dir``.
 
     ``C:`` is dropped: ``--Fdrive_c`` already maps it as a fatfs disk, and
-    ``LREDIR`` (an mfs redirection) can't overlay that. Without a
-    ``working_dir`` the target can't be resolved to a host path, so the
-    line is only commented out.
+    ``LREDIR`` (an mfs redirection) can't overlay that.
     """
     if drive.upper() == "C":
         return (
             f"REM {line}",
             Severity.UNSUPPORTED,
             "MOUNT C: dropped - --Fdrive_c already maps C: to the game directory",
-        )
-    if working_dir is None:
-        return (
-            f"REM {line}",
-            Severity.UNSUPPORTED,
-            "MOUNT commented out - translating it to LREDIR needs a known working directory",
         )
 
     prefix = "@" if line.startswith("@") else ""
@@ -127,7 +113,8 @@ SHIMS: list[tuple[str, Handler, str]] = [
 
 
 @lru_cache(maxsize=1)
-def _compiled() -> list[tuple[re.Pattern[str], Handler, str]]:
+def get_shims() -> list[tuple[re.Pattern[str], Handler, str]]:
+    """``SHIMS`` with each pattern compiled (case-insensitive)."""
     return [(re.compile(pattern, re.IGNORECASE), handler, name) for pattern, handler, name in SHIMS]
 
 
@@ -139,12 +126,15 @@ def check_autoexec_line(
     Returns ``(line_for_userhook, hit)`` where ``hit`` is
     ``(shim_name, severity, summary)`` when a shim recognised the line, or
     ``None`` when it did not (and the line is returned unchanged).
+    ``working_dir`` defaults to the current directory, the way DOSBox
+    resolves a relative ``MOUNT`` against its launch directory.
     """
     clean = line.strip()
     if not clean:
         return line, None
 
-    for pattern, handler, name in _compiled():
+    working_dir = working_dir or Path.cwd()
+    for pattern, handler, name in get_shims():
         match = pattern.match(clean)
         if match is None:
             continue
@@ -160,20 +150,18 @@ def convert_autoexec(
     autoexec: list[str], conf: Any | None = None, working_dir: Path | None = None
 ) -> list[str]:
     """Every autoexec line rewritten for ``userhook.bat`` - each line
-    unchanged unless a shim recognised it. ``working_dir`` lets the MOUNT
-    shim resolve relative paths into ``LREDIR`` calls; without it MOUNT
-    lines are commented out."""
+    unchanged unless a shim recognised it. ``working_dir`` (default: the
+    current directory) is where a relative ``MOUNT`` path is resolved
+    from, when the shim rewrites it to ``LREDIR``."""
     return [check_autoexec_line(line, conf, working_dir)[0] for line in autoexec]
 
 
 def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> list[AutoexecIssue]:
-    """The autoexec lines that won't run cleanly under DOSEMU2: the same
-    shim pass ``convert_autoexec`` runs, recording every line it changed
-    and why."""
-    issues: list[AutoexecIssue] = []
-    for line in autoexec:
-        rewritten, hit = check_autoexec_line(line, working_dir=working_dir)
-        if hit is not None:
-            name, severity, summary = hit
-            issues.append(AutoexecIssue(name, severity, summary, line, rewritten))
-    return issues
+    """Identify autoexec lines incompatible with DOSEMU2, recording each
+    rewrite and the reason for it."""
+    return [
+        AutoexecIssue(*hit, line, rewritten)
+        for line in autoexec
+        for rewritten, hit in [check_autoexec_line(line, working_dir=working_dir)]
+        if hit is not None
+    ]

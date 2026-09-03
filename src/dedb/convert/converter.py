@@ -16,9 +16,9 @@ def build_from_parsed(
     """Transform an already-parsed (section_dict, autoexec_lines) pair -
     however it was parsed - into (dosemu_config, userhook_lines). The
     dosbox.conf and the `dosbox` command line (dedb.convert.cmdline) both
-    parse to that pair and share this step. working_dir, if known, lets
-    the mount shim resolve MOUNT's relative paths into LREDIR calls;
-    without it MOUNT lines are commented out."""
+    parse to that pair and share this step. working_dir is where the mount
+    shim resolves MOUNT's relative paths from when it rewrites them to
+    LREDIR calls; it defaults to the current directory."""
     dosbox = DosboxConfig.model_validate({**raw_dict, "autoexec": list(autoexec_commands)})
     target = dosbox_to_dosemu(dosbox)
     return target, convert_autoexec(dosbox.autoexec, conf=dosbox, working_dir=working_dir)
