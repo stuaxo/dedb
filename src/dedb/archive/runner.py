@@ -20,28 +20,31 @@ def ensure_converted(layout: ArchiveLayout) -> Path:
     return layout.dosemu_conf
 
 
+def dosbox_conf_argv(layout: ArchiveLayout, target: Target) -> tuple[list[str], Path]:
+    """The emularity `dosbox` command line (mount C:, cd, run) as ``-c``
+    args - no binary - and the dir it runs in. archive.org items have no
+    dosbox.conf and no launch profiles, so ``target`` is unused."""
+    return dosbox_argv(load_metadata(layout)), layout.game
+
+
+def dosemu_conf_path(layout: ArchiveLayout, target: Target) -> Path:
+    """The dosemu.conf `run --dosemu` uses - the path only, not regenerated."""
+    return layout.dosemu_conf
+
+
 def run_dosbox(
     layout: ArchiveLayout,
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
-    dry_run: bool = False,
 ) -> int:
-    # archive.org items have no launch profiles - `target` is unused, kept
-    # only for a signature the core dispatcher shares with the gog runner.
-    metadata = load_metadata(layout)
     binary = get_settings().dosbox.get_dosbox_binary()
-
-    # No dosbox.conf for archive.org items - pass emularity's synthetic
-    # command line (mount C:, cd, run) as -c commands.
-    cmd = [binary, *dosbox_argv(metadata), *extra_args]
-
+    argv, cwd = dosbox_conf_argv(layout, target)
     return launch(
-        cmd,
-        cwd=layout.game,
+        [binary, *argv, *extra_args],
+        cwd=cwd,
         missing_hint=f"'{binary}' not found on PATH - install it first",
         verbose=verbose,
-        dry_run=dry_run,
     )
 
 
@@ -50,15 +53,11 @@ def run_dosemu(
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
-    dry_run: bool = False,
 ) -> int:
-    # dry_run: don't regenerate the config, just name the path run would use.
-    dosemu_conf = layout.dosemu_conf if dry_run else ensure_converted(layout)
     return launch_dosemu(
         layout,
-        dosemu_conf=dosemu_conf,
+        dosemu_conf=ensure_converted(layout),
         userhook_src=layout.userhook,
         extra_args=extra_args,
         verbose=verbose,
-        dry_run=dry_run,
     )

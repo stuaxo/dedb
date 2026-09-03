@@ -96,7 +96,33 @@ def test_run_dispatches_to_the_runner_module(monkeypatch, emulator, expected_fn)
     rc = GogBackend().run(target, "LAYOUT", emulator=emulator, extra_args=["-fs"], verbose=True)
 
     assert rc == 7
-    assert seen["call"] == (expected_fn, ("LAYOUT", target, ["-fs"], True, False))  # ..., dry_run
+    assert seen["call"] == (expected_fn, ("LAYOUT", target, ["-fs"], True))
+
+
+@pytest.mark.parametrize("emulator", ["dosbox", "dosemu"])
+def test_cmdline_builds_via_the_runner_module(monkeypatch, tmp_path, emulator):
+    import dedb.gog.runner as gog_runner
+
+    root = tmp_path / "gog" / "x"
+    (root / "game").mkdir(parents=True)
+    (root / "game" / "GAME.EXE").touch()  # is_downloaded() -> True
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+    monkeypatch.setattr(
+        gog_runner, "dosbox_conf_argv", lambda lyt, tgt: (["-conf", "a.conf"], root)
+    )
+    monkeypatch.setattr(gog_runner, "dosemu_conf_path", lambda lyt, tgt: root / "dosemu" / "d.conf")
+    monkeypatch.setattr(
+        "dedb.core.settings.DosboxSettings.get_dosbox_binary", lambda self: "dosbox-staging"
+    )
+
+    cmd, cwd = GogBackend().cmdline(Target("gog", "x", None, "gog://x"), emulator=emulator)
+
+    if emulator == "dosbox":
+        assert cmd == ["dosbox-staging", "-conf", "a.conf"]
+        assert cwd == root
+    else:
+        assert cmd[0] == "dosemu" and str(root / "dosemu" / "d.conf") in cmd
+        assert cwd is None
 
 
 def test_convert_writes_via_the_import_hook_and_returns_the_dir(monkeypatch, tmp_path):

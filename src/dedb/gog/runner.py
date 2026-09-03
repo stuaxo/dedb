@@ -41,31 +41,39 @@ def ensure_converted(layout: GogLayout, profile: str | None = None) -> Path:
     return layout.dosemu_conf_for(_profile_file_slug(layout, profile))
 
 
+def dosbox_conf_argv(layout: GogLayout, target: Target) -> tuple[list[str], Path]:
+    """The `dosbox` ``-conf`` argv (no binary) and the working directory it
+    runs in, for this game/profile. DOSBox resolves relative MOUNT paths
+    (typically "MOUNT C ..") against that directory - GOG's recorded
+    workingDir, not necessarily where the confs ended up under innoextract
+    (see get_working_dir)."""
+    argv = [
+        token
+        for conf in get_conf_files(layout.game, target.profile)
+        for token in ("-conf", str(conf))
+    ]
+    return argv, get_working_dir(layout.game, target.profile)
+
+
+def dosemu_conf_path(layout: GogLayout, target: Target) -> Path:
+    """The dosemu.conf `run --dosemu` uses for this profile - the path only,
+    not regenerated (see ensure_converted)."""
+    return layout.dosemu_conf_for(_profile_file_slug(layout, target.profile))
+
+
 def run_dosbox(
     layout: GogLayout,
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
-    dry_run: bool = False,
 ) -> int:
-    profile = target.profile
     binary = get_settings().dosbox.get_dosbox_binary()
-
-    cmd = [binary]
-    for conf in get_conf_files(layout.game, profile):
-        cmd += ["-conf", str(conf)]
-    cmd += extra_args
-
-    # DOSBox resolves relative MOUNT paths (typically "MOUNT C ..") against
-    # the directory it was launched from - GOG's recorded workingDir, not
-    # necessarily wherever the confs themselves ended up under innoextract
-    # (see get_working_dir).
+    argv, cwd = dosbox_conf_argv(layout, target)
     return launch(
-        cmd,
-        cwd=get_working_dir(layout.game, profile),
+        [binary, *argv, *extra_args],
+        cwd=cwd,
         missing_hint=f"'{binary}' not found on PATH - install it first",
         verbose=verbose,
-        dry_run=dry_run,
     )
 
 
@@ -74,17 +82,12 @@ def run_dosemu(
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
-    dry_run: bool = False,
 ) -> int:
     profile = target.profile
-    slug = _profile_file_slug(layout, profile)
-    # dry_run: don't regenerate the config, just name the path run would use.
-    dosemu_conf = layout.dosemu_conf_for(slug) if dry_run else ensure_converted(layout, profile)
     return launch_dosemu(
         layout,
-        dosemu_conf=dosemu_conf,
-        userhook_src=layout.userhook_for(slug),
+        dosemu_conf=ensure_converted(layout, profile),
+        userhook_src=layout.userhook_for(_profile_file_slug(layout, profile)),
         extra_args=extra_args,
         verbose=verbose,
-        dry_run=dry_run,
     )

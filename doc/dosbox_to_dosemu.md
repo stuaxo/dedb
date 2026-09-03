@@ -33,6 +33,11 @@ conversion produces, without writing anything (`CONF` is one or more
 `--userhook` narrow it to one; `--issues` adds the block above. It is the
 same output `dedb import` writes to disk.
 
+`--cmdline` on `dosboxconf` / `dosemuconf` (game reference only for
+`dosemuconf`) prints the exact `dosbox` / `dosemu` command
+`dedb run --dosbox|--dosemu` would launch - the same builder backs
+`run --cmdline`.
+
 ## Drive mapping
 
 DOSBox maps drives and disk images with `MOUNT` and `IMGMOUNT`. DOSEMU2

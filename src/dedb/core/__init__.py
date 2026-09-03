@@ -35,7 +35,7 @@ from .metadata_cache import MetadataCache, OfflineError
 from .metadata_file import GameMetadataFile
 from .refs import Target, long_target, short_target
 from .registry import get_apps, get_backends
-from .runner import launch, launch_dosemu
+from .runner import dosemu_argv, launch, launch_dosemu, render_cmdline
 from .settings import (
     CONFIG_DIR,
     SETTINGS_PATH,
@@ -61,6 +61,7 @@ __all__ = [
     "Target",
     "complete_source",
     "complete_target",
+    "dosemu_argv",
     "ensure_download_dir",
     "existing_conf",
     "get_apps",
@@ -74,6 +75,7 @@ __all__ = [
     "register_backend",
     "remove_download",
     "remove_downloads",
+    "render_cmdline",
     "require_download_dir",
     "resolve",
     "resolve_game",

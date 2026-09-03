@@ -70,7 +70,6 @@ class ArchiveBackend(BackendBase):
         return [("default", config.model_dump_dosemurc(), userhook_lines)]
 
     def dosbox_command_line(self, target: Target):
-        from .importer import dosbox_argv, load_metadata
+        from .runner import dosbox_conf_argv
 
-        layout = self.layout(target.identifier)
-        return dosbox_argv(load_metadata(layout)), layout.game
+        return dosbox_conf_argv(self.layout(target.identifier), target)

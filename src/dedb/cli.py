@@ -21,6 +21,7 @@ from .core import (
     get_apps,
     get_backends,
     remove_downloads,
+    render_cmdline,
     resolve_game,
     short_target,
 )
@@ -77,21 +78,13 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
 
 
 def _run(
-    game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload, cmdline
+    game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload
 ) -> None:
-    """Download (if needed) and launch a resolved game; exit non-zero if the
-    emulator does. ``cmdline`` just prints the command - it needs the game
-    already downloaded and touches nothing on disk."""
-    if cmdline:
-        layout = backend.layout(game.identifier)
-        layout.require_downloaded(game.scheme)
-    else:
-        layout = backend.ensure_downloaded(
-            game.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
-        )
-    exit_code = backend.run(
-        game, layout, emulator=emulator, extra_args=extra_args, verbose=verbose, dry_run=cmdline
+    """Download (if needed) and launch a resolved game; exit non-zero if the emulator does."""
+    layout = backend.ensure_downloaded(
+        game.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
     )
+    exit_code = backend.run(game, layout, emulator=emulator, extra_args=extra_args, verbose=verbose)
     if exit_code != 0:
         sys.exit(exit_code)
 
@@ -146,16 +139,20 @@ def run(
     """
     emulator = _require_one_emulator(use_dosbox, use_dosemu)
     resolved = resolve_game(game, backend, profile=profile)
+    be = get_backends()[resolved.scheme]
+    if cmdline:
+        cmd, cwd = be.cmdline(resolved, emulator=emulator, extra_args=emulator_args)
+        click.echo(render_cmdline(cmd, cwd))
+        return
     _run(
         resolved,
-        get_backends()[resolved.scheme],
+        be,
         emulator=emulator,
         extra_args=emulator_args,
         verbose=verbose,
         keep=keep,
         refresh_metadata=refresh_metadata,
         redownload=redownload,
-        cmdline=cmdline,
     )
 
 

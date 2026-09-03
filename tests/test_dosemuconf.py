@@ -113,3 +113,24 @@ def test_rejects_two_game_refs(download_dir):
 
     assert result.exit_code == 2
     assert "single game" in result.output
+
+
+def test_cmdline_game_mode_prints_the_dosemu_command(download_dir, monkeypatch):
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.cmdline",
+        lambda self, target, **kw: (
+            ["dosemu", "-f", "d.conf", "-K", "hook", "-E", "USERHOOK.BAT"],
+            None,
+        ),
+    )
+    result = CliRunner().invoke(dosemuconf, ["gog:x", "--cmdline"])
+
+    assert result.exit_code == 0
+    assert result.output.strip() == "dosemu -f d.conf -K hook -E USERHOOK.BAT"
+
+
+def test_cmdline_rejects_conf_paths(write_conf):
+    result = CliRunner().invoke(dosemuconf, [str(write_conf("[sdl]\n")), "--cmdline"])
+
+    assert result.exit_code == 2
+    assert "needs a game reference" in result.output

@@ -13,6 +13,7 @@ returns the registry.
 """
 
 import difflib
+from collections.abc import Sequence
 from importlib import import_module
 from urllib.parse import parse_qs, urlparse
 
@@ -23,6 +24,7 @@ from . import downloads, settings
 from .local import LocalGame
 from .refs import Target, long_target, short_target
 from .registry import get_backends
+from .runner import dosemu_argv
 
 
 class BackendBase:
@@ -103,22 +105,30 @@ class BackendBase:
             print(f"Refreshing metadata: {identifier} ({self.scheme})")
             make_downloader(layout).rewrite_metadata()
 
-    def run(
-        self,
-        target: Target,
-        layout,
-        *,
-        emulator: str,
-        extra_args,
-        verbose: bool,
-        dry_run: bool = False,
-    ) -> int:
+    def run(self, target: Target, layout, *, emulator: str, extra_args, verbose: bool) -> int:
         """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu") via the
-        backend's ``runner_module``; return the exit code. ``dry_run``
-        prints the command instead of running it."""
+        backend's ``runner_module``; return the exit code."""
         runner = import_module(self.runner_module)
         launch = runner.run_dosbox if emulator == "dosbox" else runner.run_dosemu
-        return launch(layout, target, extra_args, verbose, dry_run)
+        return launch(layout, target, extra_args, verbose)
+
+    def cmdline(
+        self, target: Target, *, emulator: str, extra_args: Sequence[str] = ()
+    ) -> "tuple[list[str], object]":
+        """The command `dedb run` would exec for ``target`` in ``emulator``,
+        as ``(argv, cwd)`` (``cwd`` is ``None`` for DOSEMU2, which maps its
+        own drives). The game must be downloaded; nothing is regenerated.
+        Backs ``--cmdline`` on ``run`` / ``dosboxconf`` / ``dosemuconf``."""
+        layout = self.layout(target.identifier)
+        layout.require_downloaded(self.scheme)
+        runner = import_module(self.runner_module)
+        if emulator == "dosbox":
+            argv, cwd = runner.dosbox_conf_argv(layout, target)
+            binary = settings.get_settings().dosbox.get_dosbox_binary()
+            return [binary, *argv, *extra_args], cwd
+        return dosemu_argv(
+            layout, runner.dosemu_conf_path(layout, target), extra_args=extra_args
+        ), None
 
     def convert(self, target: Target, *, output_dir=None, force: bool = False):
         """Convert an already-downloaded ``target`` to DOSEMU2 config(s);

@@ -74,13 +74,17 @@ def test_run_propagates_nonzero_exit(download_dir, spy_run):
     assert CliRunner().invoke(cli, ["run", "gog://x", "--dosbox"]).exit_code == 3
 
 
-def test_run_cmdline_passes_dry_run_through_without_downloading(download_dir, spy_run):
+def test_run_cmdline_prints_the_command_without_downloading(download_dir, spy_run, monkeypatch):
     (download_dir / "gog" / "x" / "game" / "sub").mkdir(parents=True)  # is_downloaded() -> True
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.cmdline",
+        lambda self, target, **kw: (["dosbox-staging", "-conf", "x.conf"], download_dir / "wd"),
+    )
 
     result = CliRunner().invoke(cli, ["run", "gog://x", "--dosbox", "--cmdline"])
 
     assert result.exit_code == 0
-    assert spy_run["run"]["dry_run"] is True
+    assert result.output.strip() == f"cd {download_dir / 'wd'} && dosbox-staging -conf x.conf"
     assert "ensure" not in spy_run  # --cmdline never calls ensure_downloaded
 
 
@@ -303,6 +307,29 @@ def test_dosboxconf_target_mode(tmp_path, monkeypatch, args):
     result = CliRunner().invoke(dosboxconf, [*args, "-s"])
     assert result.exit_code == 0
     assert "sbtype=sb16" in result.output
+
+
+def test_dosboxconf_cmdline_game_mode_matches_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.cmdline",
+        lambda self, target, **kw: (["dosbox-staging", "-conf", "a.conf"], tmp_path),
+    )
+    result = CliRunner().invoke(dosboxconf, ["gog:x", "--cmdline"])
+
+    assert result.exit_code == 0
+    assert result.output.strip() == f"cd {tmp_path} && dosbox-staging -conf a.conf"
+
+
+def test_dosboxconf_cmdline_conf_mode_prepends_the_binary(tmp_path, monkeypatch):
+    conf = tmp_path / "x.conf"
+    conf.write_text("[sblaster]\n", encoding="cp437")
+    monkeypatch.setattr(
+        "dedb.core.settings.DosboxSettings.get_dosbox_binary", lambda self: "dosbox-staging"
+    )
+    result = CliRunner().invoke(dosboxconf, [str(conf), "--cmdline"])
+
+    assert result.exit_code == 0
+    assert result.output.strip() == f"dosbox-staging -conf {conf}"
 
 
 def test_dosboxconf_archive_target_reads_the_emularity_command_line(download_dir, monkeypatch):

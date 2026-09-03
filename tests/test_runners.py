@@ -42,22 +42,18 @@ def test_gog_ensure_converted_reconverts_even_when_already_converted(tmp_path, m
     assert calls == [(None, True)]
 
 
-def test_dry_run_names_the_conf_without_reconverting(tmp_path, monkeypatch):
+def test_cmdline_helpers_name_paths_without_reconverting(tmp_path, monkeypatch):
+    """dosemu_conf_path / dosbox_conf_argv back --cmdline - they must not
+    trigger a conversion (that's `ensure_converted`'s job, on a real run)."""
     from dedb.core import Target
 
     layout = ArchiveLayout(tmp_path, "x")
+    target = Target("archive", "x", None, "archive://x")
     monkeypatch.setattr(
         archive_runner, "ensure_converted", lambda lyt: pytest.fail("must not reconvert")
     )
     monkeypatch.setattr(archive_runner, "load_metadata", lambda lyt: object())
     monkeypatch.setattr(archive_runner, "dosbox_argv", lambda meta: ["-c", "GAME.EXE"])
-    seen = {}
-    monkeypatch.setattr(archive_runner, "launch_dosemu", lambda lyt, **kw: seen.update(kw) or 0)
 
-    rc = archive_runner.run_dosemu(
-        layout, Target("archive", "x", None, "archive://x"), dry_run=True
-    )
-
-    assert rc == 0
-    assert seen["dosemu_conf"] == layout.dosemu_conf
-    assert seen["dry_run"] is True
+    assert archive_runner.dosemu_conf_path(layout, target) == layout.dosemu_conf
+    assert archive_runner.dosbox_conf_argv(layout, target) == (["-c", "GAME.EXE"], layout.game)
