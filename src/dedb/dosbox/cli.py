@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 import click
 
-from ..core import get_backends, resolve_game
+from ..core import complete_target, get_backends, resolve_game
 from .converter import build as build_config
 from .converter import convert as convert_config
 from .inspector import inspect_command_line
@@ -95,8 +95,20 @@ def _is_game_ref(source: str) -> bool:
     return scheme in get_backends() or scheme in ("http", "https")
 
 
+def _complete_source(ctx, param, incomplete):
+    """SOURCES is dosbox.conf paths or one game ref: complete `<scheme>:<id>`
+    targets (honouring `-b`), and - unless a scheme is already typed - fall
+    back to file paths."""
+    from click.shell_completion import CompletionItem
+
+    targets = complete_target(incomplete, backend=ctx.params.get("backend"))
+    if _is_game_ref(incomplete) or ctx.params.get("backend"):
+        return targets
+    return [*targets, CompletionItem(incomplete, type="file")]
+
+
 @click.command("dosboxconf")
-@click.argument("sources", nargs=-1, required=True)
+@click.argument("sources", nargs=-1, required=True, shell_complete=_complete_source)
 @click.option(
     "--backend",
     "-b",

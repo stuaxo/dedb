@@ -29,10 +29,14 @@ Both run in CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 ## Shell completion
 
-`completions/dedb.{bash,zsh,fish}` are click's own completion output,
-installed by the Debian package (debian/python3-dedb.install).
-Regenerate them after a click upgrade or a change to the root command
-name:
+`completions/dedb.{bash,zsh,fish}` are installed by the Debian package
+(debian/python3-dedb.install). zsh and fish are click's own output; bash
+is a colon-aware variant (`dedb.completion`) so `gog:<id>` targets
+complete past the colon. `dedb.cli._complete_game` -> `complete_target`
+supplies the `gog:` / `archive:` candidates from local data only.
+
+Regenerate the scripts after a click upgrade or a change to the root
+command name:
 
 ```bash
 uv run python completions/_generate.py

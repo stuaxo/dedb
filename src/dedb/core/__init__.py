@@ -8,7 +8,7 @@ and never reach into a sibling app or ``settings.json`` directly.
     settings        the TOML-backed Settings models + get_settings()
     _registry       the bare scheme -> backend dict + @register_backend
     registry        get_apps() / get_backends() - discovery from settings
-    backends        BackendBase + resolve() / resolve_game()
+    backends        BackendBase + resolve() / resolve_game() / complete_target()
     downloads       the <download_dir> resolve/create ops + `dedb rm`
     layout          LayoutPaths - the per-download directory tree
     local           GameDescription / LocalGame / LaunchProfile - the downloaded-program model
@@ -19,7 +19,7 @@ and never reach into a sibling app or ``settings.json`` directly.
 """
 
 from ._registry import register_backend
-from .backends import BackendBase, resolve, resolve_game
+from .backends import BackendBase, complete_target, resolve, resolve_game
 from .downloader import Downloader
 from .downloads import (
     ensure_download_dir,
@@ -57,6 +57,7 @@ __all__ = [
     "OfflineError",
     "Settings",
     "Target",
+    "complete_target",
     "ensure_download_dir",
     "get_apps",
     "get_backends",

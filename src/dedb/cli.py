@@ -14,8 +14,10 @@ from pathlib import Path
 
 import click
 
+from . import completion as _completion
 from .core import (
     LocalGame,
+    complete_target,
     get_apps,
     get_backends,
     remove_downloads,
@@ -60,6 +62,12 @@ def _download_options(func):
         help="Re-download and re-extract even if already present.",
     )(func)
     return func
+
+
+def _complete_game(ctx, param, incomplete):
+    """Shell completion for a GAME argument - `<scheme>:<id>` targets from
+    local data, honouring a `-b <scheme>` already on the line."""
+    return complete_target(incomplete, backend=ctx.params.get("backend"))
 
 
 def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
@@ -111,7 +119,7 @@ def _do_import(game, backend, *, output_dir, force, refreshconf, dumpconf, dumpu
 
 
 @click.command("run")
-@click.argument("game")
+@click.argument("game", shell_complete=_complete_game)
 @click.argument("emulator_args", nargs=-1, type=click.UNPROCESSED)
 @click.option("--dosbox", "use_dosbox", is_flag=True, default=False, help="Run in DOSBox.")
 @click.option("--dosemu", "use_dosemu", is_flag=True, default=False, help="Run in DOSEMU2.")
@@ -158,7 +166,7 @@ def run(
 
 
 @click.command("download")
-@click.argument("games", nargs=-1, required=True)
+@click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
 @_download_options
 def download(games, backend, keep, refresh_metadata, redownload):
@@ -181,7 +189,7 @@ def download(games, backend, keep, refresh_metadata, redownload):
 
 
 @click.command("import")
-@click.argument("games", nargs=-1, required=True)
+@click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @click.option(
     "--output-dir",
     "-o",
@@ -254,7 +262,7 @@ def _rm_glob_hits(pattern: str, backend: "str | None", registry) -> list:
 
 
 @click.command("rm")
-@click.argument("games", nargs=-1, required=True)
+@click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
 @click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting.")
 def rm(games, backend, yes):
@@ -293,7 +301,7 @@ def rm(games, backend, yes):
 
 
 @click.command("refreshmetadata")
-@click.argument("games", nargs=-1)
+@click.argument("games", nargs=-1, shell_complete=_complete_game)
 @_backend_option
 def refreshmetadata(games, backend):
     """Re-fetch backend metadata for downloaded games and rewrite each
@@ -466,7 +474,7 @@ def list_downloads(
 
 
 @click.command()
-@click.argument("shell", type=click.Choice(["bash", "zsh", "fish"]))
+@click.argument("shell", type=click.Choice(_completion.SHELLS))
 def completion(shell: str) -> None:
     """Print a shell completion script for dedb.
 
@@ -480,12 +488,7 @@ def completion(shell: str) -> None:
         dedb completion bash > ~/.dedb-complete.bash
         echo 'source ~/.dedb-complete.bash' >> ~/.bashrc
     """
-    from click.shell_completion import get_completion_class
-
-    comp_cls = get_completion_class(shell)
-    if comp_cls is None:  # pragma: no cover - all three are built into click
-        raise click.ClickException(f"click has no {shell} completion support.")
-    click.echo(comp_cls(cli, {}, "dedb", "_DEDB_COMPLETE").source())
+    click.echo(_completion.completion_script(shell, cli))
 
 
 # --- the root group ------------------------------------------------

@@ -1,37 +1,40 @@
 """Tests for `dedb completion` and the committed completion scripts.
 
-The scripts under completions/ are click's own output, installed by the
-Debian package (debian/python3-dedb.install). These tests fail if they
-drift from what the installed click produces - regenerate with
-`python completions/_generate.py`.
+The scripts under completions/ are installed by the Debian package
+(debian/python3-dedb.install). zsh/fish are click's output; bash is a
+colon-aware variant (dedb.completion). These tests fail if the files
+drift - regenerate with `python completions/_generate.py`.
 """
 
 from pathlib import Path
 
 import pytest
-from click.shell_completion import get_completion_class
+from click.shell_completion import ShellComplete
 from click.testing import CliRunner
 
 from dedb.cli import cli
+from dedb.completion import SHELLS, completion_script
 
 COMPLETIONS = Path(__file__).parent.parent / "completions"
 
 
-@pytest.mark.parametrize(
-    ("shell", "filename"),
-    [("bash", "dedb.bash"), ("zsh", "dedb.zsh"), ("fish", "dedb.fish")],
-)
-def test_committed_script_matches_click_output(shell: str, filename: str) -> None:
-    comp_cls = get_completion_class(shell)
-    assert comp_cls is not None
-    expected = comp_cls(cli, {}, "dedb", "_DEDB_COMPLETE").source()
+@pytest.mark.parametrize("shell", SHELLS)
+def test_committed_script_is_current(shell: str) -> None:
+    expected = completion_script(shell, cli)
 
-    assert (COMPLETIONS / filename).read_text() == expected, (
-        f"completions/{filename} is stale - run `python completions/_generate.py`"
+    assert (COMPLETIONS / f"dedb.{shell}").read_text() == expected, (
+        f"completions/dedb.{shell} is stale - run `python completions/_generate.py`"
     )
 
 
-@pytest.mark.parametrize("shell", ["bash", "zsh", "fish"])
+def test_bash_script_keeps_scheme_targets_in_one_word() -> None:
+    # click's stock bash script splits the word on ":"; ours must not.
+    script = completion_script("bash", cli)
+    assert "_get_comp_words_by_ref -n :" in script
+    assert "__ltrim_colon_completions" in script
+
+
+@pytest.mark.parametrize("shell", SHELLS)
 def test_completion_command_prints_the_script(shell: str) -> None:
     result = CliRunner().invoke(cli, ["completion", shell])
 
@@ -48,9 +51,17 @@ def test_completion_rejects_unknown_shell() -> None:
 def test_completion_resolves_a_command_name() -> None:
     # The mechanism the installed scripts drive: click resolving a
     # partial command via the _DEDB_COMPLETE protocol.
-    from click.shell_completion import ShellComplete
-
     comp = ShellComplete(cli, {}, "dedb", "_DEDB_COMPLETE")
     matches = [c.value for c in comp.get_completions(["comp"], "comp")]
 
     assert "completion" in matches
+
+
+def test_game_arguments_complete_scheme_prefixes() -> None:
+    # run / download / import / rm / refreshmetadata / dosboxconf all
+    # route their GAME argument through complete_target.
+    comp = ShellComplete(cli, {}, "dedb", "_DEDB_COMPLETE")
+    for command in ("run", "download", "import", "rm", "refreshmetadata", "dosboxconf"):
+        matches = [c.value for c in comp.get_completions([command], "")]
+        assert "gog:" in matches, command
+        assert "archive:" in matches, command

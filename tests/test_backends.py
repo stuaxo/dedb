@@ -6,13 +6,22 @@ patch the origin - `dedb.core.settings.get_settings`,
 """
 
 import dataclasses
+import json
 
 import click
 import pytest
 
 from dedb.archive.backend import ArchiveBackend
 from dedb.archive.models import ArchiveFavorite
-from dedb.core import Target, get_backends, long_target, resolve, resolve_game, short_target
+from dedb.core import (
+    Target,
+    complete_target,
+    get_backends,
+    long_target,
+    resolve,
+    resolve_game,
+    short_target,
+)
 from dedb.core.settings import Settings
 from dedb.gog.backend import GogBackend
 from dedb.gog.models import GOGGame
@@ -220,3 +229,65 @@ def test_bare_name_miss_suggests_closest(local_downloads, typed, suggestion):
         assert f"dedb run {suggestion}" in message
     else:
         assert "Did you mean" not in message
+
+
+# --- shell completion --------------------------------------------------
+
+
+@pytest.fixture
+def local_catalogue(tmp_path, monkeypatch):
+    """A gog/ download, plus a GOG owned-games cache and an archive.org
+    metadata cache - the local data completion draws on."""
+    root = tmp_path / "downloads"
+    (root / "gog" / "tyrian_2000").mkdir(parents=True)
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=root))
+
+    owned = tmp_path / "owned_games_cache.json"
+    owned.write_text(
+        json.dumps(
+            [
+                {"gamename": "bio_menace", "product_id": "1"},
+                {"gamename": "tyrian_2000", "product_id": "2"},
+            ]
+        )
+    )
+    monkeypatch.setattr("dedb.gog.client.OWNED_GAMES_CACHE_PATH", owned)
+
+    archive_cache = tmp_path / "archive_metadata_cache.json"
+    archive_cache.write_text(json.dumps({"msdos_Electro_Man_1992": {"title": "Electro Man"}}))
+    monkeypatch.setattr("dedb.archive.metadata.CACHE_PATH", archive_cache)
+    return root
+
+
+def _values(items):
+    return [i.value for i in items]
+
+
+def test_complete_target_bare_offers_scheme_prefixes_and_qualified_ids(local_catalogue):
+    values = _values(complete_target(""))
+    assert "gog:" in values and "archive:" in values
+    assert "gog:bio_menace" in values  # from the owned-games cache
+    assert "gog:tyrian_2000" in values  # download + cache, listed once
+    assert values.count("gog:tyrian_2000") == 1
+    assert "archive:msdos_Electro_Man_1992" in values  # from the metadata cache
+
+
+def test_complete_target_scheme_prefix_filters_to_that_backend(local_catalogue):
+    values = _values(complete_target("gog:b"))
+    assert values == ["gog:bio_menace"]
+
+
+def test_complete_target_tolerates_the_double_slash_form(local_catalogue):
+    assert _values(complete_target("gog://tyr")) == ["gog:tyrian_2000"]
+
+
+def test_complete_target_with_backend_completes_bare_ids(local_catalogue):
+    assert _values(complete_target("bio", backend="gog")) == ["bio_menace"]
+
+
+def test_complete_target_never_raises_without_a_catalogue(monkeypatch, tmp_path):
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+    monkeypatch.setattr("dedb.gog.client.OWNED_GAMES_CACHE_PATH", tmp_path / "nope.json")
+    monkeypatch.setattr("dedb.archive.metadata.CACHE_PATH", tmp_path / "nope.json")
+    assert _values(complete_target("gog:")) == []
+    assert _values(complete_target("")) == ["gog:", "archive:"]

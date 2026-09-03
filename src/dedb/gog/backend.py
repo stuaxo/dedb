@@ -45,6 +45,19 @@ class GogBackend(BackendBase):
             )
         return envelope.as_local_game(converted=converted, launch_profiles=profiles)
 
+    def completion_ids(self):
+        import json
+
+        from .client import OWNED_GAMES_CACHE_PATH
+
+        ids = dict(super().completion_ids())
+        try:
+            for game in json.loads(OWNED_GAMES_CACHE_PATH.read_text()):
+                ids.setdefault(game["gamename"], "owned")
+        except (OSError, ValueError, KeyError, TypeError):
+            pass  # no cache yet, or an unreadable one - downloads still complete
+        return sorted(ids.items())
+
     def _import(self, layout, target: Target, output_dir, *, force):
         from .importer import import_gog_game
 

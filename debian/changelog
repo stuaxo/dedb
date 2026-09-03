@@ -2,7 +2,9 @@ dedb (0.0.12) unstable; urgency=medium
 
   * Shell tab completion. The package installs completion scripts for
     bash, zsh and fish; `dedb completion <shell>` prints the script for
-    a pip install.
+    a pip install. GAME arguments complete to `gog:<id>` / `archive:<id>`
+    targets from local data - downloaded games, the GOG owned-games
+    cache and the archive.org metadata cache - with no network access.
 
  -- Stuart Axon <stu.axon@gmail.com>  Wed, 03 Sep 2026 12:00:00 +0100
 
