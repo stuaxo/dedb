@@ -8,7 +8,7 @@ from pathlib import Path
 
 import click
 
-from ..convert import parse_dosbox_confs, resolve_mounts
+from ..convert import DosboxConfig, parse_dosbox_confs
 from ..core import Downloader, GameMetadataFile
 from .client import FETCH_ERRORS, GOGClient
 from .gameinfo import parse_profiles
@@ -87,8 +87,8 @@ def create_missing_mount_dirs(layout: GogLayout) -> None:
         confs_by_working_dir = [(conf_files, conf_files[0].parent)] if conf_files else []
 
     for conf_files, working_dir in confs_by_working_dir:
-        _config, autoexec = parse_dosbox_confs(conf_files)
-        for mount in resolve_mounts(autoexec, working_dir):
+        dosbox = DosboxConfig.from_sections(*parse_dosbox_confs(conf_files))
+        for mount in dosbox.get_mounts(working_dir):
             if mount.host_path.is_relative_to(layout.game) and not mount.host_path.exists():
                 mount.host_path.mkdir(parents=True, exist_ok=True)
 

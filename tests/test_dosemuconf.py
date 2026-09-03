@@ -60,7 +60,7 @@ def test_issues_flag_matches_dosboxconf(write_conf, launcher_profile_conf):
     verbose = CliRunner().invoke(dosemuconf, [conf, "--issues", "-v"])
 
     assert plain.exit_code == 0
-    assert "'choice'" in plain.output
+    assert "'overlay-mount'" in plain.output
     assert "->" not in plain.output
     assert "->" in verbose.output
 

@@ -47,6 +47,16 @@ SET PATH=
     assert autoexec == ["MOUNT C GAME", "SET PATH="]
 
 
+def test_percent_in_a_value_is_kept_verbatim(write_conf):
+    """DOSBox writes `cycles=max 80%`; interpolation is off so the `%`
+    isn't mistaken for a substitution."""
+    path = write_conf("[cpu]\ncycles=max 80%\n")
+
+    sections, _autoexec = parse_dosbox_conf(path)
+
+    assert sections["cpu"]["cycles"] == "max 80%"
+
+
 def test_option_names_keep_case(write_conf):
     """DOS commands are case sensitive. ConfigParser lowercases option
     names by default; parse_dosbox_conf must turn that off."""

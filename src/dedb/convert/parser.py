@@ -1,4 +1,8 @@
-"""Parsing logic for dosbox.conf files."""
+"""Parse dosbox.conf file(s) into a ``(sections, autoexec)`` pair -
+``sections`` a nested ``{section: {key: str}}`` dict (``[autoexec]``
+excluded), ``autoexec`` the ordered raw command lines of ``[autoexec]``.
+``DosboxConfig.from_sections`` turns the pair into the model.
+"""
 
 import configparser
 from collections.abc import Sequence
@@ -6,57 +10,36 @@ from pathlib import Path
 
 
 def parse_dosbox_conf(path: Path) -> tuple[dict, list[str]]:
-    """Parse a dosbox.conf file.
-
-    Returns a tuple of (config_dict, autoexec_commands) where config_dict is
-    a nested dict of all sections except [autoexec], and autoexec_commands
-    is the ordered list of raw command lines from the [autoexec] section.
-    """
+    """Parse one dosbox.conf file. See the module docstring for the shape."""
     parser = configparser.ConfigParser(
-        allow_no_value=True,
-        strict=False,
+        allow_no_value=True,  # bare `MOUNT C GAME` autoexec lines have no `=`
+        strict=False,  # tolerate a repeated section or key
         delimiters=("=",),
+        interpolation=None,  # values are verbatim - `cycles=max 80%` keeps its `%`
     )
-    # Preserve case: DOS commands and option values are case sensitive,
-    # and configparser lowercases option names by default.
-    parser.optionxform = str
-    # DOSBox writes/reads confs in CP437 (its autoexec sections sometimes
-    # contain CP437 box-drawing characters for ASCII-art menus), not UTF-8.
+    parser.optionxform = str  # keep case: DOS commands and values are case-sensitive
+    # cp437: DOSBox writes confs in it, and autoexec sections sometimes
+    # hold CP437 box-drawing characters (ASCII-art menus).
     parser.read(path, encoding="cp437")
 
-    autoexec_commands: list[str] = []
-    if parser.has_section("autoexec"):
-        for key in parser.options("autoexec"):
-            # raw=True: .items()/.get() run values through interpolation,
-            # which turns a "no value" None into '' and loses the
-            # distinction between "MOUNT C GAMES" and "SET PATH=".
-            value = parser.get("autoexec", key, raw=True)
-            if value is None:
-                autoexec_commands.append(key)
-            else:
-                autoexec_commands.append(f"{key}={value}")
-
-    config_dict: dict = {}
-    for section in parser.sections():
-        if section == "autoexec":
-            continue
-        config_dict[section] = dict(parser.items(section))
-
-    return config_dict, autoexec_commands
+    autoexec = (
+        [key if value is None else f"{key}={value}" for key, value in parser.items("autoexec")]
+        if parser.has_section("autoexec")
+        else []
+    )
+    sections = {name: dict(parser.items(name)) for name in parser.sections() if name != "autoexec"}
+    return sections, autoexec
 
 
 def parse_dosbox_confs(paths: Sequence[Path]) -> tuple[dict, list[str]]:
-    """Parse and merge multiple dosbox.conf files, the way DOSBox itself
-    does when given several -conf arguments: options are merged section by
-    section with later files overriding earlier ones on a per-key basis,
-    and [autoexec] commands from every file are concatenated in order.
-    """
-    merged_config: dict = {}
-    merged_autoexec: list[str] = []
+    """Parse and merge several dosbox.conf files the way DOSBox does with
+    multiple -conf arguments: sections merge per key with the later file
+    winning, [autoexec] lines concatenate in file order."""
+    sections: dict = {}
+    autoexec: list[str] = []
     for path in paths:
-        config, autoexec = parse_dosbox_conf(path)
-        for section, options in config.items():
-            merged_config.setdefault(section, {}).update(options)
-        merged_autoexec.extend(autoexec)
-
-    return merged_config, merged_autoexec
+        file_sections, file_autoexec = parse_dosbox_conf(path)
+        for name, options in file_sections.items():
+            sections.setdefault(name, {}).update(options)
+        autoexec += file_autoexec
+    return sections, autoexec

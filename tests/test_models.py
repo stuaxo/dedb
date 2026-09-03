@@ -1,23 +1,26 @@
 """Tests for dedb.convert.models.
 
 DosboxConfig mirrors dosbox.conf's own vocabulary; DosemuConfig mirrors
-dosemu.conf's. dosbox_to_dosemu is the only place field names and units
-cross from one side to the other.
+dosemu.conf's. DosemuConfigFromDosbox is the translation layer between
+them, and dosbox_to_dosemu runs the pipeline.
 """
 
 import pytest
 
-from dedb.convert.models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
+from dedb.convert.models import (
+    DosboxConfig,
+    DosemuConfig,
+    DosemuConfigFromDosbox,
+    dosbox_to_dosemu,
+)
 from dedb.testing.model_naming import (
     assert_serialization_aliases_add_only_prefix,
     assert_validation_aliases_are_structural,
 )
 
-# Every left/right model pair this app translates between. A left model's
-# validation_alias only locates a value in its source format; a right
-# model's serialization_alias only adds its target format's prefix.
-# Add a pair here when a new translation is added, rather than writing a
-# one-off naming test for it.
+# DosboxConfig's validation_alias only locates a value in dosbox.conf;
+# DosemuConfig's serialization_alias only adds the `$_` prefix. Neither
+# renames - that's DosemuConfigFromDosbox's job.
 LEFT_MODELS = [DosboxConfig]
 RIGHT_MODELS = [(DosemuConfig, "$_")]
 
@@ -32,11 +35,13 @@ def test_right_model_aliases_only_add_the_prefix(model_cls, prefix):
     assert_serialization_aliases_add_only_prefix(model_cls, prefix)
 
 
-def test_config_keys_by_section_has_one_entry_per_field():
+def test_config_keys_by_section_has_one_entry_per_section_mapped_field():
     by_section = DosboxConfig.config_keys_by_section()
 
     field_names = [name for keys in by_section.values() for name in keys.values()]
-    assert sorted(field_names) == sorted(DosboxConfig.model_fields)
+    # `autoexec` is a verbatim list, not a section/key value, so it has no
+    # AliasPath and is not part of this map.
+    assert sorted(field_names) == sorted(n for n in DosboxConfig.model_fields if n != "autoexec")
 
 
 def test_config_keys_by_section_maps_a_section_key_pair_to_its_field_name():
@@ -45,6 +50,23 @@ def test_config_keys_by_section_maps_a_section_key_pair_to_its_field_name():
     assert by_section["sdl"]["fullscreen"] == "fullscreen"
     assert by_section["cpu"]["cycles"] == "cycles"
     assert by_section["dosbox"]["memsize"] == "memsize"
+
+
+def test_autoexec_defaults_to_empty_and_is_populated_by_name():
+    assert DosboxConfig().autoexec == []
+    assert DosboxConfig.model_validate({"autoexec": ["c:", "GAME.EXE"]}).autoexec == [
+        "c:",
+        "GAME.EXE",
+    ]
+
+
+def test_get_mounts_resolves_the_autoexec_mounts_against_a_working_dir(tmp_path):
+    config = DosboxConfig(autoexec=["MOUNT D SAVES", "IMGMOUNT E disk.img", "GAME.EXE"])
+
+    mounts = config.get_mounts(tmp_path)
+
+    assert [(m.dos_drive, m.dos_path) for m in mounts] == [("D", "SAVES")]
+    assert mounts[0].host_path == (tmp_path / "SAVES").resolve()
 
 
 @pytest.mark.parametrize(
@@ -76,26 +98,21 @@ def test_bool_string_coercion_for_multiple_fields(raw: str, expected: bool):
     assert config.pcspeaker is expected
 
 
-def test_fullscreen_defaults_to_false_when_absent():
-    config = DosboxConfig.model_validate({})
-
-    assert config.fullscreen is False
+@pytest.mark.parametrize(
+    ("field", "dosbox_default"),
+    [("fullscreen", False), ("cycles", "auto"), ("memsize", 16), ("sbtype", "sb16")],
+)
+def test_absent_fields_take_dosbox_own_default(field: str, dosbox_default):
+    assert getattr(DosboxConfig.model_validate({}), field) == dosbox_default
 
 
 def test_cycles_is_kept_as_dosbox_wrote_it():
     """cycles is DOSBox's own free-form value ("max", "auto", "max 80%",
     "fixed 3000"...); DosboxConfig stores it verbatim and leaves
-    interpreting it to dosbox_to_dosemu."""
+    interpreting it to the translation model."""
     config = DosboxConfig.model_validate({"cpu": {"cycles": "fixed 3000"}})
 
     assert config.cycles == "fixed 3000"
-
-
-def test_cycles_defaults_to_auto_when_absent():
-    """DOSBox's own default for cycles."""
-    config = DosboxConfig.model_validate({})
-
-    assert config.cycles == "auto"
 
 
 @pytest.mark.parametrize(
@@ -110,13 +127,6 @@ def test_memsize_string_coercion(memsize: str, expected: int):
     config = DosboxConfig.model_validate({"dosbox": {"memsize": memsize}})
 
     assert config.memsize == expected
-
-
-def test_memsize_defaults_to_16mb_when_absent():
-    """DOSBox's own default for memsize."""
-    config = DosboxConfig.model_validate({})
-
-    assert config.memsize == 16
 
 
 @pytest.mark.parametrize(
@@ -161,15 +171,12 @@ def test_dosbox_to_dosemu_floors_then_converts_memsize_to_dpmi(memsize: int, exp
     assert target.dpmi == expected_dpmi_kb
 
 
-def test_dosbox_to_dosemu_carries_fullscreen_through_unchanged():
-    target = dosbox_to_dosemu(DosboxConfig(fullscreen=True))
+def test_dosbox_to_dosemu_translates_the_remaining_fields():
+    target = dosbox_to_dosemu(
+        DosboxConfig(fullscreen=True, pcspeaker=True, serial1="dummy", joysticktype="none")
+    )
 
-    assert target.X_fullscreen is True
-
-
-def test_dosbox_to_dosemu_translates_speaker_and_serial_and_joystick():
-    target = dosbox_to_dosemu(DosboxConfig(pcspeaker=True, serial1="dummy", joysticktype="none"))
-
+    assert target.X_fullscreen is True  # renamed, copied unchanged
     assert target.speaker == "emulated"
     assert target.com1 == ""
     assert target.joystick == ""
@@ -179,7 +186,7 @@ def test_dosbox_to_dosemu_translates_speaker_and_serial_and_joystick():
     )
 
     assert target_alt.speaker == ""
-    assert target_alt.com1 == ""  # Always returns empty for now
+    assert target_alt.com1 == ""  # always empty for now
     assert target_alt.joystick == "/dev/input/js0"
 
 
@@ -190,58 +197,50 @@ def test_dosbox_to_dosemu_does_not_emit_video():
     assert not hasattr(dosbox_to_dosemu(DosboxConfig(output="opengl")), "video")
 
 
+def test_translation_model_reads_dosbox_field_names_and_converts():
+    """DosemuConfigFromDosbox reads a DosboxConfig dump: its aliases are
+    DosboxConfig field names, its validators do the conversion."""
+    mid = DosemuConfigFromDosbox.model_validate(
+        DosboxConfig(cycles="4000", memsize=8, mpu401="none").model_dump()
+    )
+
+    assert mid.cpuspeed == 4000
+    assert mid.dpmi == 131072  # 8 -> floored to 128 MB -> KB
+    assert mid.mpu401_base == 0 and mid.mpu401_irq == 0
+
+
+def test_translation_model_drops_unsupported_fields_from_the_dump():
+    mid = DosemuConfigFromDosbox.model_validate(DosboxConfig(output="opengl").model_dump())
+
+    assert "output" not in mid.model_dump()
+    assert set(mid.model_dump()) == set(DosemuConfig.model_fields)
+
+
 @pytest.fixture
-def default_dosemu_kwargs():
-    return {
-        "X_fullscreen": False,
-        "cpuspeed": 0,
-        "cpu_vm": "kvm",
-        "dpmi": 131072,
-        "sound": True,
-        "sb_base": 0x220,
-        "sb_irq": 7,
-        "sb_dma": 1,
-        "sb_hdma": 5,
-        "gus": False,
-        "mpu401_base": 0x330,
-        "mpu401_irq": 9,
-        "speaker": "emulated",
-        "com1": "",
-        "joystick": "/dev/input/js0",
-    }
+def dosemu():
+    """A fully-populated DosemuConfig - the translated DOSBox defaults."""
+    return dosbox_to_dosemu(DosboxConfig())
 
 
 @pytest.mark.parametrize(("fullscreen", "rendered"), [(True, "on"), (False, "off")])
-def test_model_dump_dosemurc_renders_fullscreen_as_on_off(
-    fullscreen: bool, rendered: str, default_dosemu_kwargs
-):
-    kwargs = default_dosemu_kwargs.copy()
-    kwargs["X_fullscreen"] = fullscreen
-    target = DosemuConfig(**kwargs)
-
-    output = target.model_dump_dosemurc()
+def test_model_dump_dosemurc_renders_fullscreen_as_on_off(fullscreen, rendered, dosemu):
+    output = dosemu.model_copy(update={"X_fullscreen": fullscreen}).model_dump_dosemurc()
 
     assert f"$_X_fullscreen = ({rendered})" in output.splitlines()
 
 
-def test_model_dump_dosemurc_renders_dpmi_without_further_conversion(default_dosemu_kwargs):
+def test_model_dump_dosemurc_renders_dpmi_without_further_conversion(dosemu):
     """dpmi is already in DOSEMU2's units by the time it reaches
     DosemuConfig; model_dump_dosemurc must not scale it again."""
-    kwargs = default_dosemu_kwargs.copy()
-    kwargs["dpmi"] = 262144
-    target = DosemuConfig(**kwargs)
-
-    output = target.model_dump_dosemurc()
+    output = dosemu.model_copy(update={"dpmi": 262144}).model_dump_dosemurc()
 
     assert "$_dpmi = (262144)" in output.splitlines()
 
 
-def test_model_dump_dosemurc_full_output(default_dosemu_kwargs):
-    kwargs = default_dosemu_kwargs.copy()
-    kwargs.update({"X_fullscreen": True, "cpuspeed": 3000, "dpmi": 131072})
-    target = DosemuConfig(**kwargs)
-
-    output = target.model_dump_dosemurc()
+def test_model_dump_dosemurc_full_output(dosemu):
+    output = dosemu.model_copy(
+        update={"X_fullscreen": True, "cpuspeed": 3000, "dpmi": 131072}
+    ).model_dump_dosemurc()
 
     assert "$_X_fullscreen = (on)" in output.splitlines()
     assert "$_cpuspeed = (3000)" in output.splitlines()

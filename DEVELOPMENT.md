@@ -14,8 +14,8 @@ uv run ruff format .      # autoformat
 uv run pytest             # tests
 ```
 
-After changing `dedb.convert.models.TRANSLATIONS` (the DOSBox->DOSEMU2
-field map), refresh the table in ARCHITECTURE.md:
+After changing `DosemuConfigFromDosbox` (the DOSBox->DOSEMU2 translation
+model in `dedb.convert.models`), refresh the table in ARCHITECTURE.md:
 
 ```bash
 uv run python -m dedb.convert.fieldmap --write

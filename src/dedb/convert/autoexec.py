@@ -1,192 +1,43 @@
-"""Shims for a game's autoexec, applied only to userhook.bat. Real DOSBox
-(via -conf) is never touched.
+"""Rewrite the autoexec commands DOSEMU2 can't run as-is, for
+``userhook.bat``. Real DOSBox runs the autoexec straight from ``-conf``
+and never sees these rewrites.
 
-Each shim takes one line and returns a replacement line, unchanged if it
-doesn't recognise it. Single-line only for now - move to whole-autoexec
-context if a shim needs it.
+``SHIMS`` is a list of ``(regex, handler, name)``.
+``autoexec_line_to_userhook_line`` applies the first handler whose regex
+matches a line; ``autoexec_as_userhook`` runs a whole autoexec through it,
+and ``diagnose_autoexec`` reports what changed, for
+``dedb dosboxconf --issues``.
 """
 
 import re
-from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum
+from enum import IntEnum
+from functools import lru_cache
 from pathlib import Path
-
-SinglelineShim = Callable[[str], str]
-
-
-def split_command(text: str) -> list[str]:
-    """Tokenise a DOS command string: whitespace-separated, except a
-    ``"double-quoted run"`` is a single token (and is unquoted). Not
-    shlex - a backslash in a DOS path must not be read as an escape.
-    Shared with dedb.gog.gameinfo (parsing playTask arguments)."""
-    tokens = re.findall(r'"[^"]*"|\S+', text)
-    return [t[1:-1] if t.startswith('"') and t.endswith('"') else t for t in tokens]
+from typing import Any
 
 
-def _split_line(line: str) -> tuple[str, list[str]]:
-    """Split an autoexec line into (leading '@' or '', tokens) - see
-    :func:`split_command`."""
-    prefix, rest = ("@", line[1:]) if line.startswith("@") else ("", line)
-    return prefix, split_command(rest)
+class Severity(IntEnum):
+    """How well DOSEMU2 copes with the command a shim covers. Numbered
+    most-severe first, so sorting orders a report worst-to-best; each
+    member's ``__doc__`` is the gloss the verbose report prints."""
 
+    UNSUPPORTED = 1, "no DOSEMU2 equivalent - commented out; the game may misbehave"
+    PARTIALLY_SUPPORTED = 2, "still runs, but not identically to DOSBox"
+    SUPPORTED = 3, "translated to a DOSEMU2 equivalent"
 
-def choice_shim(line: str) -> str:
-    """Strip CHOICE's flags (/C, /N, /S, /T...), keeping the command and
-    prompt message. The flags are known to break keyboard input in some
-    environments."""
-    prefix, tokens = _split_line(line)
-    if not tokens or tokens[0].lower() != "choice":
-        return line
-    kept = [tokens[0]] + [token for token in tokens[1:] if not token.startswith("/")]
-    return prefix + " ".join(kept)
-
-
-def mount_lredir_shim(working_dir: Path) -> SinglelineShim:
-    """Convert MOUNT to DOSEMU2's LREDIR, resolving the DOS-relative path
-    against working_dir (see dedb.gog.profiles.get_working_dir).
-
-    "MOUNT C ..." is commented out, not converted: --Fdrive_c already
-    maps C: to the game directory as a fatfs disk, and LREDIR (an mfs
-    redirection) can't overlay it.
-
-    Run unsupported_mount_option("overlay") first in the pipeline, so
-    overlay mounts are already REM'd (first token "REM", not "mount") by
-    the time this shim runs.
-    """
-
-    def shim(line: str) -> str:
-        prefix, tokens = _split_line(line)
-        if not tokens or tokens[0].lower() != "mount" or len(tokens) < 3:
-            return line
-
-        drive, dos_path = tokens[1], tokens[2]
-        if drive.rstrip(":").upper() == "C":
-            return f"REM {line}"
-
-        host_path = (working_dir / dos_path.replace("\\", "/")).resolve()
-        return f"{prefix}LREDIR -f {drive.rstrip(':').upper()}: {host_path}"
-
-    return shim
-
-
-@dataclass(frozen=True)
-class ResolvedMount:
-    """One MOUNT command's target, resolved to a host path."""
-
-    drive: str
-    dos_path: str
-    host_path: Path
-
-
-def resolve_mounts(autoexec: list[str], working_dir: Path) -> list[ResolvedMount]:
-    """Find every MOUNT command in autoexec, resolving each DOS-relative
-    target against working_dir (see dedb.gog.profiles.get_working_dir)
-    into an absolute host path. IMGMOUNT and other commands are ignored -
-    MOUNT is the only one that targets a directory rather than a file."""
-    resolved = []
-    for line in autoexec:
-        _prefix, tokens = _split_line(line)
-        if len(tokens) < 3 or tokens[0].lower() != "mount" or tokens[1].startswith("-"):
-            continue
-        drive, dos_path = tokens[1], tokens[2]
-        host_path = (working_dir / dos_path.replace("\\", "/")).resolve()
-        resolved.append(ResolvedMount(drive.rstrip(":").upper(), dos_path, host_path))
-    return resolved
-
-
-def unsupported_command(command: str) -> SinglelineShim:
-    """Build a shim that comments out any line invoking command."""
-
-    def shim(line: str) -> str:
-        rest = line[1:] if line.startswith("@") else line
-        tokens = rest.split()
-        if tokens and tokens[0].lower() == command.lower():
-            return f"REM {line}"
-        return line
-
-    return shim
-
-
-def unsupported_mount_option(option: str) -> SinglelineShim:
-    """Build a shim that comments out MOUNT only when it uses option
-    (e.g. "overlay" for "-t overlay"). Other MOUNT lines pass through."""
-
-    def shim(line: str) -> str:
-        _prefix, tokens = _split_line(line)
-        if not tokens or tokens[0].lower() != "mount":
-            return line
-        if not any(token.lower() == option.lower() for token in tokens):
-            return line
-        return f"REM {line}"
-
-    return shim
-
-
-unsupported_imgmount = unsupported_command("imgmount")
-unsupported_overlay_mount = unsupported_mount_option("overlay")
-
-
-class Severity(Enum):
-    """How well DOSEMU2 copes with the DOS command a workaround covers.
-
-    SUPPORTED       - translated to a working DOSEMU2 equivalent.
-    PARTIALLY_SUPPORTED - still runs after the shim, but not identically
-                      to real DOSBox.
-    UNSUPPORTED     - no equivalent; the shim only comments it out so it
-                      doesn't error at runtime. The game may misbehave.
-    """
-
-    SUPPORTED = "supported"
-    PARTIALLY_SUPPORTED = "partially supported"
-    UNSUPPORTED = "unsupported"
-
-
-# Most severe first - the order active_workarounds() flattens its lists in,
-# and the order the `dosboxconf --issues` report groups by.
-SEVERITY_ORDER: tuple[Severity, ...] = (
-    Severity.UNSUPPORTED,
-    Severity.PARTIALLY_SUPPORTED,
-    Severity.SUPPORTED,
-)
-
-# One-line gloss on each severity, shown after the heading in the
-# verbose (`--issues -v`) report.
-SEVERITY_BLURB: dict[Severity, str] = {
-    Severity.SUPPORTED: "translated to a DOSEMU2 equivalent",
-    Severity.PARTIALLY_SUPPORTED: "still runs, but not identically to DOSBox",
-    Severity.UNSUPPORTED: "no DOSEMU2 equivalent - commented out; the game may misbehave",
-}
-
-# Heading for each severity's block in the default (compact) `--issues`
-# report, phrased as the set of commands that band contains.
-SEVERITY_HEADING: dict[Severity, str] = {
-    Severity.SUPPORTED: "Commands translated to a DOSEMU2 equivalent:",
-    Severity.PARTIALLY_SUPPORTED: "Commands only partially supported:",
-    Severity.UNSUPPORTED: "Commands not supported as-is under DOSEMU2:",
-}
-
-
-@dataclass(frozen=True)
-class Workaround:
-    """One autoexec fix: a `shim` that rewrites the lines it recognises,
-    its `severity` (which of the lists below it lives in), and a `summary`
-    of the DOSEMU2 limitation it exists for.
-
-    The shim is also the detection - any line it changes is, by
-    definition, a line that needed working around (see diagnose_autoexec).
-    """
-
-    name: str
-    severity: Severity
-    summary: str
-    shim: SinglelineShim
+    def __new__(cls, value: int, doc: str) -> "Severity":
+        """Split ``value, gloss`` so each member keeps its gloss as ``__doc__``."""
+        member = int.__new__(cls, value)
+        member._value_ = value
+        member.__doc__ = doc
+        return member
 
 
 @dataclass(frozen=True)
 class AutoexecIssue:
-    """One autoexec line a Workaround rewrote: which workaround (and how
-    severe), and the `rewritten` line that ends up in userhook.bat."""
+    """One autoexec line a shim rewrote: which shim (and how severe), the
+    DOSEMU2 limitation it exists for, and the line before/after."""
 
     workaround: str
     severity: Severity
@@ -195,111 +46,103 @@ class AutoexecIssue:
     rewritten: str
 
 
-# --- Workarounds, grouped by severity ---------------------------------
-#
-# These lists are the source of truth for what the shim pipeline does.
-# active_workarounds() assembles them (plus the working-dir-dependent
-# MOUNT entry) into the flat, ordered pipeline the rest of the code uses.
+ShimResult = tuple[str, Severity, str]
+Handler = Any
 
-# No DOSEMU2 equivalent - the shim just comments the command out.
-UNSUPPORTED: list[Workaround] = [
-    Workaround(
-        "imgmount",
+
+def shim_imgmount(line: str, **_: Any) -> ShimResult:
+    return (
+        f"REM {line}",
         Severity.UNSUPPORTED,
         "IMGMOUNT (disk-image mounts) has no runtime equivalent in DOSEMU2",
-        unsupported_imgmount,
-    ),
-    Workaround(
-        "overlay-mount",
-        Severity.UNSUPPORTED,
-        "overlay MOUNT (-t overlay) has no equivalent - DOSEMU2 has no overlay filesystem",
-        unsupported_overlay_mount,
-    ),
-]
-
-# Still runs after the shim, but with changed behaviour.
-PARTIALLY_SUPPORTED: list[Workaround] = [
-    Workaround(
-        "choice",
-        Severity.PARTIALLY_SUPPORTED,
-        "CHOICE flags (/C, /N, /S, /T...) stripped - they break keyboard input under DOSEMU2",
-        choice_shim,
-    ),
-]
-
-# Translated cleanly to a DOSEMU2 equivalent. Nothing qualifies
-# unconditionally yet: MOUNT is the closest, but its LREDIR translation
-# depends on a correctly resolved working directory, so it's treated as
-# PARTIALLY_SUPPORTED (see _mount_workaround).
-SUPPORTED: list[Workaround] = []
-
-
-def _mount_workaround(working_dir: Path | None) -> Workaround:
-    """The MOUNT workaround, which can't be a static list entry because it
-    depends on working_dir: with one, MOUNT becomes LREDIR (a C: mount is
-    dropped - --Fdrive_c already maps C:); without one it's commented
-    out. Neither is a transparent translation, so it's PARTIALLY_SUPPORTED
-    either way."""
-    if working_dir is not None:
-        return Workaround(
-            "mount",
-            Severity.PARTIALLY_SUPPORTED,
-            "MOUNT rewritten to LREDIR (a C: mount is dropped - --Fdrive_c already maps C:)",
-            mount_lredir_shim(working_dir),
-        )
-    return Workaround(
-        "mount",
-        Severity.PARTIALLY_SUPPORTED,
-        "MOUNT commented out - translating it to LREDIR needs a known working directory",
-        unsupported_command("mount"),
     )
 
 
-def active_workarounds(working_dir: Path | None = None) -> list[Workaround]:
-    """Every autoexec workaround, flattened into the order the pipeline
-    applies them: unsupported commands are commented out first, then the
-    partial/supported translations run on what's left. Same order the
-    `dosboxconf --issues` report groups by (most severe first). The single
-    source of truth for both autoexec_shims() and diagnose_autoexec()."""
-    partial = [*PARTIALLY_SUPPORTED, _mount_workaround(working_dir)]
-    return [*UNSUPPORTED, *partial, *SUPPORTED]
+def shim_overlay_mount(line: str, **_: Any) -> ShimResult:
+    return (
+        f"REM {line}",
+        Severity.UNSUPPORTED,
+        "overlay MOUNT (-t overlay) has no equivalent - DOSEMU2 has no overlay filesystem",
+    )
 
 
-def autoexec_shims(autoexec: list[str], working_dir: Path | None = None) -> list[str]:
-    """Run every line through each active workaround shim. working_dir
-    converts MOUNT to LREDIR; without it MOUNT lines are commented out."""
-    shims = [workaround.shim for workaround in active_workarounds(working_dir)]
+def shim_mount(line: str, drive: str, dos_path: str, working_dir: Path, **_: Any) -> ShimResult:
+    """``MOUNT`` -> DOSEMU2's ``LREDIR``, resolving the DOS-relative path
+    against ``working_dir``.
 
-    result = []
-    for line in autoexec:
-        for shim in shims:
-            line = shim(line)
-        result.append(line)
-    return result
+    ``C:`` is dropped: ``--Fdrive_c`` already maps it as a fatfs disk, and
+    ``LREDIR`` (an mfs redirection) can't overlay that.
+    """
+    if drive.upper() == "C":
+        return (
+            f"REM {line}",
+            Severity.UNSUPPORTED,
+            "MOUNT C: dropped - --Fdrive_c already maps C: to the game directory",
+        )
+
+    prefix = "@" if line.startswith("@") else ""
+    host_path = (working_dir / dos_path.strip('"').replace("\\", "/")).resolve()
+    return (
+        f"{prefix}LREDIR -f {drive.upper()}: {host_path}",
+        Severity.PARTIALLY_SUPPORTED,
+        "MOUNT rewritten to LREDIR (a C: mount is dropped - --Fdrive_c already maps C:)",
+    )
+
+
+SHIMS: list[tuple[str, Handler, str]] = [
+    (r"^\s*@?imgmount\b", shim_imgmount, "imgmount"),
+    (r"^\s*@?mount\b.*-t\s+overlay\b", shim_overlay_mount, "overlay-mount"),
+    (r'^\s*@?mount\s+(?P<drive>[a-zA-Z]):?\s+(?P<dos_path>"[^"]*"|\S+)', shim_mount, "mount"),
+]
+
+
+@lru_cache(maxsize=1)
+def get_shims() -> list[tuple[re.Pattern[str], Handler, str]]:
+    """``SHIMS`` with each pattern compiled (case-insensitive)."""
+    return [(re.compile(pattern, re.IGNORECASE), handler, name) for pattern, handler, name in SHIMS]
+
+
+def autoexec_line_to_userhook_line(
+    line: str, working_dir: Path | None = None
+) -> tuple[str, tuple[str, Severity, str] | None]:
+    """Run one line through the shims.
+
+    Returns ``(line, hit)``. A shim that matched supplies the rewritten
+    line and ``hit`` of ``(name, severity, summary)``; otherwise the line
+    is unchanged and ``hit`` is ``None``. ``working_dir`` defaults to the
+    current directory.
+    """
+    clean = line.strip()
+    if not clean:
+        return line, None
+
+    working_dir = working_dir or Path.cwd()
+    for pattern, handler, name in get_shims():
+        match = pattern.match(clean)
+        if match is None:
+            continue
+        rewritten, severity, summary = handler(
+            line=clean, working_dir=working_dir, **match.groupdict()
+        )
+        return rewritten, (name, severity, summary)
+
+    return line, None
+
+
+def autoexec_as_userhook(autoexec: list[str], working_dir: Path | None = None) -> list[str]:
+    """Every autoexec line rewritten for ``userhook.bat`` - each line
+    unchanged unless a shim recognised it. ``working_dir`` (default: the
+    current directory) is where a relative ``MOUNT`` path is resolved
+    from, when the shim rewrites it to ``LREDIR``."""
+    return [autoexec_line_to_userhook_line(line, working_dir)[0] for line in autoexec]
 
 
 def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> list[AutoexecIssue]:
-    """List the autoexec lines that won't run cleanly under DOSEMU2, by
-    running the real workaround pipeline and recording every line a
-    workaround changed. Reusing the shims themselves as the detector
-    keeps the reported issues in lockstep with the fixes actually applied
-    to userhook.bat - they can't drift apart."""
-    workarounds = active_workarounds(working_dir)
-
-    issues: list[AutoexecIssue] = []
-    for original in autoexec:
-        line = original
-        for workaround in workarounds:
-            rewritten = workaround.shim(line)
-            if rewritten != line:
-                issues.append(
-                    AutoexecIssue(
-                        workaround.name,
-                        workaround.severity,
-                        workaround.summary,
-                        original,
-                        rewritten,
-                    )
-                )
-            line = rewritten
-    return issues
+    """Identify autoexec lines incompatible with DOSEMU2, recording each
+    rewrite and the reason for it."""
+    return [
+        AutoexecIssue(*hit, line, rewritten)
+        for line in autoexec
+        for rewritten, hit in [autoexec_line_to_userhook_line(line, working_dir=working_dir)]
+        if hit is not None
+    ]

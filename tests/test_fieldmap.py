@@ -1,41 +1,52 @@
-"""Tests for dedb.convert.fieldmap and the model invariants it relies on.
+"""Integrity of the three-model translation pipeline, and the generated
+ARCHITECTURE.md field map.
 
-These lock the DOSBox<->DOSEMU2 field map to the code: every DosemuConfig
-field must be produced by a translation, every DosboxConfig field must be
-either translated or explicitly listed as not, and ARCHITECTURE.md's
-generated table must be current.
+DosboxConfig (src) -> DosemuConfigFromDosbox (translation) -> DosemuConfig
+(dest). These tests check the ends line up: every translation field reads
+a real dosbox field, and its translated fields are exactly the dosemu
+fields.
 """
 
 from dedb.convert import fieldmap
-from dedb.convert.models import (
-    TRANSLATIONS,
-    UNTRANSLATED_DOSBOX_FIELDS,
-    DosboxConfig,
-    DosemuConfig,
-)
+from dedb.convert.models import DosboxConfig, DosemuConfig, DosemuConfigFromDosbox
+
+# `autoexec` is the [autoexec] command list, handled by the shim pipeline
+# (dedb.convert.autoexec), not a scalar setting the translation touches.
+_DOSBOX_SETTINGS = {name for name in DosboxConfig.model_fields if name != "autoexec"}
 
 
-def test_every_dosemu_field_is_filled_by_exactly_one_translation():
-    targets = [t.target for t in TRANSLATIONS]
-    assert sorted(targets) == sorted(DosemuConfig.model_fields)
-    assert len(targets) == len(set(targets))  # no field written twice
+def _translation_aliases() -> dict[str, str]:
+    """{translation field name: the DosboxConfig field it reads}."""
+    return {
+        name: field.validation_alias for name, field in DosemuConfigFromDosbox.model_fields.items()
+    }
 
 
-def test_every_dosbox_field_is_translated_or_explicitly_not():
-    accounted = {t.source for t in TRANSLATIONS} | set(UNTRANSLATED_DOSBOX_FIELDS)
-    assert accounted == set(DosboxConfig.model_fields)
+def test_translation_reads_only_real_dosbox_fields():
+    """src -> translation: every DosemuConfigFromDosbox field's
+    validation_alias names a field that exists on DosboxConfig."""
+    unknown = set(_translation_aliases().values()) - set(DosboxConfig.model_fields)
+    assert not unknown, f"translation reads dosbox fields that don't exist: {unknown}"
 
 
-def test_translation_sources_and_untranslated_do_not_overlap():
-    assert not {t.source for t in TRANSLATIONS} & set(UNTRANSLATED_DOSBOX_FIELDS)
+def test_translation_covers_every_dosbox_setting():
+    """No dosbox setting is silently ignored - each is either translated
+    or explicitly marked Unsupported."""
+    assert set(_translation_aliases().values()) == _DOSBOX_SETTINGS
 
 
-def test_a_translation_with_no_converter_has_no_note():
-    # "copied unchanged" straight-through translations carry no gloss;
-    # anything with a note must also have a converter behind it.
-    for t in TRANSLATIONS:
-        if t.note:
-            assert t.via is not None, f"{t.source}->{t.target} has a note but no converter"
+def test_translated_fields_are_exactly_the_dosemu_fields():
+    """translation -> dest: the non-Unsupported translation fields match
+    DosemuConfig's fields one-to-one."""
+    assert sorted(DosemuConfigFromDosbox.translated_fields()) == sorted(DosemuConfig.model_fields)
+
+
+def test_unsupported_fields_produce_nothing():
+    """An Unsupported field is read from dosbox but excluded from the
+    dump, so it never reaches DosemuConfig."""
+    excluded = {n for n, f in DosemuConfigFromDosbox.model_fields.items() if f.exclude}
+    assert excluded == {"aspect", "scaler", "output"}
+    assert not excluded & set(DosemuConfig.model_fields)
 
 
 def test_architecture_md_table_is_current():
@@ -46,8 +57,8 @@ def test_architecture_md_table_is_current():
 
 def test_render_markdown_lists_every_field():
     table = fieldmap.render_markdown()
-    for name, field in DosemuConfig.model_fields.items():
-        assert field.serialization_alias in table, name
-    for name in UNTRANSLATED_DOSBOX_FIELDS:
+    for field in DosemuConfig.model_fields.values():
+        assert field.serialization_alias in table
+    for name in ("aspect", "scaler", "output"):
         alias = DosboxConfig.model_fields[name].validation_alias
         assert f"[{alias.path[0]}] {alias.path[-1]}" in table

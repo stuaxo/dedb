@@ -7,7 +7,7 @@ files, a few flags, and a trailing program. This module turns that argv
 into the *same* ``(nested_section_dict, autoexec_lines)`` pair
 ``dedb.convert.parser`` produces from a .conf, so it flows through the
 existing ``DosboxConfig.model_validate`` -> ``dosbox_to_dosemu`` ->
-``autoexec_shims`` pipeline unchanged.
+``autoexec_as_userhook`` pipeline unchanged.
 
 Two kinds of thing arrive on a DOSBox command line:
 
@@ -23,10 +23,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .autoexec import split_command
-from .converter import build_from_parsed
+from .converter import build_from_config
 from .models import DosboxConfig, DosemuConfig
 from .parser import parse_dosbox_confs
+from .tokens import split_command
 
 # The options this module reads, each taking one value and repeatable.
 # `-fullscreen` and `-noautoexec` (bare, non-repeating) are handled inline
@@ -43,11 +43,11 @@ _HOST_VALUE_OPTS = ("-machine", "-lang", "-socket", "-scaler", "-forcescaler", "
 
 @dataclass
 class DosboxCommandLine:
-    """Structured result of parsing a `dosbox` argv. ``config`` and
+    """Structured result of parsing a `dosbox` argv. ``sections`` and
     ``autoexec`` are the pair the rest of the engine consumes; the
     other fields are for reporting (see the notebook / tests)."""
 
-    config: dict = field(default_factory=dict)  # nested {section: {key: str}}
+    sections: dict = field(default_factory=dict)  # nested {section: {key: str}}
     autoexec: list[str] = field(default_factory=list)
     conf_files: list[Path] = field(default_factory=list)
     ignored: list[str] = field(default_factory=list)  # recognised but dropped
@@ -144,7 +144,7 @@ def parse_dosbox_command_line(
     #    the later file winning; parse_dosbox_confs already does that.
     base_autoexec: list[str] = []
     if conf_paths:
-        result.config, base_autoexec = parse_dosbox_confs(conf_paths)
+        result.sections, base_autoexec = parse_dosbox_confs(conf_paths)
 
     # 2. argv config items layer on top, overriding per key.
     fragments: list[list[str]] = [split_command(item) for item in scanned.sets]
@@ -164,7 +164,7 @@ def parse_dosbox_command_line(
         if item is None:
             continue
         section, key, value = item
-        result.config.setdefault(section, {})[key] = value
+        result.sections.setdefault(section, {})[key] = value
         if key not in modelled.get(section, {}):
             result.unmodelled.append((section, key))
 
@@ -185,7 +185,7 @@ def parse_dosbox_argv(
     """A `dosbox` argv as the ``(nested_section_dict, autoexec_lines)``
     pair - the same contract as ``dedb.convert.parser.parse_dosbox_conf``."""
     result = parse_dosbox_command_line(argv, base_dir=base_dir)
-    return result.config, result.autoexec
+    return result.sections, result.autoexec
 
 
 def build_from_argv(
@@ -194,4 +194,5 @@ def build_from_argv(
     """The argv analogue of ``dedb.convert.converter.build``: a `dosbox`
     command line -> ``(DosemuConfig, userhook_lines)`` with shims applied,
     through the same models as a dosbox.conf."""
-    return build_from_parsed(*parse_dosbox_argv(argv, base_dir=base_dir), working_dir)
+    dosbox = DosboxConfig.from_sections(*parse_dosbox_argv(argv, base_dir=base_dir))
+    return build_from_config(dosbox, working_dir)
