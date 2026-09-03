@@ -1,0 +1,43 @@
+.TH "DEDB DOSBOXCONF" "1" "2026-01-01" "0.0.14" "dedb dosboxconf Manual"
+.SH NAME
+dedb\-dosboxconf \- Show aspects of a DOSBox config, from dosbox.conf(s) or a game's launch...
+.SH SYNOPSIS
+.B dedb dosboxconf
+[OPTIONS] SOURCES...
+.SH DESCRIPTION
+Show aspects of a DOSBox config, from dosbox.conf(s) or a game's
+launch command line.
+.PP
+SOURCES is one or more dosbox.conf paths, or a single downloaded game
+('gog:<id>' / 'archive:<id>', or a bare id with --backend) whose
+resolved DOSBox command line is shown - an archive.org item has no
+dosbox.conf, just the emularity command line. The game only needs to
+be downloaded, not imported. With none of -a/-s/-g given, those three
+aspects are shown; --issues is always opt-in. --cmdline prints the
+whole `dosbox` command instead.
+.PP
+.SH OPTIONS
+.TP
+\fB\-b,\fP \-\-backend SCHEME
+Read SOURCES as one bare game id for this backend, rather than dosbox.conf paths.
+.TP
+\fB\-\-profile\fP TEXT
+Launch profile, for a gog:// game.
+.TP
+\fB\-a,\fP \-\-autoexec
+Show the [autoexec] commands.
+.TP
+\fB\-s,\fP \-\-sblaster
+Show Sound Blaster ([sblaster]) settings.
+.TP
+\fB\-g,\fP \-\-gus
+Show Gravis Ultrasound ([gus]) settings.
+.TP
+\fB\-i,\fP \-\-issues
+List the commands DOSEMU2 can't run as-is, grouped by severity.
+.TP
+\fB\-v,\fP \-\-verbose
+With --issues, also show each autoexec line and what it is rewritten to.
+.TP
+\fB\-\-cmdline\fP
+Print the `dosbox` command `dedb run --dosbox` would run, and stop.

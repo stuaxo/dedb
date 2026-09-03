@@ -1,0 +1,31 @@
+.TH "DEDB DOWNLOADGOG" "1" "2026-01-01" "0.0.14" "dedb downloadgog Manual"
+.SH NAME
+dedb\-downloadgog \- Download and extract DOSBox-based owned games from GOG.
+.SH SYNOPSIS
+.B dedb downloadgog
+[OPTIONS]
+.SH DESCRIPTION
+Download and extract DOSBox-based owned games from GOG.
+.PP
+Pass --game for a single game, or --all for every owned game
+classified as DOSBox-based (see `lsgog`).
+.PP
+.SH OPTIONS
+.TP
+\fB\-\-keep\fP
+Keep the installer/ directory after extracting.
+.TP
+\fB\-\-game\fP TEXT
+Download only this game id.
+.TP
+\fB\-\-all\fP
+Download every owned game classified as DOSBox-based.
+.TP
+\fB\-r,\fP \-\-refreshmetadata
+Re-fetch GOG dependency metadata instead of using the cached copy.
+.TP
+\fB\-\-redownload\fP
+Re-download and re-extract games even if they're already downloaded.
+.TP
+\fB\-\-merge\-save\fP / \-\-no\-merge\-save
+--no-merge-save: leave bundled save files under game/__support/save/ instead of copying them onto the game root the way GOG's installer would.

@@ -1,0 +1,24 @@
+.TH "DEDB LS" "1" "2026-01-01" "0.0.14" "dedb ls Manual"
+.SH NAME
+dedb\-ls \- List downloaded games.
+.SH SYNOPSIS
+.B dedb ls
+[OPTIONS]
+.SH DESCRIPTION
+List downloaded games.
+.SH OPTIONS
+.TP
+\fB\-b,\fP \-\-backend SCHEME
+Backend(s) to list, repeatable or comma-separated. Default: all (gog, archive).
+.TP
+\fB\-s,\fP \-\-short
+Bare name; `<scheme>:` prefix only when >1 backend owns the name. (default)
+.TP
+\fB\-1\fP
+Bare names only, deduplicated.
+.TP
+\fB\-l,\fP \-\-long
+Every entry as a full `<scheme>:<id>` target (pasteable into `dedb run`).
+.TP
+\fB\-v,\fP \-\-verbose
+Columns: target, title, classification, converted?, launch profiles.

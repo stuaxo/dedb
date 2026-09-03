@@ -1,0 +1,19 @@
+.TH "DEDB COMPLETION" "1" "2026-01-01" "0.0.14" "dedb completion Manual"
+.SH NAME
+dedb\-completion \- Print a shell completion script for dedb.
+.SH SYNOPSIS
+.B dedb completion
+[OPTIONS] {bash|zsh|fish}
+.SH DESCRIPTION
+Print a shell completion script for dedb.
+.PP
+The Debian package installs these already. For a pip install, write
+the script where your shell looks for it, e.g. bash:
+.PP
+    dedb completion bash | sudo tee /usr/share/bash-completion/completions/dedb
+.PP
+or, without root, source it from your shell's rc file:
+.PP
+    dedb completion bash > ~/.dedb-complete.bash
+    echo 'source ~/.dedb-complete.bash' >> ~/.bashrc
+.PP

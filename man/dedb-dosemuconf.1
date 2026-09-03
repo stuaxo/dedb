@@ -1,0 +1,38 @@
+.TH "DEDB DOSEMUCONF" "1" "2026-01-01" "0.0.14" "dedb dosemuconf Manual"
+.SH NAME
+dedb\-dosemuconf \- Show the converted DOSEMU2 output, from dosbox.conf(s) or a game.
+.SH SYNOPSIS
+.B dedb dosemuconf
+[OPTIONS] SOURCES...
+.SH DESCRIPTION
+Show the converted DOSEMU2 output, from dosbox.conf(s) or a game.
+.PP
+SOURCES is one or more dosbox.conf paths, or a single downloaded game
+('gog:<id>' / 'archive:<id>', or a bare id with --backend). With none
+of --conf/--userhook/--issues given, dosemu.conf and userhook.bat are
+both shown. A multi-profile GOG game with no --profile shows one
+[label] block per profile; --issues then reflects the default profile.
+--cmdline instead prints the whole `dosemu` command (needs a game).
+.PP
+.SH OPTIONS
+.TP
+\fB\-b,\fP \-\-backend SCHEME
+Read SOURCES as bare game ids for this backend, rather than dosbox.conf paths.
+.TP
+\fB\-\-profile\fP TEXT
+Launch profile, for a gog game.
+.TP
+\fB\-\-conf\fP
+Show only dosemu.conf.
+.TP
+\fB\-\-userhook\fP
+Show only userhook.bat.
+.TP
+\fB\-i,\fP \-\-issues
+Show the [issues] block - what DOSEMU2 can't run as-is (same as `dosboxconf --issues`).
+.TP
+\fB\-v,\fP \-\-verbose
+With --issues, also show each autoexec line and what it is rewritten to.
+.TP
+\fB\-\-cmdline\fP
+Print the `dosemu` command `dedb run --dosemu` would run, and stop (game only).

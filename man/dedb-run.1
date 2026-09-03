@@ -1,0 +1,45 @@
+.TH "DEDB RUN" "1" "2026-01-01" "0.0.14" "dedb run Manual"
+.SH NAME
+dedb\-run \- Run a game in DOSBox or DOSEMU2.
+.SH SYNOPSIS
+.B dedb run
+[OPTIONS] GAME [EMULATOR_ARGS]...
+.SH DESCRIPTION
+Run a game in DOSBox or DOSEMU2.
+.PP
+GAME is gog://<id>, archive://<id>, an archive.org URL, or a name you
+have downloaded. It is downloaded, and for --dosemu converted, first
+if needed. Arguments after `--` go straight to the emulator.
+.PP
+--cmdline prints the resulting command (a shell-pasteable line) and
+stops, without running or converting anything. The game must already
+be downloaded.
+.PP
+.SH OPTIONS
+.TP
+\fB\-\-dosbox\fP
+Run in DOSBox.
+.TP
+\fB\-\-dosemu\fP
+Run in DOSEMU2.
+.TP
+\fB\-\-profile\fP TEXT
+Launch profile (gog:// only). Same as gog://<id>?profile=<slug>.
+.TP
+\fB\-b,\fP \-\-backend SCHEME
+Read GAME as a bare id for this backend, rather than a <scheme>://<id> URL.
+.TP
+\fB\-\-redownload\fP
+Re-download and re-extract even if already present.
+.TP
+\fB\-r,\fP \-\-refreshmetadata
+Re-fetch cached backend metadata instead of using the cached copy.
+.TP
+\fB\-\-keep\fP
+Keep the installer/archive after extracting.
+.TP
+\fB\-v,\fP \-\-verbose
+Print the command line before launching.
+.TP
+\fB\-\-cmdline\fP
+Print the command --dosbox/--dosemu would run and stop (needs the game downloaded; writes nothing).

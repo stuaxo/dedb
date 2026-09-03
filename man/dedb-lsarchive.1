@@ -1,0 +1,25 @@
+.TH "DEDB LSARCHIVE" "1" "2026-01-01" "0.0.14" "dedb lsarchive Manual"
+.SH NAME
+dedb\-lsarchive \- List an archive.org user's favorites as `archive:<id>` targets.
+.SH SYNOPSIS
+.B dedb lsarchive
+[OPTIONS]
+.SH DESCRIPTION
+List an archive.org user's favorites as `archive:<id>` targets.
+.PP
+The user comes from the `archive_user` setting, or a prompt.
+MS-DOS items only, unless --all.
+.PP
+.SH OPTIONS
+.TP
+\fB\-\-favorites\fP
+List the archive.org user's public favorites. (default)
+.TP
+\fB\-\-user\fP NAME
+archive.org screen name to list, overriding the configured [archive] archive_user.
+.TP
+\fB\-\-dos\fP / \-\-all
+--dos (default): only MS-DOS items. --all: every favorite.
+.TP
+\fB\-1\fP
+Just `archive:<id>` per line - no title column.

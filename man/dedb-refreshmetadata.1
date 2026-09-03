@@ -1,0 +1,19 @@
+.TH "DEDB REFRESHMETADATA" "1" "2026-01-01" "0.0.14" "dedb refreshmetadata Manual"
+.SH NAME
+dedb\-refreshmetadata \- Re-fetch backend metadata for downloaded games and rewrite each metadata.json.
+.SH SYNOPSIS
+.B dedb refreshmetadata
+[OPTIONS] [GAMES]...
+.SH DESCRIPTION
+Re-fetch backend metadata for downloaded games and rewrite each
+metadata.json. Downloads nothing.
+.PP
+With no GAME, refreshes every downloaded game. Each GAME is a
+<scheme>://<id> URL, an archive.org URL, or a bare downloaded name
+(or -b <scheme> with a bare id). A GAME that resolves but isn't
+downloaded is skipped; an unrecognised GAME is an error.
+.PP
+.SH OPTIONS
+.TP
+\fB\-b,\fP \-\-backend SCHEME
+Read GAME as a bare id for this backend, rather than a <scheme>://<id> URL.

@@ -1,0 +1,57 @@
+.TH "DEDB" "1" "2026-01-01" "0.0.14" "dedb Manual"
+.SH NAME
+dedb \- dedb: DOSEMU2 configuration tooling.
+.SH SYNOPSIS
+.B dedb
+[OPTIONS] COMMAND [ARGS]...
+.SH DESCRIPTION
+dedb: DOSEMU2 configuration tooling.
+.SH COMMANDS
+.PP
+\fBls\fP
+  List downloaded games.
+  See \fBdedb-ls(1)\fP for full documentation on the \fBls\fP command.
+.PP
+\fBrun\fP
+  Run a game in DOSBox or DOSEMU2.
+  See \fBdedb-run(1)\fP for full documentation on the \fBrun\fP command.
+.PP
+\fBdownload\fP
+  Download and extract one or more games.
+  See \fBdedb-download(1)\fP for full documentation on the \fBdownload\fP command.
+.PP
+\fBrm\fP
+  Delete one or more downloaded games' directory trees.
+  See \fBdedb-rm(1)\fP for full documentation on the \fBrm\fP command.
+.PP
+\fBrefreshmetadata\fP
+  Re-fetch backend metadata for downloaded games and rewrite each metadata.json.
+  See \fBdedb-refreshmetadata(1)\fP for full documentation on the \fBrefreshmetadata\fP command.
+.PP
+\fBcompletion\fP
+  Print a shell completion script for dedb.
+  See \fBdedb-completion(1)\fP for full documentation on the \fBcompletion\fP command.
+.PP
+\fBdosboxconf\fP
+  Show aspects of a DOSBox config, from dosbox.conf(s) or a game's launch...
+  See \fBdedb-dosboxconf(1)\fP for full documentation on the \fBdosboxconf\fP command.
+.PP
+\fBimport\fP
+  Create DOSEMU2 config(s) from downloaded games or dosbox.conf files.
+  See \fBdedb-import(1)\fP for full documentation on the \fBimport\fP command.
+.PP
+\fBdosemuconf\fP
+  Show the converted DOSEMU2 output, from dosbox.conf(s) or a game.
+  See \fBdedb-dosemuconf(1)\fP for full documentation on the \fBdosemuconf\fP command.
+.PP
+\fBdownloadgog\fP
+  Download and extract DOSBox-based owned games from GOG.
+  See \fBdedb-downloadgog(1)\fP for full documentation on the \fBdownloadgog\fP command.
+.PP
+\fBlsgog\fP
+  List owned GOG games and whether they look DOSBox-based, without downloading...
+  See \fBdedb-lsgog(1)\fP for full documentation on the \fBlsgog\fP command.
+.PP
+\fBlsarchive\fP
+  List an archive.org user's favorites as `archive:<id>` targets.
+  See \fBdedb-lsarchive(1)\fP for full documentation on the \fBlsarchive\fP command.
