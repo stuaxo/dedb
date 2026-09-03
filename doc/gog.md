@@ -1,120 +1,75 @@
 # GOG
 
-GOG (Good Old Games) have DOS based games in their catelogue, these
-usually run in DOSBOX.
-
-If you have a GOG account the tools here can download a DOSBOX based
-game from GOG and generate a DOSEMU2 conf and related files for testing
-vs DOSBOX.
-
-For more information on the conversion process see `dosbox_to_dosemu.md`.
-
+GOG (Good Old Games) sells DOS games; the DOS ones usually run in DOSBox.
+With a GOG account, dedb downloads a DOSBox-based GOG game and generates a
+DOSEMU2 config for it. The conversion is described in
+[ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## Configuration
 
-See the main README for `download_dir` and `[dosbox]` setup.
+See the main README for `download_dir` and `[dosbox]`.
 
-GOG DOSBox games need at least `dosbox-staging` - they don't run under
-plain upstream `dosbox`. If `dosbox-staging` is on PATH the default
-`[dosbox]` setting already picks it up; otherwise set it explicitly:
+GOG DOSBox games need `dosbox-staging` - they don't run under plain
+upstream `dosbox`. If it is on PATH the default `[dosbox]` setting picks
+it up; otherwise set it:
 
 ```toml
 [dosbox]
 dosbox = "dosbox_staging"
 ```
 
-
 ## Commands
 
-Name a GOG game `gog:///<gamename>` (see the main README), then:
+Name a game `gog:<gamename>`, then:
 
 ```
-$ dedb download gog:///tyrian_2000
-$ dedb run gog:///tyrian_2000 --dosbox
-$ dedb run 'gog:///warcraft_orcs_and_humans?profile=server' --dosbox
-$ dedb run tyrian_2000 -b gog --dosbox      # -b instead of the prefix
-$ dedb import gog:///tyrian_2000
-$ dedb dosboxconf gog:///tyrian_2000 --issues
-$ dedb rm gog:///tyrian_2000
+$ dedb download gog:tyrian_2000
+$ dedb run gog:tyrian_2000 --dosbox            # the unaltered game - a baseline
+$ dedb run gog:tyrian_2000 --dosemu
+$ dedb run 'gog:warcraft_orcs_and_humans?profile=server' --dosbox
+$ dedb run tyrian_2000 -b gog --dosbox         # -b instead of the prefix
+$ dedb import gog:tyrian_2000
+$ dedb dosboxconf gog:tyrian_2000 --issues
+$ dedb rm gog:tyrian_2000
 ```
 
-GOG-specific commands act on your GOG library, not a single game:
+`dedb run --dosemu` converts the game on first use; `dedb import` does the
+same without running it.
 
-| Command       | Does                                                   |
-|---------------|--------------------------------------------------------|
-| `lsgog`       | List your DOS games on GOG.                            |
-| `downloadgog` | Download your GOG DOS games. `--all` for the whole DOS library, `--game <id>` for one. |
+Two commands act on your whole GOG library rather than one game:
 
+| Command | Does |
+|---|---|
+| `dedb lsgog` | List your GOG games. DOS games only unless `--all`; `-1` for bare lines. |
+| `dedb downloadgog` | Download your GOG DOS games. `--all` for the DOS library, `--game <id>` for one. |
 
-### lsgog
-
-List your GOG games, by default filters for DOS games use `--all` to show
-every game.
-
-Compact listing:
-
-`lsgog -1`
-
-
-### downloadgog
-
-Download every owned game that looks DOSBox-based:
-
-```$ downloadgog --all```
-
-Or download a single game:
-
-```$ downloadgog --game tyrian_2000```
-
-(`dedb download gog:///tyrian_2000` does the same for one game.)
-
-On initial download, a DOSEMU2 conf isn't created; `dedb import gog:///<id>` can
-do this, and `dedb run` also does it on demand.
-
-
-
-# Run GOG game in DOSBOX
-
-```$ dedb run gog:///tyrian_2000 --dosbox```
-
-This is a good baseline as this runs the unaltered game.
-
-
-# Run GOG game in DOSEMU2
-
-```$ dedb run gog:///tyrian_2000 --dosemu```
-
-Pick a launch profile with `gog:///<id>?profile=<slug>` or `--profile <slug>` -
-see profiles below.
-
+`dedb downloadgog --game tyrian_2000` and `dedb download gog:tyrian_2000`
+do the same thing.
 
 ## Profiles
 
-GOG DOSBOX-based games can ship several `dosbox*.conf` files - these are
-alternate launch profiles (e.g. to add netplay), not pieces to merge.
+A GOG DOSBox game can ship several `dosbox*.conf` files - alternate launch
+profiles (e.g. to add netplay), not pieces to merge. GOG records them in
+`goggame-*.info` as `playTasks`; each conf-referencing playTask becomes a
+profile. Non-DOSBox playTasks (GOG tools like `GOGDOSConfig.exe`) are
+ignored.
 
-GOG records them in `goggame-*.info`, whose `playTasks` are the launch
-options its own installer would have made shortcuts for. Each conf-
-referencing playTask becomes one launch profile. Non-DOSBox playTasks are
-GOG-specific tools such as `GOGDOSConfig.exe`, which we ignore.
+Pick one with `gog:<id>?profile=<slug>` or `--profile <slug>`.
 
-
-### Example Profile: warcraft_orcs_and_humans
+`warcraft_orcs_and_humans`, for example:
 
 | Conf | Role |
 |---|---|
-| `dosbox_warcraft.conf` | Base hardware settings |
-| `dosbox_warcraft_single.conf` | Single player — the primary profile |
+| `dosbox_warcraft.conf` | base hardware settings |
+| `dosbox_warcraft_single.conf` | single player - the primary profile |
 | `dosbox_warcraft_client.conf` | IPX client |
 | `dosbox_warcraft_server.conf` | IPX server |
 
-
 ## Directory structure
-Games are downloaded to `<download_dir>/gog/<game_id>/`:
 
-- `installer/` — deleted after conversion unless `--keep`
-- `game/` — extracted install
-- `metadata.json` — the shared metadata envelope (`dedb.core.metadata_file`): identity,
-  classification and launch profiles at the top level, the raw GOG metadata (playTasks included)
-  under `source`
-- `dosemu/` — generated `dosemu.conf`/`userhook.bat`
+`<download_dir>/gog/<game_id>/`:
+
+- `installer/` - the extracted GOG installer, deleted after extraction unless `--keep`
+- `game/` - extracted install
+- `metadata.json` - the shared metadata envelope (`dedb.core.metadata_file`); raw GOG metadata under `source`
+- `dosemu/` - generated `dosemu.conf` / `userhook.bat`

@@ -3,10 +3,10 @@
 A backend is a source of DOS games. Each game has a URL: `gog://<gamename>` or
 `archive://<identifier>`.
 
-`dedb run`, `download`, `import`, `rm` and `dosboxconf` take a game URL and
-dispatch to its backend. You can give the parts separately instead: `-b <scheme>`
-with a bare id, and `--profile <slug>` for `?profile=`. Giving both a `scheme://`
-URL and `-b` is an error.
+`dedb run`, `download`, `import`, `rm`, `refreshmetadata` and `dosboxconf`
+take a game URL and dispatch to its backend. You can give the parts
+separately instead: `-b <scheme>` with a bare id, and `--profile <slug>`
+for `?profile=`. Giving both a `scheme://` URL and `-b` is an error.
 
 ## Resolving a game
 
@@ -71,7 +71,7 @@ profile).
    fields at the top level, your own metadata model dumped into `source`.
 
 3. Add `"dedb.<app>"` to `Settings.apps`. `get_backends()` imports
-   `dedb.<app>.backend`; `dedb ls` and `DOWNLOAD_BACKENDS` pick it up.
+   `dedb.<app>.backend`; the generic commands and `dedb ls` pick it up.
 
 4. Keep `backend.py` cheap to import - `runner_module` / `downloader_module` are
    dotted strings resolved lazily, and `importer` imports go inside the methods,
