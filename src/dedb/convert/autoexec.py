@@ -101,135 +101,112 @@ def resolve_mounts(autoexec: list[str], working_dir: Path) -> list[ResolvedMount
     return resolved
 
 
-# 1. Shims: All shims must accept **kwargs to ignore unused args.
+# ==========================================
+# 1. Shims (Return: rewritten_line, severity, summary)
+# ==========================================
 
 
-def shim_choice(line, **kwargs):
+def shim_mount(
+    line: str, drive: str, dos_path: str, working_dir: Path | None = None, **kwargs
+) -> tuple[str, Severity, str]:
+    if working_dir is None:
+        return (
+            f"REM {line}",
+            Severity.PARTIALLY_SUPPORTED,
+            "MOUNT commented out - translating it to LREDIR needs a known working directory",
+        )
+    if drive.upper().rstrip(":") == "C":
+        return (
+            f"REM {line}",
+            Severity.PARTIALLY_SUPPORTED,
+            "MOUNT rewritten to LREDIR (a C: mount is dropped - --Fdrive_c already maps C:)",
+        )
+
+    dos_path = dos_path.strip('"')
+    prefix = "@" if line.startswith("@") else ""
+    host_path = (working_dir / dos_path.replace("\\", "/")).resolve()
+
+    return (
+        f"{prefix}LREDIR -f {drive.upper().rstrip(':')}: {host_path}",
+        Severity.PARTIALLY_SUPPORTED,
+        "MOUNT rewritten to LREDIR (a C: mount is dropped - --Fdrive_c already maps C:)",
+    )
+
+
+def shim_imgmount(line: str, **kwargs) -> tuple[str, Severity, str]:
+    return (
+        f"REM {line}",
+        Severity.UNSUPPORTED,
+        "IMGMOUNT (disk-image mounts) has no runtime equivalent in DOSEMU2",
+    )
+
+
+def shim_unsupported_mount_option(line: str, **kwargs) -> tuple[str, Severity, str]:
+    return (
+        f"REM {line}",
+        Severity.UNSUPPORTED,
+        "overlay MOUNT (-t overlay) has no equivalent - DOSEMU2 has no overlay filesystem",
+    )
+
+
+def shim_choice(line: str, **kwargs) -> tuple[str, Severity, str]:
     prefix, tokens = _split_line(line)
     kept = [tokens[0]] + [token for token in tokens[1:] if not token.startswith("/")]
-    return prefix + " ".join(kept)
+    rewritten = prefix + " ".join(kept)
+    return (
+        rewritten,
+        Severity.PARTIALLY_SUPPORTED,
+        "CHOICE flags (/C, /N, /S, /T...) stripped - they break keyboard input under DOSEMU2",
+    )
 
 
-def shim_mount(line, conf=None, working_dir=None, drive=None, dos_path=None, **kwargs):
-    if working_dir is None:
-        return f"REM {line}"
-
-    prefix, tokens = _split_line(line)
-
-    if len(tokens) < 3:
-        return line
-
-    drive_tok, dos_path_tok = tokens[1], tokens[2]
-
-    if drive_tok.rstrip(":").upper() == "C":
-        return f"REM {line}"
-
-    host_path = (working_dir / dos_path_tok.replace("\\", "/")).resolve()
-    return f"{prefix}LREDIR -f {drive_tok.rstrip(':').upper()}: {host_path}"
-
-
-def shim_imgmount(line, **kwargs):
-    return f"REM {line}"
-
-
-def shim_unsupported_mount_option(line, **kwargs):
-    return f"REM {line}"
-
-
-# 2. Routing Table: Regex patterns using named capture groups
 SHIMS = [
-    (r"^\s*@?imgmount\b.*$", shim_imgmount),
-    (r"^\s*@?mount\b.*-t\s+overlay.*$", shim_unsupported_mount_option),
-    (r"^\s*@?mount\s+(?P<drive>[a-zA-Z]:?)\s+(?P<dos_path>\"[^\"]*\"|\S+).*$", shim_mount),
-    (r"^\s*@?choice\b.*$", shim_choice),
+    (r"^\s*@?imgmount\b.*$", shim_imgmount, "imgmount"),
+    (r"^\s*@?mount\b.*-t\s+overlay.*$", shim_unsupported_mount_option, "overlay-mount"),
+    (r"^\s*@?mount\s+(?P<drive>[a-zA-Z]:?)\s+(?P<dos_path>\"[^\"]*\"|\S+).*$", shim_mount, "mount"),
+    (r"^\s*@?choice\b.*$", shim_choice, "choice"),
 ]
 
 
-# 3. Lazy Compilation
 @cache
 def get_shims():
-    return [(re.compile(p, re.IGNORECASE), h) for p, h in SHIMS]
+    return [(re.compile(p, re.IGNORECASE), h, n) for p, h, n in SHIMS]
 
 
-# 4. Processing logic
-def process_autoexec_line(line: str, conf: Any, working_dir: Path | None) -> str | None:
+def check_autoexec_line(
+    line: str, conf: Any | None, working_dir: Path | None
+) -> tuple[str, tuple[str, Severity, str] | None]:
     clean = line.strip()
-    for pattern, handler in get_shims():
+    if not clean:
+        return line, None
+
+    for pattern, handler, name in get_shims():
         if match := pattern.match(clean):
-            return handler(line=clean, conf=conf, working_dir=working_dir, **match.groupdict())
-    return line
+            rewritten, severity, summary = handler(
+                line=clean, conf=conf, working_dir=working_dir, **match.groupdict()
+            )
+            return rewritten, (name, severity, summary)
+
+    return line, None
 
 
 def convert_autoexec(
     dosbox_lines: list[str], conf: Any | None = None, working_dir: Path | None = None
 ) -> list[str]:
-    return [
-        res
-        for line in dosbox_lines
-        if (res := process_autoexec_line(line, conf, working_dir)) is not None
-    ]
+    return [check_autoexec_line(line, conf, working_dir)[0] for line in dosbox_lines]
 
 
-# Alias for backwards compatibility where it matters
 def autoexec_shims(autoexec: list[str], working_dir: Path | None = None) -> list[str]:
     return convert_autoexec(autoexec, conf=None, working_dir=working_dir)
 
 
 def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> list[AutoexecIssue]:
-    """List the autoexec lines that won't run cleanly under DOSEMU2."""
-    issues = []
-    for original in autoexec:
-        line = original
-        clean = line.strip()
-        for pattern, handler in get_shims():
-            if match := pattern.match(clean):
-                rewritten = handler(
-                    line=clean, conf=None, working_dir=working_dir, **match.groupdict()
-                )
-                if rewritten != original:
-                    if handler == shim_imgmount:
-                        issues.append(
-                            AutoexecIssue(
-                                "imgmount",
-                                Severity.UNSUPPORTED,
-                                "IMGMOUNT (disk-image mounts) has no runtime equivalent in DOSEMU2",
-                                original,
-                                rewritten,
-                            )
-                        )
-                    elif handler == shim_unsupported_mount_option:
-                        issues.append(
-                            AutoexecIssue(
-                                "overlay-mount",
-                                Severity.UNSUPPORTED,
-                                "overlay MOUNT (-t overlay) has no equivalent - DOSEMU2 has no overlay filesystem",
-                                original,
-                                rewritten,
-                            )
-                        )
-                    elif handler == shim_choice:
-                        issues.append(
-                            AutoexecIssue(
-                                "choice",
-                                Severity.PARTIALLY_SUPPORTED,
-                                "CHOICE flags (/C, /N, /S, /T...) stripped - they break keyboard input under DOSEMU2",
-                                original,
-                                rewritten,
-                            )
-                        )
-                    elif handler == shim_mount:
-                        summary = (
-                            "MOUNT rewritten to LREDIR (a C: mount is dropped - --Fdrive_c already maps C:)"
-                            if working_dir
-                            else "MOUNT commented out - translating it to LREDIR needs a known working directory"
-                        )
-                        issues.append(
-                            AutoexecIssue(
-                                "mount", Severity.PARTIALLY_SUPPORTED, summary, original, rewritten
-                            )
-                        )
-                break  # Only one shim applies per line in the new architecture
-    return issues
+    return [
+        AutoexecIssue(*shim_data, line, rewritten)
+        for line in autoexec
+        for rewritten, shim_data in [check_autoexec_line(line, conf=None, working_dir=working_dir)]
+        if shim_data and rewritten != line
+    ]
 
 
 @dataclass(frozen=True)
@@ -249,12 +226,21 @@ def active_workarounds(*args, **kwargs):
 
 # Stubs for backwards compatibility in tests and __init__.py
 
-choice_shim = shim_choice
+
+def choice_shim(line: str) -> str:
+    rewritten, _s, _sum = shim_choice(line)
+    return rewritten
 
 
 def mount_lredir_shim(working_dir):
     def shim(line):
-        return shim_mount(line, working_dir=working_dir)
+        _prefix, tokens = _split_line(line)
+        if len(tokens) < 3 or tokens[0].lower() != "mount":
+            return line
+        rewritten, _s, _sum = shim_mount(
+            line, drive=tokens[1], dos_path=tokens[2], working_dir=working_dir
+        )
+        return rewritten
 
     return shim
 
