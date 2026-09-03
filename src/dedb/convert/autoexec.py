@@ -105,13 +105,12 @@ def get_shims() -> list[tuple[re.Pattern[str], Handler, str]]:
 def autoexec_line_to_userhook_line(
     line: str, conf: Any | None = None, working_dir: Path | None = None
 ) -> tuple[str, tuple[str, Severity, str] | None]:
-    """Match one autoexec line against ``SHIMS``.
+    """Run one line through the shims.
 
-    Returns ``(line_for_userhook, hit)`` where ``hit`` is
-    ``(shim_name, severity, summary)`` when a shim recognised the line, or
-    ``None`` when it did not (and the line is returned unchanged).
-    ``working_dir`` defaults to the current directory, the way DOSBox
-    resolves a relative ``MOUNT`` against its launch directory.
+    Returns ``(line, hit)``. A shim that matched supplies the rewritten
+    line and ``hit`` of ``(name, severity, summary)``; otherwise the line
+    is unchanged and ``hit`` is ``None``. ``working_dir`` defaults to the
+    current directory.
     """
     clean = line.strip()
     if not clean:
