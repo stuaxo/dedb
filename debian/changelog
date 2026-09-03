@@ -1,3 +1,17 @@
+dedb (0.0.14) unstable; urgency=medium
+
+  * dosbox.conf parser rewritten: `%` in values is kept verbatim
+    (previously mangled), and quoted values are handled consistently.
+  * DOSBox->DOSEMU2 conversion reworked as a three-model translation
+    pipeline (parsed config -> DOSBox model -> DOSEMU2 model), with the
+    per-field translations expressed as validators on the model.
+  * autoexec handling is now a declarative routing table rather than
+    branching code.
+  * No command-line or output changes; this is an internal cleanup
+    release on top of 0.0.13.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Thu, 03 Sep 2026 23:05:10 +0100
+
 dedb (0.0.13) unstable; urgency=medium
 
   * New `dedb dosemuconf` command: shows the converted DOSEMU2 output
