@@ -21,7 +21,12 @@ and never reach into a sibling app or ``settings.json`` directly.
 from ._registry import register_backend
 from .backends import BackendBase, resolve, resolve_game
 from .downloader import Downloader
-from .downloads import ensure_download_dir, remove_download, require_download_dir
+from .downloads import (
+    ensure_download_dir,
+    remove_download,
+    remove_downloads,
+    require_download_dir,
+)
 from .layout import LayoutPaths
 from .local import LaunchProfile, LocalGame
 from .metadata_cache import MetadataCache, OfflineError
@@ -62,6 +67,7 @@ __all__ = [
     "long_target",
     "register_backend",
     "remove_download",
+    "remove_downloads",
     "require_download_dir",
     "resolve",
     "resolve_game",

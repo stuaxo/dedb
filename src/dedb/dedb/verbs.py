@@ -1,16 +1,20 @@
 """Generic commands that name a game by URL: `dedb
 run|download|import|rm|refreshmetadata`.
 
-Each resolves the GAME argument (see dedb.core.resolve) to a backend
-and dispatches. Contributed to the root group by dedb.dedb.cli.
+`run` takes one GAME; `download` / `import` / `rm` / `refreshmetadata`
+take any number. Each GAME resolves to a backend (see dedb.core.resolve);
+`rm` also accepts shell wildcards matched against downloaded names.
+Contributed to the root group by dedb.dedb.cli.
 """
 
+import fnmatch
+import re
 import sys
 from pathlib import Path
 
 import click
 
-from ..core import get_backends, resolve_game, short_target
+from ..core import get_backends, remove_downloads, resolve_game, short_target
 
 
 def _backend_option(func):
@@ -142,25 +146,30 @@ def run(
 
 
 @click.command("download")
-@click.argument("game")
+@click.argument("games", nargs=-1, required=True)
 @_backend_option
 @_download_options
-def download(game, backend, keep, refresh_metadata, redownload):
-    """Download and extract a game.
+def download(games, backend, keep, refresh_metadata, redownload):
+    """Download and extract one or more games.
 
-    GAME needs a scheme (gog:<id>, archive:<id>, or an archive.org
+    Each GAME needs a scheme (gog:<id>, archive:<id>, or an archive.org
     URL), or -b <scheme> with a bare id. A bare name works only for a
     game already downloaded.
     """
-    resolved = resolve_game(game, backend)
-    get_backends()[resolved.scheme].ensure_downloaded(
-        resolved.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
-    )
-    click.echo(f"Downloaded '{resolved.identifier}' ({resolved.scheme})")
+    registry = get_backends()
+    resolved = [resolve_game(g, backend) for g in games]  # resolve all before fetching any
+    for target in resolved:
+        registry[target.scheme].ensure_downloaded(
+            target.identifier,
+            keep=keep,
+            refresh_metadata=refresh_metadata,
+            redownload=redownload,
+        )
+        click.echo(f"Downloaded '{target.identifier}' ({target.scheme})")
 
 
 @click.command("import")
-@click.argument("game")
+@click.argument("games", nargs=-1, required=True)
 @click.option(
     "--output-dir",
     "-o",
@@ -186,28 +195,83 @@ def download(game, backend, keep, refresh_metadata, redownload):
 @click.option(
     "--dumpuserhook", is_flag=True, default=False, help="Print the userhook.bat instead of writing."
 )
-def import_target(game, output_dir, profile, backend, force, refreshconf, dumpconf, dumpuserhook):
-    """Create a DOSEMU2 config for a downloaded program."""
-    resolved = resolve_game(game, backend, profile=profile)
-    _do_import(
-        resolved,
-        get_backends()[resolved.scheme],
-        output_dir=output_dir,
-        force=force,
-        refreshconf=refreshconf,
-        dumpconf=dumpconf,
-        dumpuserhook=dumpuserhook,
-    )
+def import_target(games, output_dir, profile, backend, force, refreshconf, dumpconf, dumpuserhook):
+    """Create DOSEMU2 config(s) for one or more downloaded programs."""
+    registry = get_backends()
+    resolved = [resolve_game(g, backend, profile=profile) for g in games]
+    if len(resolved) > 1:
+        if output_dir is not None:
+            raise click.UsageError("--output-dir takes a single GAME.")
+        if dumpconf or dumpuserhook:
+            raise click.UsageError("--dumpconf / --dumpuserhook take a single GAME.")
+    for target in resolved:
+        _do_import(
+            target,
+            registry[target.scheme],
+            output_dir=output_dir,
+            force=force,
+            refreshconf=refreshconf,
+            dumpconf=dumpconf,
+            dumpuserhook=dumpuserhook,
+        )
+
+
+_GLOB_CHARS = re.compile(r"[*?\[]")
+
+
+def _rm_glob_hits(pattern: str, backend: "str | None", registry) -> list:
+    """(backend, name) pairs whose downloaded name matches a shell
+    wildcard - forced to one backend with -b, scheme-qualified
+    (``gog:foo*``), or matched across every backend."""
+    prefix, sep, bare = pattern.partition(":")
+    if backend is not None:
+        candidates = {backend: pattern}
+    elif sep and prefix in registry:
+        candidates = {prefix: bare.lstrip("/")}
+    else:
+        candidates = {scheme: pattern for scheme in registry}
+
+    hits = []
+    for scheme, pat in candidates.items():
+        for name in fnmatch.filter(registry[scheme].local_names(), pat):
+            hits.append((registry[scheme], name))
+    return hits
 
 
 @click.command("rm")
-@click.argument("game")
+@click.argument("games", nargs=-1, required=True)
 @_backend_option
 @click.option("--yes", "-y", is_flag=True, default=False, help="Remove without prompting.")
-def rm(game, backend, yes):
-    """Delete a downloaded game's whole directory tree."""
-    resolved = resolve_game(game, backend)
-    get_backends()[resolved.scheme].remove(resolved.identifier, assume_yes=yes)
+def rm(games, backend, yes):
+    """Delete one or more downloaded games' directory trees.
+
+    Each GAME is a <scheme>://<id> URL, a bare downloaded name, or a
+    shell wildcard (*, ?, [...]) matched against downloaded names -
+    optionally scheme-qualified, e.g. 'gog:tyrian*'. One confirmation
+    covers the whole set (skip it with -y).
+    """
+    registry = get_backends()
+
+    pairs: list = []
+    for game in games:
+        if _GLOB_CHARS.search(game):
+            hits = _rm_glob_hits(game, backend, registry)
+            if not hits:
+                click.echo(f"No downloads match '{game}'")
+            pairs += hits
+        else:
+            target = resolve_game(game, backend)
+            pairs.append((registry[target.scheme], target.identifier))
+
+    seen: set = set()
+    layouts = []
+    for be, identifier in pairs:
+        if (be.scheme, identifier) not in seen:
+            seen.add((be.scheme, identifier))
+            layouts.append(be.layout(identifier))
+
+    if layouts:
+        remove_downloads(layouts, assume_yes=yes)
 
 
 @click.command("refreshmetadata")

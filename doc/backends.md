@@ -57,9 +57,10 @@ profile).
        def local_game(self, identifier: str): ...  # -> dedb.core.LocalGame
    ```
 
-   `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `remove`,
-   `run`, `convert`, `ensure_downloaded` (which resolves `downloader_module`
-   and drives your `Downloader`) and `iter_local_games`.
+   `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `run`,
+   `convert`, `ensure_downloaded` (which resolves `downloader_module` and
+   drives your `Downloader`), `refresh_metadata` and `iter_local_games`.
+   `dedb rm` works off `layout` + `dedb.core.remove_downloads` directly.
    Override `identifier_from_url` if the backend has its own URL form, and
    `dosbox_sources` if its games ship a `dosbox.conf`.
 

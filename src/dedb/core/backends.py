@@ -70,9 +70,6 @@ class BackendBase:
         """A :class:`LocalGame` for every download under this backend."""
         return [self.local_game(name) for name in self.local_names()]
 
-    def remove(self, identifier: str, *, assume_yes: bool) -> None:
-        downloads.remove_download(self.layout(identifier), assume_yes=assume_yes)
-
     # --- actions -------------------------------------------------------
 
     def ensure_downloaded(
