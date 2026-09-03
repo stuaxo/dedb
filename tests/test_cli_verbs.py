@@ -235,6 +235,64 @@ def test_dosboxconf_archive_target_has_no_conf():
     assert "no dosbox.conf" in result.output
 
 
+# --- refreshmetadata ---------------------------------------------
+
+
+@pytest.fixture
+def spy_refresh(monkeypatch):
+    """Record BackendBase.refresh_metadata calls as {scheme: [ids]}."""
+    calls: dict = {}
+    monkeypatch.setattr(
+        "dedb.core.backends.BackendBase.refresh_metadata",
+        lambda self, identifiers: calls.setdefault(self.scheme, []).extend(identifiers),
+    )
+    return calls
+
+
+def _downloaded(root, *rel):
+    for r in rel:
+        (root / r / "game").mkdir(parents=True)
+        (root / r / "game" / "GAME.EXE").write_text("MZ")
+
+
+def test_refreshmetadata_no_args_covers_every_downloaded_game(tmp_path, monkeypatch, spy_refresh):
+    _downloaded(tmp_path, "gog/alpha", "gog/beta", "archive/msdos_z")
+    (tmp_path / "gog" / "half").mkdir()  # in local_names() but not extracted
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+
+    result = CliRunner().invoke(cli, ["refreshmetadata"])
+
+    assert result.exit_code == 0, result.output
+    assert spy_refresh == {"gog": ["alpha", "beta"], "archive": ["msdos_z"]}
+    assert "Refreshed metadata for 3 games" in result.output
+
+
+def test_refreshmetadata_named_game_dispatches(download_dir, spy_refresh):
+    _downloaded(download_dir, "gog/x")
+
+    result = CliRunner().invoke(cli, ["refreshmetadata", "gog://x"])
+
+    assert result.exit_code == 0, result.output
+    assert spy_refresh == {"gog": ["x"]}
+
+
+def test_refreshmetadata_skips_a_named_game_that_isnt_downloaded(download_dir, spy_refresh):
+    result = CliRunner().invoke(cli, ["refreshmetadata", "gog://ghost"])
+
+    assert result.exit_code == 0
+    assert "Skipping gog:ghost: not downloaded" in result.output
+    assert spy_refresh == {}
+    assert "Refreshed metadata for 0 games" in result.output
+
+
+def test_refreshmetadata_errors_on_an_unknown_ref(download_dir, spy_refresh):
+    result = CliRunner().invoke(cli, ["refreshmetadata", "bogus://x"])
+
+    assert result.exit_code != 0
+    assert "Unknown scheme 'bogus://'" in result.output
+    assert spy_refresh == {}
+
+
 # --- the old per-backend verbs are gone -------------------------
 
 

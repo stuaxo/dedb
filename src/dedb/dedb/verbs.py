@@ -1,4 +1,5 @@
-"""Generic commands that name a game by URL: `dedb run|download|import|rm`.
+"""Generic commands that name a game by URL: `dedb
+run|download|import|rm|refreshmetadata`.
 
 Each resolves the GAME argument (see dedb.core.resolve) to a backend
 and dispatches. Contributed to the root group by dedb.dedb.cli.
@@ -9,7 +10,7 @@ from pathlib import Path
 
 import click
 
-from ..core import get_backends, resolve_game
+from ..core import get_backends, resolve_game, short_target
 
 
 def _backend_option(func):
@@ -209,4 +210,48 @@ def rm(game, backend, yes):
     get_backends()[resolved.scheme].remove(resolved.identifier, assume_yes=yes)
 
 
-GENERIC_COMMANDS = [run, download, import_target, rm]
+@click.command("refreshmetadata")
+@click.argument("games", nargs=-1)
+@_backend_option
+def refreshmetadata(games, backend):
+    """Re-fetch backend metadata for downloaded games and rewrite each
+    metadata.json. Downloads nothing.
+
+    With no GAME, refreshes every downloaded game. Each GAME is a
+    <scheme>://<id> URL, an archive.org URL, or a bare downloaded name
+    (or -b <scheme> with a bare id). A GAME that resolves but isn't
+    downloaded is skipped; an unrecognised GAME is an error.
+    """
+    registry = get_backends()
+
+    if games:
+        wanted = []
+        for game in games:
+            resolved = resolve_game(game, backend)  # raises on an unknown ref
+            be = registry[resolved.scheme]
+            if be.is_downloaded(resolved.identifier):
+                wanted.append((be, resolved.identifier))
+            else:
+                click.echo(
+                    f"Skipping {short_target(be.scheme, resolved.identifier)}: not downloaded"
+                )
+    else:
+        wanted = [
+            (be, name)
+            for be in registry.values()
+            for name in be.local_names()
+            if be.is_downloaded(name)
+        ]
+
+    by_scheme: dict = {}
+    for be, identifier in wanted:
+        by_scheme.setdefault(be.scheme, []).append(identifier)
+
+    for scheme, identifiers in by_scheme.items():
+        registry[scheme].refresh_metadata(identifiers)
+
+    done = sum(len(ids) for ids in by_scheme.values())
+    click.echo(f"Refreshed metadata for {done} game{'' if done == 1 else 's'}")
+
+
+GENERIC_COMMANDS = [run, download, import_target, rm, refreshmetadata]

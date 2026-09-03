@@ -40,9 +40,9 @@ class Downloader:
         if layout.is_downloaded():
             print(f"Skipping: {layout.name} (already downloaded)")
             if refresh_metadata or not layout.metadata_json.is_file():
-                self._prepare(refresh=refresh_metadata)
-                self._write_metadata(refresh=refresh_metadata)
-            self._post_extract()
+                self.rewrite_metadata(refresh=refresh_metadata)
+            else:
+                self._post_extract()
             return
 
         self._prepare(refresh=refresh_metadata)
@@ -61,6 +61,15 @@ class Downloader:
 
         if not keep:
             layout.rm_staging()
+
+    def rewrite_metadata(self, *, refresh: bool = True) -> None:
+        """Redo just the metadata step for an already-extracted game -
+        ``_prepare`` + ``_write_metadata`` (+ ``_post_extract``), rewriting
+        ``self.layout.metadata_json`` without touching the game files.
+        ``refresh`` re-fetches cached backend metadata."""
+        self._prepare(refresh=refresh)
+        self._write_metadata(refresh=refresh)
+        self._post_extract()
 
     # --- hooks -----------------------------------------------------------
 

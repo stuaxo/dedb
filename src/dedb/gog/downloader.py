@@ -29,6 +29,13 @@ def find_installer_exe(installer_dir: Path) -> Path | None:
     return matches[0] if matches else None
 
 
+def _recorded_product_id(layout: GogLayout) -> str | None:
+    """The ``product_id`` an earlier download wrote into ``metadata.json``
+    (kept under ``source`` for both the v1 and v2 shapes), or None."""
+    envelope = GameMetadataFile.read_or_none(layout.metadata_json)
+    return envelope.source.get("product_id") if envelope else None
+
+
 def local_dosbox_status(layout: GogLayout) -> str | None:
     """Check an extracted game's files for a DOSBox bundle. Authoritative
     when available, since these are the actual installer contents. Returns
@@ -109,10 +116,16 @@ class GogDownloader(Downloader):
         if self._product_ids is not None:
             product_id = self._product_ids.get(layout.name)
         else:
-            client = GOGClient()
-            product_id = next(
-                (g.product_id for g in client.get_list() if g.gamename == layout.name), None
-            )
+            # On a metadata refresh the game is already downloaded, so its
+            # product_id is recorded in metadata.json - use that instead of
+            # a GOG library lookup (fast, and still works for a game that
+            # has since left the library).
+            product_id = _recorded_product_id(layout) if refresh else None
+            if product_id is None:
+                client = GOGClient()
+                product_id = next(
+                    (g.product_id for g in client.get_list() if g.gamename == layout.name), None
+                )
         if product_id is None:
             raise click.ClickException(f"'{layout.name}' not found in your GOG library")
         self._product_id = product_id
