@@ -1,4 +1,4 @@
-"""Tests for dedb.dosbox.fieldmap and the model invariants it relies on.
+"""Tests for dedb.convert.fieldmap and the model invariants it relies on.
 
 These lock the DOSBox<->DOSEMU2 field map to the code: every DosemuConfig
 field must be produced by a translation, every DosboxConfig field must be
@@ -6,8 +6,8 @@ either translated or explicitly listed as not, and ARCHITECTURE.md's
 generated table must be current.
 """
 
-from dedb.dosbox import fieldmap
-from dedb.dosbox.models import (
+from dedb.convert import fieldmap
+from dedb.convert.models import (
     TRANSLATIONS,
     UNTRANSLATED_DOSBOX_FIELDS,
     DosboxConfig,
@@ -40,7 +40,7 @@ def test_a_translation_with_no_converter_has_no_note():
 
 def test_architecture_md_table_is_current():
     assert fieldmap.main(["--check"]) == 0, (
-        "ARCHITECTURE.md field map is stale - run `python -m dedb.dosbox.fieldmap --write`"
+        "ARCHITECTURE.md field map is stale - run `python -m dedb.convert.fieldmap --write`"
     )
 
 

@@ -5,7 +5,7 @@ DosboxConfig and DosemuConfig each reflect one side only: field names,
 types and defaults match that side's own config file. The ``TRANSLATIONS``
 table is the one place a DOSBox setting becomes a DOSEMU2 setting -
 renaming and unit conversion happen in it (via the ``_x_to_y`` helpers),
-nowhere else; ``dosbox_to_dosemu`` just applies it. ``dedb.dosbox.fieldmap``
+nowhere else; ``dosbox_to_dosemu`` just applies it. ``dedb.convert.fieldmap``
 turns the table into the field map in ARCHITECTURE.md."""
 
 from collections.abc import Callable
@@ -76,7 +76,7 @@ class DosboxConfig(BaseModel):
     def config_keys_by_section(cls) -> dict[str, dict[str, str]]:
         """``{section: {key: field_name}}`` for every modelled dosbox.conf
         item, read from each field's ``validation_alias`` - the same walk
-        ``dedb.dosbox.fieldmap`` does (``alias.path[0]`` is the section,
+        ``dedb.convert.fieldmap`` does (``alias.path[0]`` is the section,
         ``alias.path[-1]`` the key). Lets a caller building a config from
         somewhere other than a .conf file (e.g. a command line's
         ``config -set section key=value``) check a section/key pair is one
@@ -247,7 +247,7 @@ class Translation:
 
 
 # The complete DOSBox -> DOSEMU2 field map. dosbox_to_dosemu() applies it;
-# dedb.dosbox.fieldmap renders it (plus each model's own field metadata)
+# dedb.convert.fieldmap renders it (plus each model's own field metadata)
 # into the table in ARCHITECTURE.md - so the doc can't drift from here.
 TRANSLATIONS: tuple[Translation, ...] = (
     Translation("fullscreen", "X_fullscreen"),

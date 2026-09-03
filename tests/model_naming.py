@@ -1,5 +1,5 @@
 """Structural checks for the naming rule the DOSBox/DOSEMU2 model
-pipeline is built on (see dedb.dosbox.models): a "left" model's fields
+pipeline is built on (see dedb.convert.models): a "left" model's fields
 mirror its source format, a "right" model's fields mirror its target
 format, and any alias on either one only locates or decorates a value -
 it never renames it. Renaming happens in exactly one place, the

@@ -5,7 +5,7 @@ archive.org / emularity stores a DOS item's launch parameters the way
 they'd be passed to the `dosbox` binary: repeatable `-c` commands, `-conf`
 files, a few flags, and a trailing program. This module turns that argv
 into the *same* ``(nested_section_dict, autoexec_lines)`` pair
-``dedb.dosbox.parser`` produces from a .conf, so it flows through the
+``dedb.convert.parser`` produces from a .conf, so it flows through the
 existing ``DosboxConfig.model_validate`` -> ``dosbox_to_dosemu`` ->
 ``autoexec_shims`` pipeline unchanged.
 
@@ -23,7 +23,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..shims.autoexec import split_command
+from .autoexec import split_command
 from .converter import build_from_parsed
 from .models import DosboxConfig, DosemuConfig
 from .parser import parse_dosbox_confs
@@ -44,7 +44,7 @@ _HOST_VALUE_OPTS = ("-machine", "-lang", "-socket", "-scaler", "-forcescaler", "
 @dataclass
 class DosboxCommandLine:
     """Structured result of parsing a `dosbox` argv. ``config`` and
-    ``autoexec`` are the pair the rest of ``dedb.dosbox`` consumes; the
+    ``autoexec`` are the pair the rest of the engine consumes; the
     other fields are for reporting (see the notebook / tests)."""
 
     config: dict = field(default_factory=dict)  # nested {section: {key: str}}
@@ -183,7 +183,7 @@ def parse_dosbox_argv(
     argv: Sequence[str], *, base_dir: Path | None = None
 ) -> tuple[dict, list[str]]:
     """A `dosbox` argv as the ``(nested_section_dict, autoexec_lines)``
-    pair - the same contract as ``dedb.dosbox.parser.parse_dosbox_conf``."""
+    pair - the same contract as ``dedb.convert.parser.parse_dosbox_conf``."""
     result = parse_dosbox_command_line(argv, base_dir=base_dir)
     return result.config, result.autoexec
 
@@ -191,7 +191,7 @@ def parse_dosbox_argv(
 def build_from_argv(
     argv: Sequence[str], working_dir: Path | None = None, *, base_dir: Path | None = None
 ) -> tuple[DosemuConfig, list[str]]:
-    """The argv analogue of ``dedb.dosbox.converter.build``: a `dosbox`
+    """The argv analogue of ``dedb.convert.converter.build``: a `dosbox`
     command line -> ``(DosemuConfig, userhook_lines)`` with shims applied,
     through the same models as a dosbox.conf."""
     return build_from_parsed(*parse_dosbox_argv(argv, base_dir=base_dir), working_dir)

@@ -10,15 +10,15 @@ text.
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..shims.autoexec import (
+from ..convert import (
     SEVERITY_BLURB,
     SEVERITY_HEADING,
     SEVERITY_ORDER,
     AutoexecIssue,
     diagnose_autoexec,
+    parse_dosbox_argv,
+    parse_dosbox_confs,
 )
-from .cmdline import parse_dosbox_argv
-from .parser import parse_dosbox_confs
 
 
 def _format_section(title: str, options: dict) -> str:

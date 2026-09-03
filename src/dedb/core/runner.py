@@ -68,7 +68,7 @@ def launch_dosemu(
         "--Fdrive_c",
         str(layout.game),
         # userhook.bat's LREDIR calls (see
-        # dedb.shims.autoexec.mount_lredir_shim) only ever target paths
+        # dedb.convert.autoexec.mount_lredir_shim) only ever target paths
         # under the game's own directory - permit exactly that, nothing
         # wider.
         "-I",

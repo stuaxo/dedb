@@ -9,8 +9,8 @@ import json
 
 import pytest
 
+from dedb.convert.autoexec import split_command
 from dedb.gog.gameinfo import _conf_basenames, parse_profiles
-from dedb.shims.autoexec import split_command
 
 
 @pytest.mark.parametrize(

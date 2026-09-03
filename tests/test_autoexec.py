@@ -1,4 +1,4 @@
-"""Tests for dedb.shims.autoexec.
+"""Tests for dedb.convert.autoexec.
 
 Shims rewrite one line of a game's autoexec for userhook.bat. Real
 DOSBox, run via -conf, never sees them.
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from dedb.shims.autoexec import (
+from dedb.convert.autoexec import (
     Severity,
     autoexec_shims,
     choice_shim,

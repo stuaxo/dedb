@@ -8,9 +8,8 @@ from pathlib import Path
 
 import click
 
+from ..convert import parse_dosbox_confs, resolve_mounts
 from ..core import Downloader, GameMetadataFile
-from ..dosbox.parser import parse_dosbox_confs
-from ..shims.autoexec import resolve_mounts
 from .client import FETCH_ERRORS, GOGClient
 from .gameinfo import parse_profiles
 from .layout import GogLayout
