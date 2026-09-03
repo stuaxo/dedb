@@ -90,6 +90,15 @@ dedb reads the archive.org metadata to run the game. It requires:
 Games on archive.org use a dosbox based emulator, but do not usually have a dosbox.conf instead metadata holds parameters passed on the
 commandline (including the `autoexec` commands).
 
+With no dosbox.conf to read, dedb reconstructs the `dosbox` command line
+emularity would use - `MOUNT C .`, `C:`, `CD` into the executable's
+directory, then run it - from `emulator_start`, and converts that. How a
+command line is read is covered in
+[ARCHITECTURE.md](../ARCHITECTURE.md). To see it:
+
+* **Print the reconstructed command:** `dedb dosboxconf archive://<id> --cmdline`
+* **List what it needs under DOSEMU2:** `dedb dosboxconf archive://<id> --issues`
+
 
 ### Notes on how emularity works
 

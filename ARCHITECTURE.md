@@ -60,6 +60,10 @@ destination from that. A DOSBox setting with no DOSEMU2 equivalent
 `Unsupported` field - read, so `config -set` targeting it isn't flagged
 as unknown, but dropped before it reaches `DosemuConfig`.
 
+`dedb.convert.parser` reads a `dosbox.conf`; `dedb.convert.cmdline` reads
+the same settings off a `dosbox` command line - see
+[Reading a `dosbox` command line](#reading-a-dosbox-command-line) below.
+
 
 ### The field map
 
@@ -101,6 +105,37 @@ Read into DosboxConfig but not translated:
 | `[sdl] output` | `'surface'` | - | - | not translated |
 
 <!-- fieldmap:end -->
+
+### Reading a `dosbox` command line
+
+`dedb.convert.cmdline` turns a `dosbox` argv into the same
+`(section dict, autoexec lines)` pair the `.conf` parser produces, so it
+runs through the rest of the pipeline unchanged. A GOG game has `.conf`
+files; an archive.org item has none - emularity records its launch as
+`dosbox` arguments, and `dedb.archive` rebuilds a `MOUNT C .` / `C:` /
+`CD` / run argv from `emulator_start`.
+
+| On the command line | Becomes |
+|---|---|
+| `-conf FILE` (repeatable) | parsed and merged, later files winning |
+| `-set "SECTION KEY=VALUE"` (repeatable) | a config setting, layered on top of `-conf` |
+| `-c "config -set SECTION KEY=VALUE"` | the same |
+| `-c "COMMAND"` (anything else) | an autoexec line, verbatim, in order |
+| a trailing `PROGRAM [ARGS]` | a final autoexec line |
+| `-fullscreen` | `[sdl] fullscreen=true` |
+| `-noautoexec` | drops the `-conf` `[autoexec]`; the `-c` commands and trailing program stay |
+
+Host-side flags with no DOSEMU2 meaning - `-machine`, `-lang`, `-socket`,
+`-scaler`, `-forcescaler`, `-savedir`, and any other unrecognised `-x` -
+are dropped and recorded on `DosboxCommandLine.ignored`. Settings that
+parse but aren't in `DosboxConfig` are still applied, and recorded on
+`.unmodelled`.
+
+`dedb dosboxconf GAME --cmdline` prints the `dosbox` command
+`dedb run --dosbox` would launch; `dedb dosemuconf GAME --cmdline` prints
+the `dosemu` one. The same builder backs `dedb run --cmdline`. Given
+`.conf` paths instead of a game, `dosboxconf --cmdline` prints
+`dosbox -conf ...` for those files.
 
 ### The autoexec
 
