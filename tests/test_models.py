@@ -1,4 +1,4 @@
-"""Tests for dedb.dosbox.models.
+"""Tests for dedb.convert.models.
 
 DosboxConfig mirrors dosbox.conf's own vocabulary; DosemuConfig mirrors
 dosemu.conf's. dosbox_to_dosemu is the only place field names and units
@@ -7,7 +7,7 @@ cross from one side to the other.
 
 import pytest
 
-from dedb.dosbox.models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
+from dedb.convert.models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
 from dedb.testing.model_naming import (
     assert_serialization_aliases_add_only_prefix,
     assert_validation_aliases_are_structural,

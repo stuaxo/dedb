@@ -191,7 +191,7 @@ def test_import_archive_game_writes_the_conf_and_userhook(tmp_path):
 
 def test_build_archive_game_runs_the_command_line_through_the_models(tmp_path):
     from dedb.archive.importer import build_archive_game
-    from dedb.dosbox.models import DosemuConfig
+    from dedb.convert.models import DosemuConfig
 
     layout = _downloaded_item(tmp_path)
     target, userhook_lines = build_archive_game(layout)

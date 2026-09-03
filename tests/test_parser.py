@@ -1,4 +1,4 @@
-"""Tests for dedb.dosbox.parser.
+"""Tests for dedb.convert.parser.
 
 Covers parsing a single dosbox.conf and merging several, using generic
 conf text (see conftest.py) rather than files from any specific game.
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from dedb.dosbox.parser import parse_dosbox_conf, parse_dosbox_confs
+from dedb.convert.parser import parse_dosbox_conf, parse_dosbox_confs
 
 
 def test_parses_sections_excluding_autoexec(write_conf, base_profile_conf):

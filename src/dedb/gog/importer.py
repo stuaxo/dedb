@@ -1,5 +1,5 @@
 """Import an already-downloaded GOG game's dosbox launch profile(s) into
-DOSEMU2 config(s), reusing dedb.dosbox's own conversion logic rather than
+DOSEMU2 config(s), reusing the dedb.convert engine rather than
 duplicating it.
 """
 
@@ -7,9 +7,9 @@ from pathlib import Path
 
 import click
 
-from ..dosbox.converter import build as build_dosbox
-from ..dosbox.converter import convert as convert_dosbox
-from ..dosbox.models import DosemuConfig
+from ..convert import DosemuConfig
+from ..convert import build as build_dosbox
+from ..convert import convert as convert_dosbox
 from .layout import GogLayout
 from .profiles import (
     default_profile,

@@ -1,4 +1,4 @@
-"""Tests for dedb.dosbox.cmdline: building the DOSBox model from a
+"""Tests for dedb.convert.cmdline: building the DOSBox model from a
 `dosbox` command line (the form archive.org / emularity stores) instead
 of a dosbox.conf.
 
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from dedb.dosbox.cmdline import (
+from dedb.convert.cmdline import (
     build_from_argv,
     parse_dosbox_argv,
     parse_dosbox_command_line,
@@ -157,7 +157,7 @@ def test_build_from_argv_applies_autoexec_shims():
 def test_build_from_argv_matches_the_equivalent_conf(write_conf):
     conf = write_conf("[sdl]\nfullscreen=true\n\n[cpu]\ncycles=max\n")
 
-    from dedb.dosbox.converter import build
+    from dedb.convert.converter import build
 
     conf_target, _ = build([conf])
     argv_target, _ = build_from_argv(

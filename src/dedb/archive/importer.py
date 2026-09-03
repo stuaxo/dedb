@@ -3,18 +3,16 @@
 archive.org items ship no dosbox.conf - just an ``emulator_start`` path.
 emularity launches them by synthesizing a `dosbox` command line (mount C:,
 cd, run); ``dosbox_argv`` rebuilds that command line and
-``dedb.dosbox.cmdline.build_from_argv`` runs it through the same models a
-GOG game's dosbox.conf goes through.
+``dedb.convert.build_from_argv`` runs it through the same models a GOG
+game's dosbox.conf goes through.
 """
 
 from pathlib import Path
 
 import click
 
+from ..convert import DosemuConfig, build_from_argv, write_outputs
 from ..core import GameMetadataFile, long_target
-from ..dosbox.cmdline import build_from_argv
-from ..dosbox.converter import write_outputs
-from ..dosbox.models import DosemuConfig
 from .layout import ArchiveLayout
 from .models import ArchiveMetadata
 

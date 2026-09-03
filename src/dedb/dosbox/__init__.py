@@ -1,1 +1,4 @@
-"""dedb.dosbox: DOSBox to DOSEMU2 configuration conversion."""
+"""dedb.dosbox: the `dosboxconf` / `importdosbox` commands.
+
+The conversion engine they drive lives in `dedb.convert`.
+"""

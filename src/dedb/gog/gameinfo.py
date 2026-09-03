@@ -5,7 +5,7 @@ install) into structured profile data - see GogProfile.
 import json
 from pathlib import Path
 
-from ..shims.autoexec import split_command
+from ..convert import split_command
 from .models import GogProfile
 
 

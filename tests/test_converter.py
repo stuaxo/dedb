@@ -1,4 +1,4 @@
-"""Tests for dedb.dosbox.converter: the parser, models and shims wired
+"""Tests for dedb.convert.converter: the parser, models and shims wired
 together, matching what the importdosbox command does.
 """
 
@@ -7,11 +7,11 @@ from pathlib import Path
 import click
 import pytest
 
-from dedb.dosbox.converter import build, build_from_parsed, convert
+from dedb.convert.converter import build, build_from_parsed, convert
 
 
 def test_build_from_parsed_is_the_shared_seam_for_conf_and_argv():
-    """build() and dedb.dosbox.cmdline.build_from_argv both feed a parsed
+    """build() and dedb.convert.cmdline.build_from_argv both feed a parsed
     (section_dict, autoexec_lines) pair through this one step."""
     target, userhook_lines = build_from_parsed(
         {"cpu": {"cycles": "max"}, "sdl": {"fullscreen": "true"}},

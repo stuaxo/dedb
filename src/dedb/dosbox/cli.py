@@ -11,9 +11,9 @@ from urllib.parse import urlparse
 import click
 from click.shell_completion import CompletionItem
 
+from ..convert import build as build_config
+from ..convert import convert as convert_config
 from ..core import complete_target, get_backends, resolve_game
-from .converter import build as build_config
-from .converter import convert as convert_config
 from .inspector import inspect_command_line
 
 CONF_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
