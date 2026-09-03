@@ -25,6 +25,7 @@ def run_dosbox(
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> int:
     # archive.org items have no launch profiles - `target` is unused, kept
     # only for a signature the core dispatcher shares with the gog runner.
@@ -40,6 +41,7 @@ def run_dosbox(
         cwd=layout.game,
         missing_hint=f"'{binary}' not found on PATH - install it first",
         verbose=verbose,
+        dry_run=dry_run,
     )
 
 
@@ -48,11 +50,15 @@ def run_dosemu(
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> int:
+    # dry_run: don't regenerate the config, just name the path run would use.
+    dosemu_conf = layout.dosemu_conf if dry_run else ensure_converted(layout)
     return launch_dosemu(
         layout,
-        dosemu_conf=ensure_converted(layout),
+        dosemu_conf=dosemu_conf,
         userhook_src=layout.userhook,
         extra_args=extra_args,
         verbose=verbose,
+        dry_run=dry_run,
     )

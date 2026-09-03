@@ -44,6 +44,17 @@ def test_launch_verbose_echoes_the_command_with_cwd(monkeypatch, tmp_path, capsy
     assert "'a b'" in out  # shlex-quoted argument
 
 
+def test_launch_dry_run_prints_a_bare_command_and_skips_subprocess(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("must not run"))
+
+    rc = runner.launch(["dosbox", "-conf", "a b"], cwd=tmp_path, missing_hint="_", dry_run=True)
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert not out.startswith("$ ")  # bare, shell-pasteable
+    assert out.strip() == f"cd {tmp_path} && dosbox -conf 'a b'"
+
+
 class _Layout(LayoutPaths):
     def __init__(self, root):
         self.dir = root
@@ -78,3 +89,20 @@ def test_launch_dosemu_stages_the_userhook_and_builds_the_argv(monkeypatch, tmp_
     assert cmd[:3] == ["dosemu", "-f", str(tmp_path / "dosemu.conf")]
     assert cmd[-2:] == ["-K", "."]
     assert f'$_lredir_paths = "{layout.game}"' in cmd
+
+
+def test_launch_dosemu_dry_run_does_not_stage_the_userhook(monkeypatch, tmp_path, capsys):
+    layout = _Layout(tmp_path / "item")
+    layout.game.mkdir(parents=True)
+    userhook_src = tmp_path / "userhook.bat"
+    userhook_src.write_text("echo hi\n")
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("must not run"))
+
+    rc = runner.launch_dosemu(
+        layout, dosemu_conf=tmp_path / "dosemu.conf", userhook_src=userhook_src, dry_run=True
+    )
+
+    assert rc == 0
+    assert not (layout.game / "userhook.bat").exists()
+    assert not layout.dosemu_local.exists()
+    assert f"dosemu -f {tmp_path / 'dosemu.conf'}" in capsys.readouterr().out

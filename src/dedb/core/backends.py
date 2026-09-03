@@ -103,12 +103,22 @@ class BackendBase:
             print(f"Refreshing metadata: {identifier} ({self.scheme})")
             make_downloader(layout).rewrite_metadata()
 
-    def run(self, target: Target, layout, *, emulator: str, extra_args, verbose: bool) -> int:
+    def run(
+        self,
+        target: Target,
+        layout,
+        *,
+        emulator: str,
+        extra_args,
+        verbose: bool,
+        dry_run: bool = False,
+    ) -> int:
         """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu") via the
-        backend's ``runner_module``; return the exit code."""
+        backend's ``runner_module``; return the exit code. ``dry_run``
+        prints the command instead of running it."""
         runner = import_module(self.runner_module)
         launch = runner.run_dosbox if emulator == "dosbox" else runner.run_dosemu
-        return launch(layout, target, extra_args, verbose)
+        return launch(layout, target, extra_args, verbose, dry_run)
 
     def convert(self, target: Target, *, output_dir=None, force: bool = False):
         """Convert an already-downloaded ``target`` to DOSEMU2 config(s);

@@ -77,13 +77,21 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
 
 
 def _run(
-    game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload
+    game, backend, *, emulator, extra_args, verbose, keep, refresh_metadata, redownload, cmdline
 ) -> None:
-    """Download (if needed) and launch a resolved game; exit non-zero if the emulator does."""
-    layout = backend.ensure_downloaded(
-        game.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+    """Download (if needed) and launch a resolved game; exit non-zero if the
+    emulator does. ``cmdline`` just prints the command - it needs the game
+    already downloaded and touches nothing on disk."""
+    if cmdline:
+        layout = backend.layout(game.identifier)
+        layout.require_downloaded(game.scheme)
+    else:
+        layout = backend.ensure_downloaded(
+            game.identifier, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+        )
+    exit_code = backend.run(
+        game, layout, emulator=emulator, extra_args=extra_args, verbose=verbose, dry_run=cmdline
     )
-    exit_code = backend.run(game, layout, emulator=emulator, extra_args=extra_args, verbose=verbose)
     if exit_code != 0:
         sys.exit(exit_code)
 
@@ -106,6 +114,13 @@ def _run(
 @click.option(
     "--verbose", "-v", is_flag=True, default=False, help="Print the command line before launching."
 )
+@click.option(
+    "--cmdline",
+    is_flag=True,
+    default=False,
+    help="Print the command --dosbox/--dosemu would run and stop "
+    "(needs the game downloaded; writes nothing).",
+)
 def run(
     game,
     emulator_args,
@@ -117,12 +132,17 @@ def run(
     refresh_metadata,
     redownload,
     verbose,
+    cmdline,
 ):
     """Run a game in DOSBox or DOSEMU2.
 
     GAME is gog://<id>, archive://<id>, an archive.org URL, or a name you
     have downloaded. It is downloaded, and for --dosemu converted, first
     if needed. Arguments after `--` go straight to the emulator.
+
+    --cmdline prints the resulting command (a shell-pasteable line) and
+    stops, without running or converting anything. The game must already
+    be downloaded.
     """
     emulator = _require_one_emulator(use_dosbox, use_dosemu)
     resolved = resolve_game(game, backend, profile=profile)
@@ -135,6 +155,7 @@ def run(
         keep=keep,
         refresh_metadata=refresh_metadata,
         redownload=redownload,
+        cmdline=cmdline,
     )
 
 

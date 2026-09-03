@@ -3,6 +3,8 @@ ensure_converted() regenerates the config on every launch (rather than
 only when it is missing), so a config never lingers from an older dedb.
 """
 
+import pytest
+
 from dedb.archive import runner as archive_runner
 from dedb.archive.layout import ArchiveLayout
 from dedb.gog import runner as gog_runner
@@ -38,3 +40,24 @@ def test_gog_ensure_converted_reconverts_even_when_already_converted(tmp_path, m
 
     assert gog_runner.ensure_converted(layout) == layout.dosemu_conf
     assert calls == [(None, True)]
+
+
+def test_dry_run_names_the_conf_without_reconverting(tmp_path, monkeypatch):
+    from dedb.core import Target
+
+    layout = ArchiveLayout(tmp_path, "x")
+    monkeypatch.setattr(
+        archive_runner, "ensure_converted", lambda lyt: pytest.fail("must not reconvert")
+    )
+    monkeypatch.setattr(archive_runner, "load_metadata", lambda lyt: object())
+    monkeypatch.setattr(archive_runner, "dosbox_argv", lambda meta: ["-c", "GAME.EXE"])
+    seen = {}
+    monkeypatch.setattr(archive_runner, "launch_dosemu", lambda lyt, **kw: seen.update(kw) or 0)
+
+    rc = archive_runner.run_dosemu(
+        layout, Target("archive", "x", None, "archive://x"), dry_run=True
+    )
+
+    assert rc == 0
+    assert seen["dosemu_conf"] == layout.dosemu_conf
+    assert seen["dry_run"] is True

@@ -96,7 +96,7 @@ def test_run_dispatches_to_the_runner_module(monkeypatch, emulator, expected_fn)
     rc = GogBackend().run(target, "LAYOUT", emulator=emulator, extra_args=["-fs"], verbose=True)
 
     assert rc == 7
-    assert seen["call"] == (expected_fn, ("LAYOUT", target, ["-fs"], True))
+    assert seen["call"] == (expected_fn, ("LAYOUT", target, ["-fs"], True, False))  # ..., dry_run
 
 
 def test_convert_writes_via_the_import_hook_and_returns_the_dir(monkeypatch, tmp_path):

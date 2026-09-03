@@ -59,6 +59,7 @@ Examples:
 ```
 $ dedb run gog:tyrian_2000 --dosbox
 $ dedb run archive:msdos_Electro_Man_1992 --dosemu
+$ dedb run gog:tyrian_2000 --dosbox --cmdline   # print the command, don't run it
 $ dedb run 'gog:warcraft_orcs_and_humans?profile=server' --dosbox -- -fullscreen
 $ dedb download gog:tyrian_2000 gog:warcraft_orcs_and_humans
 $ dedb rm gog:tyrian_2000

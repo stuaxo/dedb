@@ -46,6 +46,7 @@ def run_dosbox(
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> int:
     profile = target.profile
     binary = get_settings().dosbox.get_dosbox_binary()
@@ -64,6 +65,7 @@ def run_dosbox(
         cwd=get_working_dir(layout.game, profile),
         missing_hint=f"'{binary}' not found on PATH - install it first",
         verbose=verbose,
+        dry_run=dry_run,
     )
 
 
@@ -72,12 +74,17 @@ def run_dosemu(
     target: Target,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> int:
     profile = target.profile
+    slug = _profile_file_slug(layout, profile)
+    # dry_run: don't regenerate the config, just name the path run would use.
+    dosemu_conf = layout.dosemu_conf_for(slug) if dry_run else ensure_converted(layout, profile)
     return launch_dosemu(
         layout,
-        dosemu_conf=ensure_converted(layout, profile),
-        userhook_src=layout.userhook_for(_profile_file_slug(layout, profile)),
+        dosemu_conf=dosemu_conf,
+        userhook_src=layout.userhook_for(slug),
         extra_args=extra_args,
         verbose=verbose,
+        dry_run=dry_run,
     )

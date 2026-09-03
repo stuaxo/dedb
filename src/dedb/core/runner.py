@@ -25,15 +25,22 @@ def launch(
     cwd: Path | None = None,
     missing_hint: str,
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> int:
     """Run ``cmd`` (in ``cwd`` if given), echoing it first when ``verbose``
     and turning a missing executable into a clean ``click.ClickException``
-    carrying ``missing_hint``. Returns the child's exit code."""
-    if verbose:
+    carrying ``missing_hint``. Returns the child's exit code.
+
+    ``dry_run`` prints the command (a bare, shell-pasteable line, no
+    ``$`` prefix) and returns 0 without running anything."""
+    if verbose or dry_run:
         rendered = shlex.join(cmd)
         if cwd is not None:
             rendered = f"cd {shlex.quote(str(cwd))} && {rendered}"
-        click.echo(f"$ {rendered}")
+        click.echo(rendered if dry_run else f"$ {rendered}")
+
+    if dry_run:
+        return 0
 
     try:
         return subprocess.run(cmd, cwd=cwd).returncode
@@ -48,16 +55,19 @@ def launch_dosemu(
     userhook_src: Path,
     extra_args: Sequence[str] = (),
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> int:
     """Stage ``userhook_src`` as the game's userhook.bat and launch DOSEMU2
-    with C: mapped to the extracted game directory."""
-    layout.dosemu_local.mkdir(parents=True, exist_ok=True)
+    with C: mapped to the extracted game directory. ``dry_run`` skips the
+    staging and just prints the command (see ``launch``)."""
+    if not dry_run:
+        layout.dosemu_local.mkdir(parents=True, exist_ok=True)
 
-    # DOSEMU2's boot chain (dosrc.d/4uhook.bat) auto-runs only
-    # %USERDRV%:\userhook.bat, and --Fdrive_c maps C: to layout.game - so
-    # the generated userhook has to be copied there before every launch
-    # (the active GOG launch profile can change between runs).
-    shutil.copyfile(userhook_src, layout.game / "userhook.bat")
+        # DOSEMU2's boot chain (dosrc.d/4uhook.bat) auto-runs only
+        # %USERDRV%:\userhook.bat, and --Fdrive_c maps C: to layout.game -
+        # so the generated userhook has to be copied there before every
+        # launch (the active GOG launch profile can change between runs).
+        shutil.copyfile(userhook_src, layout.game / "userhook.bat")
 
     cmd = [
         "dosemu",
@@ -79,4 +89,5 @@ def launch_dosemu(
         cmd,
         missing_hint="'dosemu' not found on PATH - install the dosemu2 package first",
         verbose=verbose,
+        dry_run=dry_run,
     )
