@@ -98,6 +98,7 @@ class Settings(BaseModel):
     # picks it up. Keep the two in sync.
     apps: list[str] = [
         "dedb.dosbox",
+        "dedb.dosemu",
         "dedb.gog",
         "dedb.archive",
     ]

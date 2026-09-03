@@ -111,7 +111,7 @@ def test_an_unknown_dosbox_choice_is_rejected_at_validation():
 
 
 def test_app_paths_is_the_configured_apps_deduped():
-    assert Settings().app_paths() == ["dedb.dosbox", "dedb.gog", "dedb.archive"]
+    assert Settings().app_paths() == ["dedb.dosbox", "dedb.dosemu", "dedb.gog", "dedb.archive"]
     # duplicates dropped, order kept
     assert Settings(apps=["dedb.gog", "dedb.gog", "dedb.dosbox"]).app_paths() == [
         "dedb.gog",

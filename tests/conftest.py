@@ -7,9 +7,21 @@ from those releases appears anywhere in this file. Use these fixtures,
 or extend them, instead of copying text from a downloaded game.
 """
 
+import tempfile
 from pathlib import Path
 
 import pytest
+
+# Isolate the whole session from the real ~/.config/dedb *before* any test
+# module imports dedb.cli - it registers app commands from Settings.apps at
+# import time, so a stale pinned `apps` in the user's config would other-
+# wise decide which commands exist during the run. Points at an empty dir,
+# so load_settings() falls back to the packaged default (every app).
+_SESSION_CFG = Path(tempfile.mkdtemp(prefix="dedb-test-cfg-"))
+from dedb.core import settings as _settings  # noqa: E402
+
+_settings.CONFIG_DIR = _SESSION_CFG
+_settings.SETTINGS_PATH = _SESSION_CFG / "dedbconf.toml"
 
 
 @pytest.fixture(autouse=True)

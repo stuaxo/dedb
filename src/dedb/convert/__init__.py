@@ -42,6 +42,7 @@ from .cmdline import (
     parse_dosbox_command_line,
 )
 from .converter import build, build_from_parsed, convert, write_outputs
+from .issues import render_issues
 from .models import (
     TRANSLATIONS,
     UNTRANSLATED_DOSBOX_FIELDS,
@@ -80,6 +81,7 @@ __all__ = [
     "parse_dosbox_command_line",
     "parse_dosbox_conf",
     "parse_dosbox_confs",
+    "render_issues",
     "resolve_mounts",
     "split_command",
     "unsupported_command",

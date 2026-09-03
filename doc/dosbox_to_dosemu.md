@@ -25,6 +25,14 @@ Commands only partially supported:
 `-v` expands each band to every line and its rewrite. A conf that needs
 no shims reports `(none)`.
 
+## Seeing the converted output
+
+`dedb dosemuconf CONF` prints the `dosemu.conf` and `userhook.bat` the
+conversion produces, without writing anything (`CONF` is one or more
+`.conf` paths, or a `gog:<id>` / `archive:<id>` game). `--conf` /
+`--userhook` narrow it to one; `--issues` adds the block above. It is the
+same output `dedb import` writes to disk.
+
 ## Drive mapping
 
 DOSBox maps drives and disk images with `MOUNT` and `IMGMOUNT`. DOSEMU2

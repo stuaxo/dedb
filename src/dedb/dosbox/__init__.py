@@ -1,4 +1,5 @@
-"""dedb.dosbox: the `dosboxconf` / `importdosbox` commands.
+"""dedb.dosbox: the `dosboxconf` command.
 
-The conversion engine they drive lives in `dedb.convert`.
+The conversion engine it reads through lives in `dedb.convert`; writing
+DOSEMU2 output (`import`) lives in `dedb.dosemu`.
 """

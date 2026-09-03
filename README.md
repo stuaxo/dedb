@@ -52,6 +52,7 @@ For more ls options:
 | `https://archive.org/details/<name>` | an archive.org item, by URL                   |
 | `<name>`                             | a downloaded game by name                     |
 | `<pattern>` (`rm` only)              | a `*`/`?`/`[]` wildcard over downloaded names (optionally `gog:<pattern>`) |
+| `path/to/dosbox.conf` (`import` / `dosboxconf` / `dosemuconf`) | a dosbox.conf on disk, converted directly (`import` merges several, writes to `-o`) |
 
 Examples:
 
@@ -147,7 +148,7 @@ archive_user = "your-archive-org-username"
 Developer config settings:
 ```toml
 # Enable or disable apps that make up dedb (default is to include all):
-# apps = ["dedb.dosbox", "dedb.gog", "dedb.archive"]
+# apps = ["dedb.dosbox", "dedb.dosemu", "dedb.gog", "dedb.archive"]
 ```
 
 
