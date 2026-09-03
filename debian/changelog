@@ -15,8 +15,9 @@ dedb (0.0.9) unstable; urgency=medium
     longer do a per-game GOG library lookup - the product id comes from
     the existing metadata.json.
   * Add ARCHITECTURE.md.
+  * Skip the test suite during the Debian package build; it runs in CI.
 
- -- Stuart Axon <stu.axon@gmail.com>  Thu, 03 Sep 2026 02:41:13 +0100
+ -- Stuart Axon <stu.axon@gmail.com>  Thu, 03 Sep 2026 02:47:00 +0100
 
 dedb (0.0.8) unstable; urgency=medium
 

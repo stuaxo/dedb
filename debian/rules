@@ -3,3 +3,7 @@ export PYBUILD_NAME=dedb
 
 %:
 	dh $@ --with python3 --buildsystem=pybuild
+
+# The test suite needs pydantic v2 and pytest; the package build environment
+# only has runtime deps. Tests run in CI (.github/workflows/ci.yml), not here.
+override_dh_auto_test:
