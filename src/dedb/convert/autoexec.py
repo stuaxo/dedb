@@ -1,4 +1,3 @@
-
 """Shims for a game's autoexec, applied only to userhook.bat. Real DOSBox
 (via -conf) is never touched.
 
@@ -176,7 +175,6 @@ def autoexec_shims(autoexec: list[str], working_dir: Path | None = None) -> list
     return convert_autoexec(autoexec, conf=None, working_dir=working_dir)
 
 
-
 def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> list[AutoexecIssue]:
     """List the autoexec lines that won't run cleanly under DOSEMU2."""
     issues = []
@@ -233,26 +231,33 @@ def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> l
                 break  # Only one shim applies per line in the new architecture
     return issues
 
+
 @dataclass(frozen=True)
 class Workaround:
     """For backwards compatibility with __init__.py exports."""
+
     name: str
     severity: Severity
     summary: str
     shim: Any
 
+
 def active_workarounds(*args, **kwargs):
     # Stub for backwards compatibility with __init__.py exports.
     return []
+
 
 # Stubs for backwards compatibility in tests and __init__.py
 
 choice_shim = shim_choice
 
+
 def mount_lredir_shim(working_dir):
     def shim(line):
         return shim_mount(line, working_dir=working_dir)
+
     return shim
+
 
 def unsupported_command(cmd):
     def shim(line):
@@ -261,7 +266,9 @@ def unsupported_command(cmd):
         if tokens and tokens[0].lower() == cmd.lower():
             return f"REM {line}"
         return line
+
     return shim
+
 
 def unsupported_mount_option(option):
     def shim(line):
@@ -271,5 +278,5 @@ def unsupported_mount_option(option):
         if not any(token.lower() == option.lower() for token in tokens):
             return line
         return f"REM {line}"
-    return shim
 
+    return shim
