@@ -1,3 +1,16 @@
+dedb (0.0.15) unstable; urgency=medium
+
+  * Each command now installs its own man page (dedb-run(1),
+    dedb-import(1), dedb-dosboxconf(1), ...) alongside dedb(1).
+  * Error handling reworked: the library modules raise plain exceptions
+    and only the command layer turns them into messages, so a failure
+    such as an unknown game or a game that isn't downloaded prints a
+    one-line error rather than a traceback. `dedb <cmd> -b <unknown>`,
+    and passing both a `<scheme>://` URL and `-b`, now exit 1 (was 2).
+  * Internal cli.py cleanup. No other command-line or output changes.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Fri, 04 Sep 2026 00:55:00 +0100
+
 dedb (0.0.14) unstable; urgency=medium
 
   * dosbox.conf parser rewritten: `%` in values is kept verbatim
