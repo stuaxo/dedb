@@ -38,7 +38,8 @@ For more ls options:
 
 ### Naming a game
 
-`dedb run`, `download`, `import` and `rm` take one GAME argument:
+`dedb run`, `download`, `import` and `rm` take one GAME argument
+(`refreshmetadata` takes any number, or none for every downloaded game):
 
 | GAME                                 | Is                                            |
 |--------------------------------------|-----------------------------------------------|
@@ -56,6 +57,7 @@ $ dedb run archive:msdos_Electro_Man_1992 --dosemu
 $ dedb run 'gog:warcraft_orcs_and_humans?profile=server' --dosbox -- -fullscreen
 $ dedb download gog:tyrian_2000
 $ dedb rm gog:tyrian_2000
+$ dedb refreshmetadata          # re-fetch metadata.json for every downloaded game
 ```
 
 

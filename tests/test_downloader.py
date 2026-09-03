@@ -106,6 +106,39 @@ def test_missing_metadata_is_written_even_without_refresh(layout):
     assert dl.calls == [("prepare", False), ("write_metadata", False), "post_extract"]
 
 
+def test_rewrite_metadata_redoes_only_the_metadata_step(layout):
+    _mark_downloaded(layout)
+    (layout.game / "GAME.EXE").write_text("MZ")
+    dl = FakeDownloader()
+
+    dl.rewrite_metadata(layout)
+
+    assert dl.calls == [("prepare", True), ("write_metadata", True), "post_extract"]
+    assert layout.metadata_json.is_file()
+    assert (layout.game / "old.exe").is_file()  # game files untouched
+    assert not layout.staging.exists()  # nothing fetched
+
+
+def test_gog_prepare_on_refresh_reads_the_product_id_from_metadata_json(layout, monkeypatch):
+    """A refresh of an already-downloaded GOG game takes its product_id
+    from the recorded metadata.json instead of a GOG library lookup."""
+    from dedb.core import GameMetadataFile
+    from dedb.gog.downloader import GogDownloader
+
+    layout.dir.mkdir(parents=True)
+    layout.metadata_json.write_text(
+        GameMetadataFile(
+            scheme="gog", identifier="x", source={"product_id": "42"}
+        ).model_dump_json()
+    )
+    monkeypatch.setattr(
+        "dedb.gog.downloader.GOGClient",
+        lambda: pytest.fail("must not hit the GOG library on a refresh"),
+    )
+
+    assert GogDownloader()._prepare(layout, refresh=True) == "42"
+
+
 def test_redownload_clears_the_old_copy_then_re_runs_the_pipeline(layout):
     _mark_downloaded(layout)
     layout.dosemu.mkdir(parents=True)

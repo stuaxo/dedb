@@ -76,5 +76,11 @@ profile).
 `dedb download <url>` does nothing if the game is already downloaded. Pass
 `--redownload` or `--refreshmetadata` to force it.
 
+`dedb refreshmetadata [GAME]...` re-fetches backend metadata and rewrites
+`metadata.json` without re-downloading the game; with no GAME it does this
+for every downloaded game. A named GAME that isn't downloaded is skipped.
+`BackendBase.refresh_metadata()` (default: loop over
+`Downloader.rewrite_metadata`) is the hook a backend overrides to batch.
+
 A backend can add library-level commands in its `cli.py`, like GOG's `lsgog`
 and `downloadgog`.

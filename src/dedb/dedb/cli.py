@@ -1,6 +1,6 @@
 """Commands contributed by the dedb app itself: `ls` (spans every download
-backend), plus the generic `run` / `download` / `import` / `rm` from
-`dedb.dedb.verbs`. `dedb.core.get_apps()` reads `commands`.
+backend), plus the generic `run` / `download` / `import` / `rm` /
+`refreshmetadata` from `dedb.dedb.verbs`. `dedb.core.get_apps()` reads `commands`.
 """
 
 import click

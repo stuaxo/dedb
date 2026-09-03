@@ -88,6 +88,18 @@ class BackendBase:
         )
         return layout
 
+    def refresh_metadata(self, identifiers: "list[str]") -> None:
+        """Re-fetch backend metadata for each already-downloaded id and
+        rewrite its ``metadata.json`` - never downloads a game. Ids that
+        aren't downloaded are skipped (the caller normally filters first)."""
+        downloader = self._downloader()
+        for identifier in identifiers:
+            layout = self.layout(identifier)
+            if not layout.is_downloaded():
+                continue
+            print(f"Refreshing metadata: {identifier} ({self.scheme})")
+            downloader.rewrite_metadata(layout)
+
     def run(self, target: Target, layout, *, emulator: str, extra_args, verbose: bool) -> int:
         """Launch ``target`` in ``emulator`` ("dosbox" or "dosemu") via the
         backend's ``runner_module``; return the exit code."""
