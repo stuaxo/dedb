@@ -9,6 +9,7 @@
 # ships (the default below). Uncomment and edit to pin a specific set.
 # apps = [
 #     "dedb.dosbox",
+#     "dedb.dosemu",
 #     "dedb.gog",
 #     "dedb.archive",
 # ]

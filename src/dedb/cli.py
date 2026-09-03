@@ -1,16 +1,16 @@
 """The dedb CLI.
 
 The root `cli` group, plus the commands that span every backend:
-`ls` / `run` / `download` / `import` / `rm` / `refreshmetadata`. Source
-apps (`dedb.dosbox` / `dedb.gog` / `dedb.archive`, from `Settings.apps`)
-contribute the rest; commands are registered flat on the root group and
-`--help` groups them per app, Django manage.py style.
+`ls` / `run` / `download` / `rm` / `refreshmetadata`. Source apps
+(`dedb.dosbox` / `dedb.dosemu` / `dedb.gog` / `dedb.archive`, from
+`Settings.apps`) contribute the rest - `import` lives in `dedb.dosemu`;
+commands are registered flat on the root group and `--help` groups them
+per app, Django manage.py style.
 """
 
 import fnmatch
 import re
 import sys
-from pathlib import Path
 
 import click
 
@@ -88,34 +88,7 @@ def _run(
         sys.exit(exit_code)
 
 
-def _do_import(game, backend, *, output_dir, force, refreshconf, dumpconf, dumpuserhook) -> None:
-    """Convert a resolved game to DOSEMU2 config(s), or --dump* them to stdout."""
-    if dumpconf or dumpuserhook:
-        entries = backend.build(game)
-        for i, (label, conf_text, userhook_lines) in enumerate(entries):
-            if i:
-                click.echo()
-            if len(entries) > 1:
-                click.echo(f"[{label}]")
-            if dumpconf:
-                click.echo(conf_text, nl=False)
-            if dumpuserhook:
-                click.echo("\n".join(userhook_lines))
-        return
-
-    if refreshconf:
-        if not backend.is_downloaded(game.identifier):
-            click.echo(f"Skipping '{game.identifier}' (not downloaded)")
-            return
-        force = True
-
-    # The profile travels on the resolved target (game.profile); convert()
-    # reads it from there - don't pass it as a separate kwarg.
-    dest = backend.convert(game, output_dir=output_dir, force=force)
-    click.echo(f"Imported '{game.identifier}' -> '{dest}'")
-
-
-# --- run / download / import --------------------------------------------
+# --- run / download ----------------------------------------------------
 
 
 @click.command("run")
@@ -186,54 +159,6 @@ def download(games, backend, keep, refresh_metadata, redownload):
             redownload=redownload,
         )
         click.echo(f"Downloaded '{target.identifier}' ({target.scheme})")
-
-
-@click.command("import")
-@click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
-@click.option(
-    "--output-dir",
-    "-o",
-    "output_dir",
-    default=None,
-    type=click.Path(file_okay=False, path_type=Path),
-    help="Directory to write the DOSEMU2 config(s) into. Defaults to the download's dosemu/ dir.",
-)
-@click.option("--profile", default=None, help="Launch profile to convert (gog:// only).")
-@_backend_option
-@click.option(
-    "--force", "-f", is_flag=True, default=False, help="Overwrite an existing output dir."
-)
-@click.option(
-    "--refreshconf",
-    is_flag=True,
-    default=False,
-    help="Regenerate the config for an already-downloaded game (implies --force; skips if not downloaded).",
-)
-@click.option(
-    "--dumpconf", is_flag=True, default=False, help="Print the dosemu.conf instead of writing."
-)
-@click.option(
-    "--dumpuserhook", is_flag=True, default=False, help="Print the userhook.bat instead of writing."
-)
-def import_target(games, output_dir, profile, backend, force, refreshconf, dumpconf, dumpuserhook):
-    """Create DOSEMU2 config(s) for one or more downloaded programs."""
-    registry = get_backends()
-    resolved = [resolve_game(g, backend, profile=profile) for g in games]
-    if len(resolved) > 1:
-        if output_dir is not None:
-            raise click.UsageError("--output-dir takes a single GAME.")
-        if dumpconf or dumpuserhook:
-            raise click.UsageError("--dumpconf / --dumpuserhook take a single GAME.")
-    for target in resolved:
-        _do_import(
-            target,
-            registry[target.scheme],
-            output_dir=output_dir,
-            force=force,
-            refreshconf=refreshconf,
-            dumpconf=dumpconf,
-            dumpuserhook=dumpuserhook,
-        )
 
 
 # --- rm ----------------------------------------------------------------
@@ -496,7 +421,7 @@ def completion(shell: str) -> None:
 
 # Cross-cutting commands, not tied to one backend. Listed before the
 # per-app groups in --help.
-CORE_COMMANDS = [list_downloads, run, download, import_target, rm, refreshmetadata, completion]
+CORE_COMMANDS = [list_downloads, run, download, rm, refreshmetadata, completion]
 
 
 class AppGroupedGroup(click.Group):

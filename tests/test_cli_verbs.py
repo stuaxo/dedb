@@ -1,5 +1,6 @@
-"""Tests for the generic URL-driven commands (`dedb run|download|import|rm`,
-and the target mode of `dedb dosboxconf`).
+"""Tests for the generic URL-driven commands (`dedb run|download|rm`, the
+`import` command wired in from `dedb.dosemu`, and the target mode of
+`dedb dosboxconf`).
 
 These cover the CLI wiring only - option surface, dispatch, output, exit
 codes. Target *resolution* (schemes, bare names, "did you mean") is
@@ -247,26 +248,7 @@ def test_backend_option_errors(download_dir, args, match):
     assert match in result.output
 
 
-# --- import: --dump* / --refreshconf ------------------------------
-
-
-def test_import_dumpconf_prints_only_the_conf(download_dir, monkeypatch):
-    monkeypatch.setattr(
-        "dedb.gog.backend.GogBackend.build",
-        lambda self, target: [("default", "$_dpmi = (131072)\n", ["GAME.EXE"])],
-    )
-    result = CliRunner().invoke(cli, ["import", "gog://x", "--dumpconf"])
-    assert result.output == "$_dpmi = (131072)\n"
-
-
-def test_import_dumpuserhook_labels_multiple_profiles(download_dir, monkeypatch):
-    monkeypatch.setattr(
-        "dedb.gog.backend.GogBackend.build",
-        lambda self, target: [("default", "c1", ["A.EXE"]), ("server", "c2", ["B.EXE"])],
-    )
-    result = CliRunner().invoke(cli, ["import", "gog://x", "--dumpuserhook"])
-    assert "[default]" in result.output and "[server]" in result.output
-    assert "A.EXE" in result.output and "B.EXE" in result.output
+# --- import: --refreshconf ---------------------------------------
 
 
 def test_import_refreshconf_skips_when_not_downloaded(download_dir, monkeypatch):

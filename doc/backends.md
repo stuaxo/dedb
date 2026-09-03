@@ -3,10 +3,11 @@
 A backend is a source of DOS games. Each game has a URL: `gog://<gamename>` or
 `archive://<identifier>`.
 
-`dedb run`, `download`, `import`, `rm`, `refreshmetadata` and `dosboxconf`
-take a game URL and dispatch to its backend. You can give the parts
-separately instead: `-b <scheme>` with a bare id, and `--profile <slug>`
-for `?profile=`. Giving both a `scheme://` URL and `-b` is an error.
+`dedb run`, `download`, `import`, `rm`, `refreshmetadata`, `dosboxconf`
+and `dosemuconf` take a game URL and dispatch to its backend. You can
+give the parts separately instead: `-b <scheme>` with a bare id, and
+`--profile <slug>` for `?profile=`. Giving both a `scheme://` URL and
+`-b` is an error.
 
 ## Resolving a game
 
@@ -63,8 +64,8 @@ profile).
    `dedb rm` works off `layout` + `dedb.core.remove_downloads` directly.
    Override `identifier_from_url` if the backend has its own URL form, and
    `dosbox_command_line` (returns `(argv, working_dir)`) so `dedb dosboxconf`
-   can inspect a game - a GOG game's is its `-conf` files, an archive.org
-   item's is the emularity `-c` command line.
+   (and `dedb dosemuconf --issues`) can inspect a game - a GOG game's is its
+   `-conf` files, an archive.org item's is the emularity `-c` command line.
 
    `local_game(identifier)` assembles a `dedb.core.LocalGame` (identity, title,
    classification, launch profiles, converted?) from the download's `metadata.json`

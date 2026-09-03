@@ -58,10 +58,11 @@ def test_completion_resolves_a_command_name() -> None:
 
 
 def test_game_arguments_complete_scheme_prefixes() -> None:
-    # run / download / import / rm / refreshmetadata / dosboxconf all
-    # route their GAME argument through complete_target.
+    # run / download / rm / refreshmetadata route GAME through complete_target;
+    # import / dosboxconf / dosemuconf route SOURCES through complete_source.
     comp = ShellComplete(cli, {}, "dedb", "_DEDB_COMPLETE")
-    for command in ("run", "download", "import", "rm", "refreshmetadata", "dosboxconf"):
+    commands = ("run", "download", "rm", "refreshmetadata", "import", "dosboxconf", "dosemuconf")
+    for command in commands:
         matches = [c.value for c in comp.get_completions([command], "")]
         assert "gog:" in matches, command
         assert "archive:" in matches, command

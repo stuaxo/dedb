@@ -124,27 +124,31 @@ rewrites the lines it recognises, with a `Severity`:
 | `UNSUPPORTED` | no equivalent; commented out with `REM` so it does not error - `IMGMOUNT`, overlay mounts |
 
 `dedb dosboxconf CONF --issues` reports what a conf needs before you
-convert it. Deeper notes - drive mapping, the `C:` re-map limit, DPMI
-sizing - are in [doc/dosbox_to_dosemu.md](doc/dosbox_to_dosemu.md).
+convert it; `dedb dosemuconf CONF` (or a `gog:` / `archive:` game) shows
+the converted `dosemu.conf` + `userhook.bat`. Deeper notes - drive
+mapping, the `C:` re-map limit, DPMI sizing - are in
+[doc/dosbox_to_dosemu.md](doc/dosbox_to_dosemu.md).
 
 
 ## Packages
 
 | Package        | What                                                              |
 |----------------|------------------------------------------------------------------|
-| `dedb.cli`     | the root group + the cross-cutting commands (ls / run / download / import / rm / refreshmetadata / completion) |
+| `dedb.cli`     | the root group + the cross-cutting commands (ls / run / download / rm / refreshmetadata / completion) |
 | `dedb.completion` | shell completion scripts for the `completion` command       |
 | `dedb.core`    | the framework the apps plug into                                 |
 | `dedb.convert` | the DOSBox↔DOSEMU2 conversion engine above - a standalone library |
-| `dedb.dosbox`  | the `importdosbox` / `dosboxconf` commands (drive `dedb.convert`) |
+| `dedb.dosbox`  | the `dosboxconf` command (reads through `dedb.convert`)          |
+| `dedb.dosemu`  | the `import` / `dosemuconf` commands (write / show the converted output) |
 | `dedb.gog`     | GOG: `downloadgog` / `lsgog`, backend, importer                  |
 | `dedb.archive` | archive.org: `lsarchive`, backend, importer                      |
 | `dedb.testing` | test helpers                                                     |
 
-`dosbox` / `gog` / `archive` are "apps": listed in `Settings.apps`, each
-exposing a `cli.commands` list that `dedb.cli` registers. `dedb --help`
-groups their commands under `[dosbox]` / `[gog]` / `[archive]`; the
-cross-cutting commands come first, ungrouped:
+`dosbox` / `dosemu` / `gog` / `archive` are "apps": listed in
+`Settings.apps`, each exposing a `cli.commands` list that `dedb.cli`
+registers. `dedb --help` groups their commands under `[dosbox]` /
+`[dosemu]` / `[gog]` / `[archive]`; the cross-cutting commands come
+first, ungrouped:
 
 ```sh
 $ dedb --help
@@ -159,17 +163,20 @@ Commands:
   ls               List downloaded games.
   run              Run a game in DOSBox or DOSEMU2.
   download         Download and extract one or more games.
-  import           Create DOSEMU2 config(s) for one or more downloaded
-                   programs.
   rm               Delete one or more downloaded games' directory trees.
   refreshmetadata  Re-fetch backend metadata for downloaded games and rewrite
                    each metadata.json.
   completion       Print a shell completion script for dedb.
 
 [dosbox]:
-  importdosbox  Import one or more dosbox.conf files into a DOSEMU2 config.
-  dosboxconf    Show aspects of a DOSBox config, from dosbox.conf(s) or a
-                game's launch command line.
+  dosboxconf  Show aspects of a DOSBox config, from dosbox.conf(s) or a game's
+              launch...
+
+[dosemu]:
+  import      Create DOSEMU2 config(s) from downloaded games or dosbox.conf
+              files.
+  dosemuconf  Show the converted DOSEMU2 output, from dosbox.conf(s) or a
+              game.
 
 [gog]:
   downloadgog  Download and extract DOSBox-based owned games from GOG.

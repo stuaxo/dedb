@@ -9,6 +9,7 @@ and never reach into a sibling app or ``settings.json`` directly.
     _registry       the bare scheme -> backend dict + @register_backend
     registry        get_apps() / get_backends() - discovery from settings
     backends        BackendBase + resolve() / resolve_game() / complete_target()
+    cliargs         is_game_ref / existing_conf / complete_source - the "conf paths or a game ref" SOURCES helpers
     downloads       the <download_dir> resolve/create ops + `dedb rm`
     layout          LayoutPaths - the per-download directory tree
     local           GameDescription / LocalGame / LaunchProfile - the downloaded-program model
@@ -20,6 +21,7 @@ and never reach into a sibling app or ``settings.json`` directly.
 
 from ._registry import register_backend
 from .backends import BackendBase, complete_target, resolve, resolve_game
+from .cliargs import complete_source, existing_conf, is_game_ref
 from .downloader import Downloader
 from .downloads import (
     ensure_download_dir,
@@ -57,11 +59,14 @@ __all__ = [
     "OfflineError",
     "Settings",
     "Target",
+    "complete_source",
     "complete_target",
     "ensure_download_dir",
+    "existing_conf",
     "get_apps",
     "get_backends",
     "get_settings",
+    "is_game_ref",
     "launch",
     "launch_dosemu",
     "load_settings",

@@ -30,11 +30,13 @@ $ dedb run 'gog:warcraft_orcs_and_humans?profile=server' --dosbox
 $ dedb run tyrian_2000 -b gog --dosbox         # -b instead of the prefix
 $ dedb import gog:tyrian_2000
 $ dedb dosboxconf gog:tyrian_2000 --issues
+$ dedb dosemuconf gog:tyrian_2000              # the converted dosemu.conf + userhook.bat
 $ dedb rm gog:tyrian_2000
 ```
 
 `dedb run --dosemu` converts the game on first use; `dedb import` does the
-same without running it.
+same without running it, and `dedb dosemuconf` shows the result without
+writing it.
 
 Two commands act on your whole GOG library rather than one game:
 
