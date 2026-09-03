@@ -1,3 +1,11 @@
+dedb (0.0.12) unstable; urgency=medium
+
+  * Shell tab completion. The package installs completion scripts for
+    bash, zsh and fish; `dedb completion <shell>` prints the script for
+    a pip install.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Wed, 03 Sep 2026 12:00:00 +0100
+
 dedb (0.0.11) unstable; urgency=medium
 
   * `dedb dosboxconf` now works for `archive://` items, rendered from
