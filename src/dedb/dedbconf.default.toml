@@ -5,12 +5,13 @@
 # same defaults (with a warning) if it is ever unreadable or invalid.
 
 # Installed apps: dotted module paths, each exposing a cli.commands list.
-# Mirrors Django's INSTALLED_APPS.
-apps = [
-    "dedb.dosbox",
-    "dedb.gog",
-    "dedb.archive",
-]
+# Mirrors Django's INSTALLED_APPS. Left commented, dedb loads every app it
+# ships (the default below). Uncomment and edit to pin a specific set.
+# apps = [
+#     "dedb.dosbox",
+#     "dedb.gog",
+#     "dedb.archive",
+# ]
 
 # Shared downloads root. Each app gets a namespaced subdirectory under it
 # (<download_dir>/gog/, <download_dir>/archive/, ...). Set this before

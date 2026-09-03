@@ -35,6 +35,19 @@ def test_the_written_default_leaves_download_dir_commented_out():
     assert load_settings().download_dir is None
 
 
+def test_the_written_default_leaves_apps_commented_out():
+    """A fresh config doesn't pin `apps`, so it always gets every app
+    dedb ships (Settings.apps' default)."""
+    load_settings()
+    text = settings.SETTINGS_PATH.read_text()
+
+    assert not any(line.strip().startswith("apps") for line in text.splitlines())
+    assert load_settings().apps == Settings().apps
+    # the commented example still lists every configurable app
+    for app in Settings().apps:
+        assert f'"{app}"' in text
+
+
 def test_invalid_toml_falls_back_to_defaults_with_a_warning(capsys):
     settings.SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
     settings.SETTINGS_PATH.write_text("this = is not = valid toml")
