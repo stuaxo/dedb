@@ -287,10 +287,13 @@ def test_dosboxconf_missing_file_points_at_a_game(tmp_path):
     result = CliRunner().invoke(dosboxconf, [str(tmp_path / "nope.conf")])
     assert result.exit_code == 2
     assert "not an existing dosbox.conf" in result.output
-    assert "gog://<id>" in result.output
+    assert "gog:<id>" in result.output
 
 
-@pytest.mark.parametrize("args", [["gog://tyrian_2000"], ["tyrian_2000", "-b", "gog"]])
+@pytest.mark.parametrize(
+    "args",
+    [["gog://tyrian_2000"], ["gog:tyrian_2000"], ["tyrian_2000", "-b", "gog"]],
+)
 def test_dosboxconf_target_mode(tmp_path, monkeypatch, args):
     conf = tmp_path / "x.conf"
     conf.write_text("[sblaster]\nsbtype=sb16\n", encoding="cp437")
