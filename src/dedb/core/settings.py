@@ -23,6 +23,12 @@ else:
     import tomli as tomllib
 
 
+class ConfigError(Exception):
+    """dedb is missing configuration it needs to carry out the command
+    (e.g. ``download_dir`` isn't set, or points somewhere that doesn't
+    exist). Reported to the user as a one-line error, not a traceback."""
+
+
 def _config_dir() -> Path:
     xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg_config_home) if xdg_config_home else Path.home() / ".config"

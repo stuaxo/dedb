@@ -4,7 +4,6 @@ test_settings.)"""
 
 import subprocess
 
-import click
 import pytest
 
 from dedb.core import runner
@@ -17,7 +16,7 @@ def test_launch_maps_missing_executable_to_a_clean_error(monkeypatch):
 
     monkeypatch.setattr(subprocess, "run", _boom)
 
-    with pytest.raises(click.ClickException, match="install the thing"):
+    with pytest.raises(FileNotFoundError, match="install the thing"):
         runner.launch(["nope"], missing_hint="install the thing")
 
 

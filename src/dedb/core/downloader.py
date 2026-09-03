@@ -12,6 +12,12 @@ hooks need on ``self``; the base class threads nothing between them.
 """
 
 
+class DownloadError(RuntimeError):
+    """A download or extraction failed partway through (a network error,
+    an archive.org fetch that never completed, ...). Reported to the user
+    as a one-line error, not a traceback."""
+
+
 class Downloader:
     def __init__(self, layout) -> None:
         self.layout = layout
@@ -76,8 +82,10 @@ class Downloader:
     def _prepare(self, *, refresh: bool) -> None:
         """Validate the item is downloadable and stash whatever ``_fetch``
         / ``_extract`` / ``_write_metadata`` need on ``self`` (the
-        resolved metadata, an id, ...). Raise ``click.ClickException`` if
-        it can't be downloaded."""
+        resolved metadata, an id, ...). Raise if it can't be downloaded -
+        ``DownloadError`` for a fetch failure, ``LookupError`` (e.g.
+        ``GameRefError``, ``NotDosItemError``) for an unknown/unusable
+        item."""
 
     def _fetch(self) -> bool | None:
         """Download the item into its staging dir. Return ``False`` to

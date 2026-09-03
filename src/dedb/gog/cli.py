@@ -5,7 +5,7 @@ commands - see dedb.cli and dedb.gog.backend."""
 
 import click
 
-from ..core import ensure_download_dir, get_settings
+from ..core import cli_command, ensure_download_dir, get_settings
 from .classify import classify_owned_games
 from .client import GOGClient, OfflineError
 from .downloader import GogDownloader
@@ -52,6 +52,7 @@ from .layout import GogLayout
         "instead of copying them onto the game root the way GOG's installer would."
     ),
 )
+@cli_command
 def downloadgog(
     keep: bool,
     game_id: str | None,
@@ -133,6 +134,7 @@ def downloadgog(
     default=False,
     help="Print each network request to GOG as it happens.",
 )
+@cli_command
 def lsgog(
     names_only: bool, dos_only: bool, refresh_metadata: bool, offline: bool, verbose: bool
 ) -> None:

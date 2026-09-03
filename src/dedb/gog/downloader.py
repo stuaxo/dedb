@@ -6,10 +6,8 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-import click
-
 from ..convert import DosboxConfig, parse_dosbox_confs
-from ..core import Downloader, GameMetadataFile
+from ..core import Downloader, GameMetadataFile, GameRefError
 from .client import FETCH_ERRORS, GOGClient
 from .gameinfo import parse_profiles
 from .layout import GogLayout
@@ -126,7 +124,7 @@ class GogDownloader(Downloader):
                     (g.product_id for g in client.get_list() if g.gamename == layout.name), None
                 )
         if product_id is None:
-            raise click.ClickException(f"'{layout.name}' not found in your GOG library")
+            raise GameRefError(f"'{layout.name}' not found in your GOG library")
         self._product_id = product_id
 
     def _fetch(self) -> bool:

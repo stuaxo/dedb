@@ -1,21 +1,22 @@
-"""Tests for dedb.core.downloads: remove_download and ensure_download_dir.
+"""Tests for dedb.core.downloads: delete_download and ensure_download_dir.
 
-remove_download takes a layout; the removal safety checks it relies on
-(`LayoutPaths._safe_rmtree`) are tested in test_layout. ensure_download_dir
-reads settings.download_dir, so patch dedb.core.settings.get_settings; the
-temp-dir gate patches tempfile.gettempdir.
+delete_download takes a layout and just deletes the tree; the removal
+safety checks it relies on (`LayoutPaths._safe_rmtree`) are tested in
+test_layout, and the `dedb rm` prompting/reporting around it in
+test_cli_verbs. ensure_download_dir reads settings.download_dir, so patch
+dedb.core.settings.get_settings; the temp-dir gate patches
+tempfile.gettempdir.
 """
 
 from pathlib import Path
 
-import click
 import pytest
 
-from dedb.core import ensure_download_dir, remove_download, remove_downloads
+from dedb.core import ConfigError, UnsafePathError, delete_download, ensure_download_dir
 from dedb.core.settings import Settings
 from dedb.gog.layout import GogLayout
 
-# --- remove_download -------------------------------------------------------
+# --- delete_download ------------------------------------------------------
 
 
 @pytest.fixture
@@ -28,59 +29,20 @@ def gog_root(tmp_path: Path) -> Path:
 
 
 def test_removes_a_single_item(gog_root: Path):
-    remove_download(GogLayout(gog_root, "doom"), assume_yes=True)
+    delete_download(GogLayout(gog_root, "doom"))
     assert not (gog_root / "doom").exists()
     assert gog_root.is_dir()  # only the item goes, not the root
 
 
-def test_missing_item_is_a_no_op(gog_root: Path, capsys):
-    remove_download(GogLayout(gog_root, "quake"), assume_yes=True)
-    assert "Nothing to remove" in capsys.readouterr().out
-
-
-def test_missing_download_dir_is_a_no_op(tmp_path: Path, capsys):
-    remove_download(GogLayout(tmp_path / "downloads" / "gog", "doom"), assume_yes=True)
-    assert "Nothing to remove" in capsys.readouterr().out
-
-
 def test_propagates_a_safety_refusal(gog_root: Path):
-    with pytest.raises(click.ClickException, match="Refusing"):
-        remove_download(GogLayout(gog_root, "doom/sub"), assume_yes=True)
+    with pytest.raises(UnsafePathError, match="Refusing"):
+        delete_download(GogLayout(gog_root, "doom/sub"))
 
 
 def test_removes_a_stray_file_child(gog_root: Path):
     (gog_root / "notes.txt").write_text("x")
-    remove_download(GogLayout(gog_root, "notes.txt"), assume_yes=True)
+    delete_download(GogLayout(gog_root, "notes.txt"))
     assert not (gog_root / "notes.txt").exists()
-
-
-# --- remove_downloads (batch) --------------------------------------------
-
-
-def test_batch_removes_the_present_ones_and_reports_the_rest(gog_root: Path, capsys):
-    (gog_root / "quake").mkdir()
-    remove_downloads([GogLayout(gog_root, n) for n in ("doom", "quake", "ghost")], assume_yes=True)
-    assert not (gog_root / "doom").exists()
-    assert not (gog_root / "quake").exists()
-    assert "Nothing to remove for 'ghost'" in capsys.readouterr().out
-
-
-def test_batch_confirms_once_for_the_whole_set(gog_root: Path, monkeypatch):
-    (gog_root / "quake").mkdir()
-    prompts = []
-    monkeypatch.setattr("click.confirm", lambda msg, **kw: prompts.append(msg) or True)
-    remove_downloads([GogLayout(gog_root, n) for n in ("doom", "quake")], assume_yes=False)
-
-    assert len(prompts) == 1
-    assert not (gog_root / "doom").exists() and not (gog_root / "quake").exists()
-
-
-def test_batch_abort_removes_nothing(gog_root: Path, monkeypatch):
-    (gog_root / "quake").mkdir()
-    monkeypatch.setattr("click.confirm", lambda *a, **k: (_ for _ in ()).throw(click.Abort()))
-    with pytest.raises(click.Abort):
-        remove_downloads([GogLayout(gog_root, n) for n in ("doom", "quake")], assume_yes=False)
-    assert (gog_root / "doom").exists()
 
 
 # --- ensure_download_dir --------------------------------------------------
@@ -115,5 +77,5 @@ def test_creates_a_missing_download_dir_under_tmp(tmp_path: Path, set_download_d
 def test_refuses_a_missing_download_dir_outside_tmp(tmp_path: Path, set_download_dir, monkeypatch):
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path / "nowhere"))
     set_download_dir(tmp_path / "missing")
-    with pytest.raises(click.ClickException, match="does not exist"):
+    with pytest.raises(ConfigError, match="does not exist"):
         ensure_download_dir("gog")

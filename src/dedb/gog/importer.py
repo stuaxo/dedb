@@ -5,13 +5,12 @@ duplicating it.
 
 from pathlib import Path
 
-import click
-
 from ..convert import DosemuConfig
 from ..convert import build as build_dosbox
 from ..convert import convert as convert_dosbox
 from .layout import GogLayout
 from .profiles import (
+    ProfileError,
     default_profile,
     legacy_find_confs,
     profile_slug,
@@ -35,10 +34,10 @@ def _resolve_targets(layout: GogLayout, profile: str | None) -> list[tuple[str, 
 
     if not profiles:
         if profile is not None:
-            raise click.ClickException(f"No launch profiles found for '{layout.gamename}'.")
+            raise ProfileError(f"No launch profiles found for '{layout.gamename}'.")
         conf_files = legacy_find_confs(layout.game)
         if not conf_files:
-            raise click.ClickException(f"No dosbox*.conf found under {layout.game}")
+            raise FileNotFoundError(f"No dosbox*.conf found under {layout.game}")
         return [("default", conf_files, conf_files[0].parent)]
 
     targets = [select_profile(layout.game, profile)] if profile is not None else profiles
@@ -71,7 +70,7 @@ def import_gog_game(
     targets = _resolve_targets(layout, profile)
 
     if output_dir.exists() and not force:
-        raise click.ClickException(f"'{output_dir}' already exists. Use --force to overwrite.")
+        raise FileExistsError(f"'{output_dir}' already exists. Use --force to overwrite.")
 
     results: dict[str, list[Path]] = {}
     for label, conf_files, working_dir in targets:

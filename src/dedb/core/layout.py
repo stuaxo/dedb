@@ -10,13 +10,22 @@ field (and ``download_dir``), and adds any source-specific paths.
 import shutil
 from pathlib import Path
 
-import click
-
 from .refs import long_target
 
 # A download root with fewer parts than this - '/', '/home', a bare drive -
 # is almost certainly a misconfigured download_dir, not somewhere to rmtree.
 _MIN_SAFE_ROOT_PARTS = 3
+
+
+class NotDownloadedError(FileNotFoundError):
+    """A game's files haven't been extracted yet - the caller needs to run
+    ``dedb download`` first. Reported to the user as a one-line error."""
+
+
+class UnsafePathError(RuntimeError):
+    """A remove target failed the download-tree safety checks (a shallow
+    ``download_dir``, an item that isn't a direct child of it, a target
+    outside the item dir). Reported to the user as a one-line error."""
 
 
 class LayoutPaths:
@@ -67,11 +76,11 @@ class LayoutPaths:
         return self.game.is_dir() and any(self.game.iterdir())
 
     def require_downloaded(self, scheme: str) -> None:
-        """Raise a ``click.ClickException`` pointing at ``dedb download``
-        unless the game's files have already been extracted. ``scheme`` is
-        the owning backend's, only needed to spell the download command."""
+        """Raise ``NotDownloadedError`` pointing at ``dedb download`` unless
+        the game's files have already been extracted. ``scheme`` is the
+        owning backend's, only needed to spell the download command."""
         if not self.is_downloaded():
-            raise click.ClickException(
+            raise NotDownloadedError(
                 f"'{self.name}' hasn't been downloaded yet. "
                 f"Run `dedb download {long_target(scheme, self.name)}` first."
             )
@@ -91,15 +100,15 @@ class LayoutPaths:
         item = self.dir.resolve()
         resolved = target.resolve()
         if len(root.parts) < _MIN_SAFE_ROOT_PARTS:
-            raise click.ClickException(
+            raise UnsafePathError(
                 f"Refusing to touch '{root}' - download_dir looks misconfigured."
             )
         if item.parent != root:
-            raise click.ClickException(
+            raise UnsafePathError(
                 f"Refusing to remove under '{self.dir}' - not a single item below {root}."
             )
         if resolved != item and not resolved.is_relative_to(item):
-            raise click.ClickException(f"Refusing to remove '{target}' - outside '{self.dir}'.")
+            raise UnsafePathError(f"Refusing to remove '{target}' - outside '{self.dir}'.")
         if resolved.is_dir():
             shutil.rmtree(resolved, ignore_errors=True)
         elif resolved.exists():

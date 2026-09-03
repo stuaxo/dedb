@@ -3,8 +3,6 @@
 from collections.abc import Sequence
 from pathlib import Path
 
-import click
-
 from .autoexec import autoexec_as_userhook
 from .models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
 from .parser import parse_dosbox_confs
@@ -50,7 +48,7 @@ def write_outputs(
     (e.g. one per GOG launch profile - see dedb.gog.importer). Shared by
     convert() and the gog/archive importers."""
     if output_dir.exists() and not force:
-        raise click.ClickException(
+        raise FileExistsError(
             f"Output directory '{output_dir}' already exists. Use --force to overwrite."
         )
     output_dir.mkdir(parents=True, exist_ok=True)

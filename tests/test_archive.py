@@ -14,7 +14,6 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import click
 import pytest
 from internetarchive import get_session
 from internetarchive.item import Item
@@ -207,7 +206,7 @@ def test_import_archive_game_refuses_to_overwrite_without_force(tmp_path):
     layout = _downloaded_item(tmp_path)
     layout.dosemu.mkdir(parents=True)
 
-    with pytest.raises(click.ClickException, match="already exists"):
+    with pytest.raises(FileExistsError, match="already exists"):
         import_archive_game(layout)
     import_archive_game(layout, force=True)  # force overwrites
 
@@ -262,7 +261,7 @@ def test_prepare_returns_the_resolved_metadata(tmp_path, stub_metadata):
 
 def test_prepare_rejects_a_non_dosbox_item(tmp_path, stub_metadata):
     stub_metadata(metadata={"emulator": "scummvm"})
-    with pytest.raises(click.ClickException, match="not DOSBox"):
+    with pytest.raises(archive_client.NotDosItemError, match="not DOSBox"):
         _prepare(tmp_path)
 
 
@@ -272,7 +271,7 @@ def test_prepare_rejects_a_non_zip_archive(tmp_path, stub_metadata):
         metadata={"emulator_ext": "7z"},
         extra_files=[{"name": "Electro_Man_1992.7z", "format": "7z"}],
     )
-    with pytest.raises(click.ClickException, match=r"only \.zip"):
+    with pytest.raises(archive_client.NotDosItemError, match=r"only \.zip"):
         _prepare(tmp_path)
 
 

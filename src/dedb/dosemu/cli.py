@@ -13,6 +13,7 @@ from ..convert import build as build_config
 from ..convert import convert as convert_config
 from ..convert import parse_dosbox_argv, parse_dosbox_confs, render_issues
 from ..core import (
+    cli_command,
     complete_source,
     existing_conf,
     get_backends,
@@ -79,6 +80,7 @@ def _conf_paths(sources: tuple[str, ...]) -> list[Path] | None:
     default=False,
     help="Regenerate the config for an already-downloaded game (implies --force; skips if not downloaded).",
 )
+@cli_command
 def import_target(sources, output_dir, profile, backend, force, refreshconf):
     """Create DOSEMU2 config(s) from downloaded games or dosbox.conf files.
 
@@ -139,6 +141,7 @@ def import_target(sources, output_dir, profile, backend, force, refreshconf):
     default=False,
     help="Print the `dosemu` command `dedb run --dosemu` would run, and stop (game only).",
 )
+@cli_command
 def dosemuconf(sources, backend, profile, conf, userhook, issues, verbose, cmdline):
     """Show the converted DOSEMU2 output, from dosbox.conf(s) or a game.
 

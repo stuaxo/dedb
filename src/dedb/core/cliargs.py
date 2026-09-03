@@ -1,18 +1,66 @@
-"""Shared handling for a ``SOURCES`` argument that is *either* one or more
+"""CLI-argument helpers shared across the command modules.
+
+Handling for a ``SOURCES`` argument that is *either* one or more
 dosbox.conf paths *or* a single downloaded game reference
 (``gog:<id>`` / ``archive:<id>``, an archive.org URL, or a bare id with
-``-b``). Used by ``dedb dosboxconf``, ``dedb dosemuconf`` and ``dedb
-import``.
+``-b``), used by ``dedb dosboxconf``, ``dedb dosemuconf`` and ``dedb
+import``; plus ``cli_command``, which turns the domain layer's
+user-facing exceptions into a one-line click error.
 """
 
+import functools
 from pathlib import Path
 from urllib.parse import urlparse
 
 import click
 from click.shell_completion import CompletionItem
 
-from .backends import complete_target
+from .backends import GameRefError, complete_target
+from .downloader import DownloadError
+from .layout import UnsafePathError
 from .registry import get_backends
+from .settings import ConfigError
+
+# Failures that are part of normal use: a game reference that doesn't
+# resolve, a game that isn't downloaded, an unsupported archive.org item,
+# a launch profile that doesn't exist, a pre-existing output directory, a
+# download that fell over, missing configuration. `cli_command` renders
+# these as `Error: <message>`; anything outside this set keeps its
+# traceback, because at that point dedb really is broken.
+#
+# GameRefError, UnsafePathError and DownloadError sit on stdlib bases too
+# broad to catch here (ValueError / RuntimeError), so they're named.
+# FileNotFoundError / FileExistsError are precise enough to catch as-is
+# (they cover NotDownloadedError and the missing-conf / output-exists
+# cases). LookupError is the one broad base kept on purpose: it covers
+# gog.ProfileError and archive.NotDosItemError without this core module
+# importing those app packages.
+USER_FACING_ERRORS = (
+    GameRefError,
+    UnsafePathError,
+    DownloadError,
+    ConfigError,
+    FileNotFoundError,
+    FileExistsError,
+    LookupError,
+)
+
+
+def cli_command(func):
+    """Decorator for a click command body: convert a `USER_FACING_ERRORS`
+    into a `click.ClickException` (a one-line ``Error:`` message, exit 1).
+    Apply it directly above the function, below the click decorators."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except click.ClickException:
+            raise
+        except USER_FACING_ERRORS as exc:
+            raise click.ClickException(str(exc)) from exc
+
+    return wrapper
 
 
 def is_game_ref(source: str) -> bool:

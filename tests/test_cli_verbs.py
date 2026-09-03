@@ -9,7 +9,7 @@ tested in test_backends.
 Seam: patch the backend *class* method (instances are frozen dataclasses),
 patch `dedb.core.settings.get_settings` at its origin, and patch helpers
 the verb imports by name where the verb imports them
-(`dedb.cli.remove_downloads`).
+(`dedb.cli._remove_downloads`).
 """
 
 from pathlib import Path
@@ -196,7 +196,7 @@ def test_import_output_dir_rejects_multiple_games(download_dir):
 def test_rm_dispatches(download_dir, monkeypatch):
     seen = {}
     monkeypatch.setattr(
-        "dedb.cli.remove_downloads",
+        "dedb.cli._remove_downloads",
         lambda layouts, *, assume_yes: seen.update(
             names=[lo.dir.name for lo in layouts], assume_yes=assume_yes
         ),
@@ -213,7 +213,7 @@ def test_rm_expands_a_wildcard_and_dedups(tmp_path, monkeypatch):
     monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
     seen = {}
     monkeypatch.setattr(
-        "dedb.cli.remove_downloads",
+        "dedb.cli._remove_downloads",
         lambda layouts, *, assume_yes: seen.update(
             targets={(lo.dir.parent.name, lo.dir.name) for lo in layouts}
         ),
@@ -248,6 +248,28 @@ def test_rm_confirms_once_for_the_whole_set(tmp_path, monkeypatch):
     assert not (tmp_path / "gog" / "quake").exists()
 
 
+def test_rm_reports_a_missing_tree_and_deletes_the_present_one(tmp_path, monkeypatch):
+    (tmp_path / "gog" / "doom" / "game").mkdir(parents=True)
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+
+    result = CliRunner().invoke(cli, ["rm", "gog://doom", "gog://ghost", "-y"])
+
+    assert result.exit_code == 0, result.output
+    assert "Nothing to remove for 'ghost'" in result.output
+    assert "Removed 'doom'" in result.output
+    assert not (tmp_path / "gog" / "doom").exists()
+
+
+def test_rm_abort_at_the_prompt_removes_nothing(tmp_path, monkeypatch):
+    (tmp_path / "gog" / "doom" / "game").mkdir(parents=True)
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+
+    result = CliRunner().invoke(cli, ["rm", "gog://doom"], input="n\n")
+
+    assert result.exit_code == 1
+    assert (tmp_path / "gog" / "doom").exists()
+
+
 # --- -b/--backend component form ----------------------------------
 
 
@@ -265,7 +287,9 @@ def test_backend_option_equals_scheme_prefix(download_dir, spy_run):
 )
 def test_backend_option_errors(download_dir, args, match):
     result = CliRunner().invoke(cli, args)
-    assert result.exit_code == 2
+    # A bad game reference (bad --backend value, or a URL *and* --backend)
+    # is a GameRefError -> `Error: ...`, exit 1, like an unknown scheme.
+    assert result.exit_code == 1
     assert match in result.output
 
 

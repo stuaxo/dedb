@@ -9,6 +9,9 @@ are the same for both, and live here. (Which DOSBox binary to run is
 
 ``dosemu_argv`` / ``render_cmdline`` also back the ``--cmdline`` flag of
 ``run`` / ``dosboxconf`` / ``dosemuconf`` (see ``BackendBase.cmdline``).
+
+``launch`` reports a missing emulator by re-raising ``FileNotFoundError``
+with an install hint; the CLI turns that into a one-line error.
 """
 
 import shlex
@@ -16,8 +19,6 @@ import shutil
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
-
-import click
 
 from .layout import LayoutPaths
 
@@ -67,15 +68,15 @@ def launch(
     verbose: bool = False,
 ) -> int:
     """Run ``cmd`` (in ``cwd`` if given), echoing it first when ``verbose``
-    and turning a missing executable into a clean ``click.ClickException``
-    carrying ``missing_hint``. Returns the child's exit code."""
+    and re-raising a missing executable as ``FileNotFoundError`` carrying
+    ``missing_hint``. Returns the child's exit code."""
     if verbose:
-        click.echo(f"$ {render_cmdline(cmd, cwd)}")
+        print(f"$ {render_cmdline(cmd, cwd)}")
 
     try:
         return subprocess.run(cmd, cwd=cwd).returncode
     except FileNotFoundError:
-        raise click.ClickException(missing_hint) from None
+        raise FileNotFoundError(missing_hint) from None
 
 
 def launch_dosemu(

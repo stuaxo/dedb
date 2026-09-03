@@ -10,11 +10,11 @@ import re
 import urllib.parse
 from pathlib import Path
 
-import click
 from internetarchive import download as ia_download
 from internetarchive import get_item, search_items
 from requests.exceptions import RequestException
 
+from ..core import DownloadError
 from ..core.client import BaseClient
 from .models import ArchiveFavorite, ArchiveItemInfo
 
@@ -76,7 +76,7 @@ class ArchiveClient(BaseClient):
             identifier, files=[filename], destdir=str(dest_dir), no_directory=True, retries=3
         )
         if errors:
-            raise click.ClickException(
+            raise DownloadError(
                 f"Could not download '{filename}' from archive.org item '{identifier}'"
             )
 

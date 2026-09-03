@@ -17,11 +17,14 @@ merge-in variant.
 import re
 from pathlib import Path
 
-import click
-
 from ..core import LaunchProfile
 from .gameinfo import parse_profiles
 from .models import GogProfile
+
+
+class ProfileError(LookupError):
+    """A requested GOG launch profile doesn't exist, or a game exposes no
+    usable launch profile at all. Reported to the user as a one-line error."""
 
 
 def legacy_find_confs(extracted_dir: Path) -> list[Path]:
@@ -74,7 +77,7 @@ def resolve_conf_files(extracted_dir: Path, profile: GogProfile) -> list[Path]:
     for basename in profile.conf_files:
         matches = list(extracted_dir.rglob(basename))
         if not matches:
-            raise click.ClickException(
+            raise FileNotFoundError(
                 f"Could not locate conf file '{basename}' under {extracted_dir}"
             )
         resolved.append(matches[0])
@@ -89,7 +92,7 @@ def select_profile(extracted_dir: Path, profile_name: str) -> GogProfile:
             return p
 
     available = ", ".join(profile_slug(p) for p in profiles) or "(none)"
-    raise click.ClickException(f"No such profile '{profile_name}'. Available: {available}")
+    raise ProfileError(f"No such profile '{profile_name}'. Available: {available}")
 
 
 def get_conf_files(extracted_dir: Path, profile_name: str | None) -> list[Path]:
@@ -106,7 +109,7 @@ def get_conf_files(extracted_dir: Path, profile_name: str | None) -> list[Path]:
 
     conf_files = legacy_find_confs(extracted_dir)
     if not conf_files:
-        raise click.ClickException(f"No dosbox*.conf found under {extracted_dir}")
+        raise FileNotFoundError(f"No dosbox*.conf found under {extracted_dir}")
     return conf_files
 
 

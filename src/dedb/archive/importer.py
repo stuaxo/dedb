@@ -9,17 +9,15 @@ game's dosbox.conf goes through.
 
 from pathlib import Path
 
-import click
-
 from ..convert import DosemuConfig, build_from_argv, write_outputs
-from ..core import GameMetadataFile, long_target
+from ..core import GameMetadataFile, NotDownloadedError, long_target
 from .layout import ArchiveLayout
 from .models import ArchiveMetadata
 
 
 def load_metadata(layout: ArchiveLayout) -> ArchiveMetadata:
     if not layout.metadata_json.is_file():
-        raise click.ClickException(
+        raise NotDownloadedError(
             f"No metadata.json for '{layout.identifier}' - run "
             f"`dedb download {long_target('archive', layout.identifier)}` first."
         )

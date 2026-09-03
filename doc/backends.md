@@ -61,7 +61,7 @@ profile).
    (dispatches to `runner_module`), `convert` (calls your `_import`),
    `ensure_downloaded` (resolves `downloader_module` and drives your
    `Downloader`), `refresh_metadata` and `iter_local_games`.
-   `dedb rm` works off `layout` + `dedb.core.remove_downloads` directly.
+   `dedb rm` works off `layout` + `dedb.core.delete_download` directly.
    Override `identifier_from_url` if the backend has its own URL form, and
    `dosbox_command_line` (returns `(argv, working_dir)`) so `dedb dosboxconf`
    (and `dedb dosemuconf --issues`) can inspect a game - a GOG game's is its

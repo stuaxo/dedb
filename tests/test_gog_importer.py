@@ -7,7 +7,6 @@ no game, company or product name from any of them.
 
 import json
 
-import click
 import pytest
 
 from dedb.gog.importer import import_gog_game
@@ -38,7 +37,7 @@ def test_refuses_an_existing_output_dir_without_force(tmp_path, base_profile_con
     layout = _extracted(tmp_path, base_profile_conf)
     layout.dosemu.mkdir(parents=True)
 
-    with pytest.raises(click.ClickException, match="already exists"):
+    with pytest.raises(FileExistsError, match="already exists"):
         import_gog_game(layout)
     import_gog_game(layout, force=True)  # force overwrites
 
