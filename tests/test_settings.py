@@ -110,10 +110,13 @@ def test_an_unknown_dosbox_choice_is_rejected_at_validation():
 # --- Settings.app_paths / .download_dir_for ---------------------------
 
 
-def test_app_paths_prepends_the_builtin_and_dedupes_it():
-    assert Settings().app_paths() == ["dedb.dedb", "dedb.dosbox", "dedb.gog", "dedb.archive"]
-    # a config that names dedb.dedb explicitly doesn't get it twice, order kept
-    assert Settings(apps=["dedb.gog", "dedb.dedb"]).app_paths() == ["dedb.dedb", "dedb.gog"]
+def test_app_paths_is_the_configured_apps_deduped():
+    assert Settings().app_paths() == ["dedb.dosbox", "dedb.gog", "dedb.archive"]
+    # duplicates dropped, order kept
+    assert Settings(apps=["dedb.gog", "dedb.gog", "dedb.dosbox"]).app_paths() == [
+        "dedb.gog",
+        "dedb.dosbox",
+    ]
 
 
 def test_download_dir_for_namespaces_by_scheme_or_is_none(tmp_path):
