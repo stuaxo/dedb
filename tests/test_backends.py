@@ -8,12 +8,12 @@ patch the origin - `dedb.core.settings.get_settings`,
 import dataclasses
 import json
 
-import click
 import pytest
 
 from dedb.archive.backend import ArchiveBackend
 from dedb.archive.models import ArchiveFavorite
 from dedb.core import (
+    GameRefError,
     Target,
     complete_target,
     get_backends,
@@ -189,7 +189,7 @@ def test_resolve_urls(value, kwargs, expected):
     ],
 )
 def test_resolve_url_errors(value, kwargs, match):
-    with pytest.raises(click.ClickException, match=match):
+    with pytest.raises(GameRefError, match=match):
         resolve(value, **kwargs)
 
 
@@ -210,7 +210,7 @@ def test_resolve_game_backend_flag_is_a_scheme_prefix():
     ],
 )
 def test_resolve_game_backend_flag_errors(value, backend, match):
-    with pytest.raises(click.UsageError, match=match):
+    with pytest.raises(GameRefError, match=match):
         resolve_game(value, backend)
 
 
@@ -233,7 +233,7 @@ def test_bare_name_resolves_when_downloaded_under_one_backend(local_downloads):
 
 def test_bare_name_ambiguous_across_backends(local_downloads):
     (local_downloads / "archive" / "tyrian_2000").mkdir(parents=True)
-    with pytest.raises(click.ClickException, match="multiple backends"):
+    with pytest.raises(GameRefError, match="multiple backends"):
         resolve("tyrian_2000")
 
 
@@ -247,7 +247,7 @@ def test_bare_name_ambiguous_across_backends(local_downloads):
     ],
 )
 def test_bare_name_miss_suggests_closest(local_downloads, typed, suggestion):
-    with pytest.raises(click.ClickException) as exc:
+    with pytest.raises(GameRefError) as exc:
         resolve(typed)
     message = str(exc.value)
     assert "gog://" in message  # always offers the scheme form

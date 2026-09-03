@@ -17,7 +17,6 @@ from collections.abc import Sequence
 from importlib import import_module
 from urllib.parse import parse_qs, urlparse
 
-import click
 from click.shell_completion import CompletionItem
 
 from . import downloads, settings
@@ -25,6 +24,13 @@ from .local import LocalGame
 from .refs import Target, long_target, short_target
 from .registry import get_backends
 from .runner import dosemu_argv
+
+
+class GameRefError(ValueError):
+    """A game reference (a ``<scheme>://<id>`` URL, an archive.org item
+    URL, a bare downloaded name, a ``--backend`` shorthand) that doesn't
+    resolve to a known backend and identifier. Reported to the user as a
+    one-line error, not a traceback."""
 
 
 class BackendBase:
@@ -154,7 +160,9 @@ class BackendBase:
         `dedb dosboxconf`. A GOG game's is ``-conf`` files; an archive.org
         item's is the emularity-style ``-c`` command line. Backends that
         can't produce one raise."""
-        raise click.ClickException(f"Can't inspect a {self.scheme}:// game's DOSBox command line.")
+        raise NotImplementedError(
+            f"Can't inspect a {self.scheme}:// game's DOSBox command line."
+        )
 
 
 def _closest_name(value: str, names: "list[str]") -> "str | None":
@@ -177,7 +185,7 @@ def _closest_name(value: str, names: "list[str]") -> "str | None":
 
 def _finish(backend: BackendBase, identifier: str, profile: "str | None", raw: str) -> Target:
     if profile is not None and not backend.supports_profile:
-        raise click.ClickException(
+        raise GameRefError(
             f"{backend.scheme}:// games have no launch profiles (drop --profile)."
         )
     return Target(backend.scheme, identifier, profile, raw)
@@ -191,8 +199,7 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
     host), optionally ``?profile=<slug>``; an ``https://archive.org/...``
     item URL; or a bare name that matches a local download under exactly
     one backend. ``profile`` (the --profile flag) overrides any
-    ``?profile=`` in the URL. Raises ``click.ClickException`` if nothing
-    resolves.
+    ``?profile=`` in the URL. Raises ``GameRefError`` if nothing resolves.
     """
     registry = get_backends()
     parsed = urlparse(value)
@@ -203,7 +210,7 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
             identifier = backend.identifier_from_url(value)
             if identifier is not None:
                 return _finish(backend, identifier, profile, value)
-        raise click.ClickException(
+        raise GameRefError(
             f"Don't know how to handle URL: {value}\nUse a scheme instead, e.g. archive://<id>."
         )
 
@@ -212,13 +219,13 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
         # gog:x -> path, gog://x -> netloc, gog:///x -> path; all mean the same.
         identifier = (parsed.netloc or parsed.path.lstrip("/")).rstrip("/")
         if not identifier:
-            raise click.ClickException(f"No game id in '{value}'")
+            raise GameRefError(f"No game id in '{value}'")
         url_profile = parse_qs(parsed.query).get("profile", [None])[0]
         return _finish(backend, identifier, profile if profile is not None else url_profile, value)
 
     if scheme:
         known = ", ".join(f"{s}://" for s in sorted(registry))
-        raise click.ClickException(f"Unknown scheme '{scheme}://'. Known schemes: {known}")
+        raise GameRefError(f"Unknown scheme '{scheme}://'. Known schemes: {known}")
 
     # Bare name -> match against local downloads.
     local = {backend: backend.local_names() for backend in registry.values()}
@@ -237,9 +244,9 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
             "Otherwise prefix it with a scheme, e.g. "
             + " or ".join(long_target(s, value) for s in schemes)
         )
-        raise click.ClickException("\n".join(lines))
+        raise GameRefError("\n".join(lines))
     found = sorted(backend.scheme for backend in hits)
-    raise click.ClickException(
+    raise GameRefError(
         f"'{value}' is downloaded under multiple backends ({', '.join(found)}).\n"
         f"Disambiguate with a scheme, e.g. {long_target(found[0], value)}"
     )
@@ -300,12 +307,12 @@ def resolve_game(
     """:func:`resolve`, plus the ``-b/--backend`` shorthand used by the CLI
     verbs: ``resolve_game("x", "gog")`` means ``resolve("gog://x")``. A
     ``backend`` and a ``<scheme>://`` URL in ``value`` are mutually
-    exclusive. Raises ``click.UsageError`` for a bad ``--backend``."""
+    exclusive. Raises ``GameRefError`` for a bad ``--backend``."""
     if backend is not None:
         registry = get_backends()
         if backend not in registry:
-            raise click.UsageError(f"Unknown backend '{backend}'. Known: {', '.join(registry)}.")
+            raise GameRefError(f"Unknown backend '{backend}'. Known: {', '.join(registry)}.")
         if "://" in value:
-            raise click.UsageError("Give a <scheme>://<id> URL or --backend, not both.")
+            raise GameRefError("Give a <scheme>://<id> URL or --backend, not both.")
         value = long_target(backend, value)
     return resolve(value, profile=profile)

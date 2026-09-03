@@ -1,15 +1,14 @@
 """Operations on the downloads tree: resolving an app's namespaced
 subdir under ``[download_dir]`` (with the policy about when to create it),
-and the shared ``dedb rm`` implementation.
+and deleting a downloaded item.
 
 The pure "where is it" part is ``Settings.download_dir_for``; this module
-is the part that also touches the filesystem and reports errors.
+is the part that also touches the filesystem. The prompting and reporting
+around ``dedb rm`` live in ``dedb.cli``.
 """
 
 import tempfile
 from pathlib import Path
-
-import click
 
 from . import settings
 from .layout import LayoutPaths
@@ -17,13 +16,13 @@ from .layout import LayoutPaths
 
 def require_download_dir(app_name: str) -> Path:
     """The app's ``<download_dir>/<scheme>`` subdir (see
-    ``Settings.download_dir_for``), raising a ClickException when
+    ``Settings.download_dir_for``), raising ``ConfigError`` when
     [download_dir] isn't configured - for commands that can't do anything
     without it. Doesn't check the directory exists; the download path uses
     ensure_download_dir for that."""
     app_dir = settings.get_settings().download_dir_for(app_name)
     if app_dir is None:
-        raise click.ClickException(
+        raise settings.ConfigError(
             f"download_dir is not set. Add it to {settings.SETTINGS_PATH}, e.g.:\n"
             '  download_dir = "/path/to/downloads"'
         )
@@ -52,52 +51,18 @@ def ensure_download_dir(app_name: str) -> Path:
         app_dir.mkdir(parents=True, exist_ok=True)
         return app_dir
 
-    raise click.ClickException(
+    raise settings.ConfigError(
         f"download_dir '{configured}' does not exist. Create it first "
         f"(it's auto-created only under {tmp_root})."
     )
 
 
-def remove_download(layout: LayoutPaths, *, assume_yes: bool) -> None:
-    """Shared implementation of `dedb rm`: delete a downloaded game/item's
-    whole directory tree, after confirming. The safety checks live in
-    `LayoutPaths._safe_rmtree`."""
-    if not layout.dir.exists():
-        click.echo(f"Nothing to remove for '{layout.dir.name}' ({layout.dir} doesn't exist)")
-        return
-    if not assume_yes:
-        click.confirm(f"Remove '{layout.dir.name}' and everything under {layout.dir}?", abort=True)
-    _rm_confirmed(layout)
-
-
-def remove_downloads(layouts: "list[LayoutPaths]", *, assume_yes: bool) -> None:
-    """`dedb rm` for one or more downloads: report the ones that don't
-    exist, confirm the rest *once* for the whole set (unless
-    ``assume_yes``), then delete each."""
-    present = [lo for lo in layouts if lo.dir.exists()]
-    for lo in layouts:
-        if not lo.dir.exists():
-            click.echo(f"Nothing to remove for '{lo.dir.name}' ({lo.dir} doesn't exist)")
-    if not present:
-        return
-    if not assume_yes:
-        if len(present) == 1:
-            lo = present[0]
-            click.confirm(f"Remove '{lo.dir.name}' and everything under {lo.dir}?", abort=True)
-        else:
-            click.echo(f"About to remove {len(present)} downloads:")
-            for lo in present:
-                click.echo(f"  {lo.dir.name}  ({lo.dir})")
-            click.confirm("Proceed?", abort=True)
-    for lo in present:
-        _rm_confirmed(lo)
-
-
-def _rm_confirmed(layout: LayoutPaths) -> None:
+def delete_download(layout: LayoutPaths) -> None:
+    """Delete a downloaded game/item's whole directory tree. The safety
+    checks live in ``LayoutPaths._safe_rmtree`` (they raise
+    ``UnsafePathError``); a filesystem failure raises ``OSError``. The
+    caller (``dedb rm``) checks the tree exists and does the prompting."""
     try:
         layout.rm()
     except OSError as exc:
-        raise click.ClickException(
-            f"Could not remove '{layout.dir.name}' ({layout.dir}): {exc}"
-        ) from exc
-    click.echo(f"Removed '{layout.dir.name}' ({layout.dir})")
+        raise OSError(f"Could not remove '{layout.dir.name}' ({layout.dir}): {exc}") from exc

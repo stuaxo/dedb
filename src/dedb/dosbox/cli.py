@@ -7,6 +7,7 @@ A flat click.Command; the root CLI registers it so it runs as
 import click
 
 from ..core import (
+    cli_command,
     complete_source,
     existing_conf,
     get_backends,
@@ -59,6 +60,7 @@ from .inspector import inspect_command_line
     default=False,
     help="Print the `dosbox` command `dedb run --dosbox` would run, and stop.",
 )
+@cli_command
 def dosboxconf(
     sources: tuple[str, ...],
     backend: str | None,

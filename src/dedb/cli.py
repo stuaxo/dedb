@@ -15,10 +15,11 @@ import click
 from . import completion as _completion
 from .core import (
     LocalGame,
+    cli_command,
     complete_target,
+    delete_download,
     get_apps,
     get_backends,
-    remove_downloads,
     render_cmdline,
     resolve_game,
     short_target,
@@ -100,6 +101,7 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
     help="Print the command --dosbox/--dosemu would run and stop "
     "(needs the game downloaded; writes nothing).",
 )
+@cli_command
 def run(
     game,
     emulator_args,
@@ -146,6 +148,7 @@ def run(
 @click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
 @_download_options
+@cli_command
 def download(games, backend, keep, refresh_metadata, redownload):
     """Download and extract one or more games.
 
@@ -194,6 +197,7 @@ def _rm_glob_hits(pattern: str, backend: "str | None", registry) -> list:
 @click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
 @click.option("--yes", "-y", is_flag=True, help="Remove without prompting.")
+@cli_command
 def rm(games, backend, yes):
     """Delete one or more downloaded games' directory trees.
 
@@ -219,8 +223,31 @@ def rm(games, backend, yes):
     unique = {(be.scheme, identifier): be for be, identifier in pairs}
     layouts = [be.layout(identifier) for (_, identifier), be in unique.items()]
 
-    if layouts:
-        remove_downloads(layouts, assume_yes=yes)
+    _remove_downloads(layouts, assume_yes=yes)
+
+
+def _remove_downloads(layouts: list, *, assume_yes: bool) -> None:
+    """`dedb rm`'s prompting and reporting around `core.delete_download`:
+    skip the trees that aren't there, confirm the rest *once* for the
+    whole set (unless `assume_yes`), then delete each."""
+    present = [lo for lo in layouts if lo.dir.exists()]
+    for lo in layouts:
+        if not lo.dir.exists():
+            click.echo(f"Nothing to remove for '{lo.dir.name}' ({lo.dir} doesn't exist)")
+    if not present:
+        return
+    if not assume_yes:
+        if len(present) == 1:
+            lo = present[0]
+            click.confirm(f"Remove '{lo.dir.name}' and everything under {lo.dir}?", abort=True)
+        else:
+            click.echo(f"About to remove {len(present)} downloads:")
+            for lo in present:
+                click.echo(f"  {lo.dir.name}  ({lo.dir})")
+            click.confirm("Proceed?", abort=True)
+    for lo in present:
+        delete_download(lo)
+        click.echo(f"Removed '{lo.dir.name}' ({lo.dir})")
 
 
 # --- refreshmetadata --------------------------------------------------
@@ -229,6 +256,7 @@ def rm(games, backend, yes):
 @click.command("refreshmetadata")
 @click.argument("games", nargs=-1, shell_complete=_complete_game)
 @_backend_option
+@cli_command
 def refreshmetadata(games, backend):
     """Re-fetch backend metadata for games and rewriting each metadata.json.
 
@@ -362,6 +390,7 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     is_flag=True,
     help="Columns: target, title, classification, converted?, launch profiles.",
 )
+@cli_command
 def list_downloads(
     backends: list[str], short: bool, names_only: bool, qualified: bool, verbose: bool
 ) -> None:

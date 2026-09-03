@@ -5,9 +5,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import click
-
-from ..core import Downloader, GameMetadataFile, LaunchProfile
+from ..core import Downloader, DownloadError, GameMetadataFile, LaunchProfile
 from .client import FETCH_ERRORS, ArchiveClient, NotDosItemError
 from .metadata import get_metadata
 from .models import ArchiveMetadata
@@ -28,20 +26,20 @@ class ArchiveDownloader(Downloader):
         name = self.layout.name
         try:
             metadata = get_metadata(name, refresh=refresh)
-        except NotDosItemError as exc:
-            raise click.ClickException(str(exc)) from exc
+        except NotDosItemError:
+            raise  # already a clean, user-facing LookupError
         except (LookupError, *FETCH_ERRORS) as exc:
-            raise click.ClickException(
+            raise DownloadError(
                 f"Could not fetch archive.org metadata for '{name}': {exc}"
             ) from exc
 
         if metadata.emulator.lower() != "dosbox":
-            raise click.ClickException(
+            raise NotDosItemError(
                 f"'{name}' is an archive.org '{metadata.emulator}' item, "
                 "not DOSBox - not supported."
             )
         if metadata.emulator_ext != "zip":
-            raise click.ClickException(
+            raise NotDosItemError(
                 f"'{name}' ships a .{metadata.emulator_ext} archive - "
                 "only .zip items are supported so far."
             )

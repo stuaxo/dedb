@@ -4,10 +4,10 @@ backend's source-specific extras.
 
 from pathlib import Path
 
-import click
 import pytest
 
 from dedb.archive.layout import ArchiveLayout
+from dedb.core import NotDownloadedError, UnsafePathError
 from dedb.gog.layout import GogLayout
 
 
@@ -37,7 +37,7 @@ def test_is_downloaded_needs_a_non_empty_game_dir(tmp_path):
 
 def test_require_downloaded_points_at_the_download_command(tmp_path):
     layout = ArchiveLayout(tmp_path, "msdos_x")
-    with pytest.raises(click.ClickException, match=r"dedb download archive://msdos_x"):
+    with pytest.raises(NotDownloadedError, match=r"dedb download archive://msdos_x"):
         layout.require_downloaded("archive")
 
     layout.game.mkdir(parents=True)
@@ -103,7 +103,7 @@ def test_rm_of_an_absent_target_is_a_no_op(tmp_path):
 def test_safe_rmtree_refuses_an_item_that_is_not_a_direct_child(tmp_path, key):
     root = tmp_path / "downloads" / "gog"
     (root / "doom" / "sub").mkdir(parents=True)
-    with pytest.raises(click.ClickException, match="Refusing"):
+    with pytest.raises(UnsafePathError, match="Refusing"):
         GogLayout(root, key).rm()
 
 
@@ -114,11 +114,11 @@ def test_safe_rmtree_refuses_a_symlinked_item_pointing_outside(tmp_path):
     outside.mkdir()
     (root / "link").symlink_to(outside)
 
-    with pytest.raises(click.ClickException, match="Refusing"):
+    with pytest.raises(UnsafePathError, match="Refusing"):
         GogLayout(root, "link").rm()
     assert outside.is_dir()
 
 
 def test_safe_rmtree_refuses_a_shallow_download_root():
-    with pytest.raises(click.ClickException, match="misconfigured"):
+    with pytest.raises(UnsafePathError, match="misconfigured"):
         GogLayout(Path("/gog"), "doom").rm_game()

@@ -4,7 +4,6 @@ together into build() / build_from_config() / convert().
 
 from pathlib import Path
 
-import click
 import pytest
 
 from dedb.convert.converter import build, build_from_config, convert
@@ -76,7 +75,7 @@ def test_convert_refuses_to_overwrite_without_force(tmp_path: Path, write_conf, 
     output_dir = tmp_path / "out"
     output_dir.mkdir()
 
-    with pytest.raises(click.ClickException):
+    with pytest.raises(FileExistsError):
         convert([conf], output_dir)
 
 
