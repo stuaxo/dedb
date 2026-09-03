@@ -2,6 +2,9 @@
 
 DOSEMU2-DOSBOX importer and run games packaged for DOSBOX in DOSEMU2.
 
+At its core dedb translates a game's `dosbox.conf` + `[autoexec]` into a
+DOSEMU2 `dosemu.conf` + `userhook.bat`; see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 
 ## Core commands
 
