@@ -73,20 +73,20 @@ class DosboxConfig(BaseModel):
     coerce_int = field_validator("memsize", "irq", "dma", "hdma", mode="before")(coerce_int)
 
     @classmethod
-    def config_keys(cls) -> dict[tuple[str, str], str]:
-        """``{(section, key): field_name}`` for every modelled dosbox.conf
+    def config_keys_by_section(cls) -> dict[str, dict[str, str]]:
+        """``{section: {key: field_name}}`` for every modelled dosbox.conf
         item, read from each field's ``validation_alias`` - the same walk
         ``dedb.dosbox.fieldmap`` does (``alias.path[0]`` is the section,
         ``alias.path[-1]`` the key). Lets a caller building a config from
         somewhere other than a .conf file (e.g. a command line's
         ``config -set section key=value``) check a section/key pair is one
         this model actually reads."""
-        keys: dict[tuple[str, str], str] = {}
+        by_section: dict[str, dict[str, str]] = {}
         for name, field in cls.model_fields.items():
             alias = field.validation_alias
             assert isinstance(alias, AliasPath)  # every DosboxConfig field has one
-            keys[(alias.path[0], alias.path[-1])] = name
-        return keys
+            by_section.setdefault(alias.path[0], {})[alias.path[-1]] = name
+        return by_section
 
 
 class DosemuConfig(BaseModel):

@@ -157,14 +157,14 @@ def parse_dosbox_command_line(
     if scanned.fullscreen:
         fragments.append(["sdl", "fullscreen=true"])
 
-    modelled = DosboxConfig.config_keys()
+    modelled = DosboxConfig.config_keys_by_section()
     for tokens in fragments:
         item = _fragment_to_item(tokens)
         if item is None:
             continue
         section, key, value = item
         result.config.setdefault(section, {})[key] = value
-        if (section, key) not in modelled:
+        if key not in modelled.get(section, {}):
             result.unmodelled.append((section, key))
 
     # 3. autoexec: conf [autoexec], then argv -c commands, then the
