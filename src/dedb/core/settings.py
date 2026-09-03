@@ -98,7 +98,9 @@ _BUILTIN_APPS = ("dedb.dedb",)
 class Settings(BaseModel):
     # dotted module paths, each expected to expose a `cli.commands` list -
     # mirrors Django's INSTALLED_APPS. `dedb.dedb` is prepended by
-    # app_paths(), so it isn't listed here.
+    # app_paths(), so it isn't listed here. This is the "every app dedb
+    # ships" default; dedbconf.default.toml leaves `apps` commented so a
+    # fresh config picks it up. Keep the two in sync.
     apps: list[str] = [
         "dedb.dosbox",
         "dedb.gog",
