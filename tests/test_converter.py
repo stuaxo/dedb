@@ -1,5 +1,5 @@
 """Tests for dedb.convert.converter: the parser, models and shims wired
-together, matching what the importdosbox command does.
+together into build() / build_from_parsed() / convert().
 """
 
 from pathlib import Path

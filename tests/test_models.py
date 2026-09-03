@@ -18,11 +18,9 @@ from dedb.testing.model_naming import (
     assert_validation_aliases_are_structural,
 )
 
-# Every left/right model pair this app translates between. A left model's
-# validation_alias only locates a value in its source format; a right
-# model's serialization_alias only adds its target format's prefix.
-# Add a pair here when a new translation is added, rather than writing a
-# one-off naming test for it.
+# DosboxConfig's validation_alias only locates a value in dosbox.conf;
+# DosemuConfig's serialization_alias only adds the `$_` prefix. Neither
+# renames - that's DosemuConfigFromDosbox's job.
 LEFT_MODELS = [DosboxConfig]
 RIGHT_MODELS = [(DosemuConfig, "$_")]
 
@@ -100,26 +98,21 @@ def test_bool_string_coercion_for_multiple_fields(raw: str, expected: bool):
     assert config.pcspeaker is expected
 
 
-def test_fullscreen_defaults_to_false_when_absent():
-    config = DosboxConfig.model_validate({})
-
-    assert config.fullscreen is False
+@pytest.mark.parametrize(
+    ("field", "dosbox_default"),
+    [("fullscreen", False), ("cycles", "auto"), ("memsize", 16), ("sbtype", "sb16")],
+)
+def test_absent_fields_take_dosbox_own_default(field: str, dosbox_default):
+    assert getattr(DosboxConfig.model_validate({}), field) == dosbox_default
 
 
 def test_cycles_is_kept_as_dosbox_wrote_it():
     """cycles is DOSBox's own free-form value ("max", "auto", "max 80%",
     "fixed 3000"...); DosboxConfig stores it verbatim and leaves
-    interpreting it to dosbox_to_dosemu."""
+    interpreting it to the translation model."""
     config = DosboxConfig.model_validate({"cpu": {"cycles": "fixed 3000"}})
 
     assert config.cycles == "fixed 3000"
-
-
-def test_cycles_defaults_to_auto_when_absent():
-    """DOSBox's own default for cycles."""
-    config = DosboxConfig.model_validate({})
-
-    assert config.cycles == "auto"
 
 
 @pytest.mark.parametrize(
@@ -134,13 +127,6 @@ def test_memsize_string_coercion(memsize: str, expected: int):
     config = DosboxConfig.model_validate({"dosbox": {"memsize": memsize}})
 
     assert config.memsize == expected
-
-
-def test_memsize_defaults_to_16mb_when_absent():
-    """DOSBox's own default for memsize."""
-    config = DosboxConfig.model_validate({})
-
-    assert config.memsize == 16
 
 
 @pytest.mark.parametrize(
@@ -185,15 +171,12 @@ def test_dosbox_to_dosemu_floors_then_converts_memsize_to_dpmi(memsize: int, exp
     assert target.dpmi == expected_dpmi_kb
 
 
-def test_dosbox_to_dosemu_carries_fullscreen_through_unchanged():
-    target = dosbox_to_dosemu(DosboxConfig(fullscreen=True))
+def test_dosbox_to_dosemu_translates_the_remaining_fields():
+    target = dosbox_to_dosemu(
+        DosboxConfig(fullscreen=True, pcspeaker=True, serial1="dummy", joysticktype="none")
+    )
 
-    assert target.X_fullscreen is True
-
-
-def test_dosbox_to_dosemu_translates_speaker_and_serial_and_joystick():
-    target = dosbox_to_dosemu(DosboxConfig(pcspeaker=True, serial1="dummy", joysticktype="none"))
-
+    assert target.X_fullscreen is True  # renamed, copied unchanged
     assert target.speaker == "emulated"
     assert target.com1 == ""
     assert target.joystick == ""
@@ -203,7 +186,7 @@ def test_dosbox_to_dosemu_translates_speaker_and_serial_and_joystick():
     )
 
     assert target_alt.speaker == ""
-    assert target_alt.com1 == ""  # Always returns empty for now
+    assert target_alt.com1 == ""  # always empty for now
     assert target_alt.joystick == "/dev/input/js0"
 
 
