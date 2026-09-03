@@ -75,7 +75,8 @@ Games are stored in `<download_dir>/archive/<identifier>/`. This directory conta
 * `download/` - the downloaded `.zip` file (deleted automatically after extraction unless you run with `--keep`)
 * `game/` - the extracted game files
 * `metadata.json` - standard dedb metadata (raw archive.org metadata is stored in the `source` field)
-* `dosemu/` - generated DOSEMU2 configuration files (`dosemu.conf` and `userhook.bat`)
+* `dosemu/` - generated DOSEMU2 configuration files (`dosemu.conf` and `userhook.bat`; `hook/` stages the active `userhook.bat` as its own DOSEMU2 drive at launch)
+* `dosemu_local/` - DOSEMU2's per-game scratch dir (`--Flocal_dir`)
 
 ### How games run in DOSBox
 
