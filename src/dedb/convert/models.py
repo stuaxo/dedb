@@ -181,82 +181,6 @@ class DosemuConfig(BaseModel):
         return "\n".join(lines) + "\n"
 
 
-# --- Converters: one DOSBox value -> its DOSEMU2 form. Wired as
-# mode="before" validators on DosemuConfigFromDosbox. Each docstring is
-# the full rationale; the field's `description` is the one-line gloss the
-# field map prints.
-
-
-def _cycles_to_cpuspeed(cycles: str) -> int:
-    """DOSBox's cycles throttles emulated instructions per millisecond;
-    DOSEMU2's cpuspeed calibrates a reported clock speed in MHz -
-    different measurements that happen to share a "0 = auto" convention.
-    cycles may be e.g. "max", "auto", "max 80%", "fixed 3000"; only a
-    bare number carries a value across, anything else maps to 0."""
-    first_token = cycles.strip().lower().split()[0] if cycles.strip() else ""
-    if first_token in ("max", "auto"):
-        return 0
-    try:
-        return int(first_token)
-    except ValueError:
-        return 0
-
-
-def _memsize_to_dpmi_kb(memsize: int) -> int:
-    """DOSBox shares one memsize figure (Mb) across XMS/EMS/DPMI; DOSEMU2
-    sizes each pool separately (dosemu2 src/doc/README/config), and GOG
-    confs frequently set memsize as low as 16Mb - copying it straight
-    into $_dpmi would badly under-provision DPMI, so it's floored
-    against DOSEMU2's own documented default before converting to Kb.
-    Over-provisioning DPMI is safe; under-provisioning is fatal."""
-    return max(memsize, MIN_DPMI_MEMORY_MB) * 1024
-
-
-def _core_to_cpu_vm(core: str) -> str:
-    """DOSBox throttles a fixed cycle count; DOSEmu2 runs near-native via KVM."""
-    if core.strip().lower() == "normal":
-        return "emulated"
-    return "kvm"
-
-
-def _sbtype_to_sound_enabled(sbtype: str) -> bool:
-    """DOSBox emulates specific SoundBlaster chips; DOSEmu2 emulates fixed hardware and forwards to host audio."""
-    return sbtype.strip().lower() != "none"
-
-
-def _sbbase_to_hex(sbbase: str) -> int:
-    """DOSBox implicitly uses hex for ports; DOSEmu2 requires explicit 0x prefix."""
-    try:
-        return int(sbbase.strip(), 16)
-    except ValueError:
-        return 0x220
-
-
-def _mpu401_to_base(mpu401: str) -> int:
-    """DOSBox uses various MIDI devices; DOSEmu2 exposes MPU-401 for host routing."""
-    return 0 if mpu401.strip().lower() == "none" else 0x330
-
-
-def _mpu401_to_irq(mpu401: str) -> int:
-    """Default IRQ 9 for MPU-401 if enabled, 0 if none."""
-    return 0 if mpu401.strip().lower() == "none" else 9
-
-
-def _pcspeaker_to_speaker(pcspeaker: bool) -> str:
-    """DOSBox synthesizes PC speaker; DOSEmu2 routes emulated speaker to host audio."""
-    return "emulated" if pcspeaker else ""
-
-
-def _serial_to_com(serial: str) -> str:
-    """DOSBox provides dummy serial ports; DOSEmu2 requires explicit host device paths. Defaulting to disabled."""
-    return ""
-
-
-def _joystick_to_device(joysticktype: str) -> str:
-    """DOSBox emulates specific joystick protocols; DOSEmu2 maps directly to host input devices."""
-    return "" if joysticktype.strip().lower() == "none" else "/dev/input/js0"
-
-
 # A DOSBox setting dedb reads (so `config -set` targeting it isn't flagged
 # as unknown) but has no DOSEMU2 equivalent for. The value is dropped:
 # excluded from model_dump, so it never reaches DosemuConfig.
@@ -266,9 +190,11 @@ Unsupported = Annotated[Any, Field(default=None, exclude=True)]
 class DosemuConfigFromDosbox(BaseModel):
     """The translation layer: ``DosemuConfig``'s fields, each read from
     the ``DosboxConfig`` field its ``validation_alias`` names and put
-    through a ``mode="before"`` validator. ``dosbox_to_dosemu`` feeds it
-    ``DosboxConfig.model_dump()`` and builds a ``DosemuConfig`` from the
-    result. Field order matches the field map in ARCHITECTURE.md."""
+    through a ``mode="before"`` validator that does the unit/format
+    conversion. ``dosbox_to_dosemu`` feeds it ``DosboxConfig.model_dump()``
+    and builds a ``DosemuConfig`` from the result. Field order matches the
+    field map in ARCHITECTURE.md; each field's ``description`` is the
+    one-line gloss the map prints, the validator's docstring the rationale."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -312,16 +238,87 @@ class DosemuConfigFromDosbox(BaseModel):
     scaler: Unsupported = Field(validation_alias="scaler")
     output: Unsupported = Field(validation_alias="output")
 
-    _cpuspeed = field_validator("cpuspeed", mode="before")(_cycles_to_cpuspeed)
-    _cpu_vm = field_validator("cpu_vm", mode="before")(_core_to_cpu_vm)
-    _dpmi = field_validator("dpmi", mode="before")(_memsize_to_dpmi_kb)
-    _sound = field_validator("sound", mode="before")(_sbtype_to_sound_enabled)
-    _sb_base = field_validator("sb_base", mode="before")(_sbbase_to_hex)
-    _mpu401_base = field_validator("mpu401_base", mode="before")(_mpu401_to_base)
-    _mpu401_irq = field_validator("mpu401_irq", mode="before")(_mpu401_to_irq)
-    _speaker = field_validator("speaker", mode="before")(_pcspeaker_to_speaker)
-    _com1 = field_validator("com1", mode="before")(_serial_to_com)
-    _joystick = field_validator("joystick", mode="before")(_joystick_to_device)
+    @field_validator("cpuspeed", mode="before")
+    @classmethod
+    def _cycles_to_cpuspeed(cls, cycles: str) -> int:
+        """DOSBox's cycles throttles emulated instructions per millisecond;
+        DOSEMU2's cpuspeed calibrates a reported clock speed in MHz -
+        different measurements that happen to share a "0 = auto"
+        convention. cycles may be e.g. "max", "auto", "max 80%",
+        "fixed 3000"; only a bare number carries a value across, anything
+        else maps to 0."""
+        first_token = cycles.strip().lower().split()[0] if cycles.strip() else ""
+        if first_token in ("max", "auto"):
+            return 0
+        try:
+            return int(first_token)
+        except ValueError:
+            return 0
+
+    @field_validator("dpmi", mode="before")
+    @classmethod
+    def _memsize_to_dpmi_kb(cls, memsize: int) -> int:
+        """DOSBox shares one memsize figure (Mb) across XMS/EMS/DPMI;
+        DOSEMU2 sizes each pool separately (dosemu2
+        src/doc/README/config), and GOG confs frequently set memsize as
+        low as 16Mb - copying it straight into $_dpmi would badly
+        under-provision DPMI, so it's floored against DOSEMU2's own
+        documented default before converting to Kb. Over-provisioning
+        DPMI is safe; under-provisioning is fatal."""
+        return max(memsize, MIN_DPMI_MEMORY_MB) * 1024
+
+    @field_validator("cpu_vm", mode="before")
+    @classmethod
+    def _core_to_cpu_vm(cls, core: str) -> str:
+        """DOSBox throttles a fixed cycle count; DOSEMU2 runs near-native via KVM."""
+        return "emulated" if core.strip().lower() == "normal" else "kvm"
+
+    @field_validator("sound", mode="before")
+    @classmethod
+    def _sbtype_to_sound_enabled(cls, sbtype: str) -> bool:
+        """DOSBox emulates specific SoundBlaster chips; DOSEMU2 emulates
+        fixed hardware and forwards to host audio."""
+        return sbtype.strip().lower() != "none"
+
+    @field_validator("sb_base", mode="before")
+    @classmethod
+    def _sbbase_to_hex(cls, sbbase: str) -> int:
+        """DOSBox implicitly uses hex for ports; DOSEMU2 requires an explicit 0x prefix."""
+        try:
+            return int(sbbase.strip(), 16)
+        except ValueError:
+            return 0x220
+
+    @field_validator("mpu401_base", mode="before")
+    @classmethod
+    def _mpu401_to_base(cls, mpu401: str) -> int:
+        """DOSBox uses various MIDI devices; DOSEMU2 exposes MPU-401 for host routing."""
+        return 0 if mpu401.strip().lower() == "none" else 0x330
+
+    @field_validator("mpu401_irq", mode="before")
+    @classmethod
+    def _mpu401_to_irq(cls, mpu401: str) -> int:
+        """IRQ 9 for MPU-401 when enabled, 0 when none."""
+        return 0 if mpu401.strip().lower() == "none" else 9
+
+    @field_validator("speaker", mode="before")
+    @classmethod
+    def _pcspeaker_to_speaker(cls, pcspeaker: bool) -> str:
+        """DOSBox synthesizes the PC speaker; DOSEMU2 routes the emulated speaker to host audio."""
+        return "emulated" if pcspeaker else ""
+
+    @field_validator("com1", mode="before")
+    @classmethod
+    def _serial_to_com(cls, serial1: str) -> str:
+        """DOSBox provides dummy serial ports; DOSEMU2 needs a real host
+        device path, so serial is left disabled."""
+        return ""
+
+    @field_validator("joystick", mode="before")
+    @classmethod
+    def _joysticktype_to_device(cls, joysticktype: str) -> str:
+        """DOSBox emulates specific joystick protocols; DOSEMU2 maps directly to host input devices."""
+        return "" if joysticktype.strip().lower() == "none" else "/dev/input/js0"
 
     @classmethod
     def translated_fields(cls) -> list[str]:
