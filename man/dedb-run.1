@@ -1,4 +1,4 @@
-.TH "DEDB RUN" "1" "2026-01-01" "0.0.14" "dedb run Manual"
+.TH "DEDB RUN" "1" "2026-01-01" "0.0.15" "dedb run Manual"
 .SH NAME
 dedb\-run \- Run a game in DOSBox or DOSEMU2.
 .SH SYNOPSIS
@@ -7,13 +7,14 @@ dedb\-run \- Run a game in DOSBox or DOSEMU2.
 .SH DESCRIPTION
 Run a game in DOSBox or DOSEMU2.
 .PP
-GAME is gog://<id>, archive://<id>, an archive.org URL, or a name you
-have downloaded. It is downloaded, and for --dosemu converted, first
-if needed. Arguments after `--` go straight to the emulator.
+GAME is specified as <scheme>:<identifier> or -b <scheme> <identifier>,
+or just <identifier> for downloaded games.
 .PP
---cmdline prints the resulting command (a shell-pasteable line) and
-stops, without running or converting anything. The game must already
-be downloaded.
+An emulator must be specified with --dosbox or --dosemu.
+.PP
+Arguments after `--` go straight to the emulator.
+.PP
+--cmdline shows the emulator commandline instead of running it.
 .PP
 .SH OPTIONS
 .TP
