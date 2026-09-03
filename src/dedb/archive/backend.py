@@ -2,6 +2,7 @@
 `identifier_from_url`). No launch profiles. See `dedb.gog.backend`.
 """
 
+import json
 from dataclasses import dataclass
 
 from ..core import BackendBase, Target, register_backend
@@ -24,9 +25,7 @@ class ArchiveBackend(BackendBase):
         return match.group(1) if match else None
 
     def completion_ids(self):
-        import json
-
-        from .metadata import CACHE_PATH
+        from .metadata import CACHE_PATH  # local: .metadata pulls in internetarchive
 
         ids = dict(super().completion_ids())
         try:

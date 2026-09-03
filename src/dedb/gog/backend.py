@@ -6,6 +6,7 @@ importer imports are function-local, to keep dedb.core -> dedb.gog.backend
 import-light and cycle-free.
 """
 
+import json
 from dataclasses import dataclass
 
 from ..core import BackendBase, Target, register_backend
@@ -46,9 +47,7 @@ class GogBackend(BackendBase):
         return envelope.as_local_game(converted=converted, launch_profiles=profiles)
 
     def completion_ids(self):
-        import json
-
-        from .client import OWNED_GAMES_CACHE_PATH
+        from .client import OWNED_GAMES_CACHE_PATH  # local: matches the other methods here
 
         ids = dict(super().completion_ids())
         try:
