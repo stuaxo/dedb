@@ -11,8 +11,8 @@ and never reach into a sibling app or ``settings.json`` directly.
     backends        BackendBase + resolve() / resolve_game()
     downloads       the <download_dir> resolve/create ops + `dedb rm`
     layout          LayoutPaths - the per-download directory tree
-    local           LocalGame / LaunchProfile - the downloaded-program model
-    metadata_file   GameMetadataFile - the metadata.json envelope
+    local           GameDescription / LocalGame / LaunchProfile - the downloaded-program model
+    metadata_file   GameMetadataFile - the metadata.json envelope (a persisted GameDescription)
     downloader      the download+extract template
     runner          the emulator-launch helpers
     metadata_cache  MetadataCache

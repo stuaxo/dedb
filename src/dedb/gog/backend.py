@@ -30,22 +30,23 @@ class GogBackend(BackendBase):
 
         layout = self.layout(identifier)
         envelope = GameMetadataFile.read_or_none(layout.metadata_json)
+        converted = layout.is_converted()
 
         if envelope and envelope.launch_profiles:
-            profiles = envelope.launch_profiles
+            profiles = None  # the envelope already carries them
         elif layout.is_downloaded():
             profiles = launch_profiles(layout.game)  # migrated/legacy file: re-derive
         else:
             profiles = [LaunchProfile(slug=None, name="default", is_default=True)]
 
-        return LocalGame(
-            scheme="gog",
-            identifier=identifier,
-            classification=(envelope.classification if envelope else None),
-            downloaded_at=(envelope.downloaded_at if envelope else None),
-            launch_profiles=profiles,
-            converted=layout.is_converted(),
-        )
+        if envelope is None:
+            return LocalGame(
+                scheme="gog",
+                identifier=identifier,
+                launch_profiles=profiles,
+                converted=converted,
+            )
+        return envelope.as_local_game(converted=converted, launch_profiles=profiles)
 
     def _import(self, layout, target: Target, output_dir, *, force):
         from .importer import import_gog_game

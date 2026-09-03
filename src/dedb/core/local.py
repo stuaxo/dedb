@@ -40,11 +40,11 @@ class LaunchProfile(BaseModel):
     is_default: bool = False
 
 
-class LocalGame(BaseModel):
-    """A downloaded, extracted program: its identity, what little we know
-    about it, and how it can be launched."""
-
-    model_config = ConfigDict(frozen=True)
+class GameDescription(BaseModel):
+    """The fields that describe one game - identity plus what little we
+    record about it. Shared by the persisted ``metadata.json`` envelope
+    (:class:`dedb.core.metadata_file.GameMetadataFile`) and the in-memory
+    :class:`LocalGame` the CLI reads; each adds its own extra fields."""
 
     scheme: str
     identifier: str
@@ -54,6 +54,14 @@ class LocalGame(BaseModel):
     classification: str | None = None
     downloaded_at: datetime | None = None
     launch_profiles: list[LaunchProfile] = []
+
+
+class LocalGame(GameDescription):
+    """A downloaded, extracted program: its identity, what little we know
+    about it, and how it can be launched."""
+
+    model_config = ConfigDict(frozen=True)
+
     converted: bool = False  # at least one dosemu.conf has been generated
 
     @property
