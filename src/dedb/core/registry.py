@@ -2,15 +2,20 @@
 click commands (``get_apps``) and the registered backend instances
 (``get_backends``) the CLI needs.
 
-Depends on ``_registry`` (the bare dict) and ``settings``, never on
-``backends`` - so ``backends.resolve()`` can import ``get_backends`` from
-here at module level.
+Depends at runtime on ``_registry`` (the bare dict) and ``settings``,
+never on ``backends`` - so ``backends.resolve()`` can import
+``get_backends`` from here at module level. ``BackendBase`` is pulled in
+for typing only.
 """
 
 from importlib import import_module
+from typing import TYPE_CHECKING
 
 from . import settings
 from ._registry import _REGISTRY
+
+if TYPE_CHECKING:
+    from .backends import BackendBase
 
 
 def get_apps() -> dict[str, list]:
@@ -24,7 +29,7 @@ def get_apps() -> dict[str, list]:
     }
 
 
-def get_backends() -> dict[str, object]:
+def get_backends() -> "dict[str, BackendBase]":
     """Import each app's optional `backend` module (which self-registers via
     dedb.core.register_backend) and return the registry, keyed by scheme
     (== app short name) in Settings.apps order. Apps without a backend module
@@ -39,7 +44,7 @@ def get_backends() -> dict[str, object]:
             if exc.name != f"{dotted_path}.backend":
                 raise
 
-    backends: dict[str, object] = {}
+    backends: dict[str, BackendBase] = {}
     for dotted_path in app_paths:
         short_name = dotted_path.rsplit(".", 1)[-1]
         if short_name in _REGISTRY:
