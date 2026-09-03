@@ -132,7 +132,7 @@ sizing - are in [doc/dosbox_to_dosemu.md](doc/dosbox_to_dosemu.md).
 
 | Package        | What                                                              |
 |----------------|------------------------------------------------------------------|
-| `dedb.cli`     | the root group + the cross-cutting commands (ls / run / download / import / rm / refreshmetadata) |
+| `dedb.cli`     | the root group + the cross-cutting commands (ls / run / download / import / rm / refreshmetadata / completion) |
 | `dedb.core`    | the framework the apps plug into                                 |
 | `dedb.dosbox`  | the conversion above, plus the `importdosbox` / `dosboxconf` commands |
 | `dedb.shims`   | autoexec shims (used by the conversion)                          |
@@ -163,6 +163,7 @@ Commands:
   rm               Delete one or more downloaded games' directory trees.
   refreshmetadata  Re-fetch backend metadata for downloaded games and rewrite
                    each metadata.json.
+  completion       Print a shell completion script for dedb.
 
 [dosbox]:
   importdosbox  Import one or more dosbox.conf files into a DOSEMU2 config.

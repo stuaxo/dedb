@@ -27,6 +27,19 @@ Both run in CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 `ruff check` also runs as a [pre-commit](https://pre-commit.com) hook -
 `pre-commit install` once to enable it.
 
+## Shell completion
+
+`completions/dedb.{bash,zsh,fish}` are click's own completion output,
+installed by the Debian package (debian/python3-dedb.install).
+Regenerate them after a click upgrade or a change to the root command
+name:
+
+```bash
+uv run python completions/_generate.py
+```
+
+`test_completion.py` fails until you do.
+
 ## Local builds
 
 To build the Debian package locally:

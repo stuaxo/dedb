@@ -82,6 +82,29 @@ $ dedb run tyrian_2000 -b gog --profile server --dosbox
 To add a backend, see [doc/backends.md](doc/backends.md).
 
 
+## Shell completion
+
+The Debian package installs tab completion for bash, zsh and fish. bash
+also needs the `bash-completion` package (a recommended dependency).
+Start a new shell to pick it up.
+
+For a pip install, print the script and put it where your shell reads
+completions:
+
+```sh
+dedb completion bash | sudo tee /usr/share/bash-completion/completions/dedb
+dedb completion zsh  | sudo tee /usr/share/zsh/vendor-completions/_dedb
+dedb completion fish > ~/.config/fish/completions/dedb.fish
+```
+
+Without root, source the script from your shell's rc file instead:
+
+```sh
+dedb completion bash > ~/.dedb-complete.bash
+echo 'source ~/.dedb-complete.bash' >> ~/.bashrc
+```
+
+
 ## Configuration
 
 The dedb config file is `~/.config/dedb/dedbconf.toml`.

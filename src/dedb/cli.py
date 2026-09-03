@@ -462,12 +462,38 @@ def list_downloads(
             click.echo(short_target(scheme, name) if qualify else name)
 
 
+# --- shell completion ---------------------------------------------
+
+
+@click.command()
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish"]))
+def completion(shell: str) -> None:
+    """Print a shell completion script for dedb.
+
+    The Debian package installs these already. For a pip install, write
+    the script where your shell looks for it, e.g. bash:
+
+        dedb completion bash | sudo tee /usr/share/bash-completion/completions/dedb
+
+    or, without root, source it from your shell's rc file:
+
+        dedb completion bash > ~/.dedb-complete.bash
+        echo 'source ~/.dedb-complete.bash' >> ~/.bashrc
+    """
+    from click.shell_completion import get_completion_class
+
+    comp_cls = get_completion_class(shell)
+    if comp_cls is None:  # pragma: no cover - all three are built into click
+        raise click.ClickException(f"click has no {shell} completion support.")
+    click.echo(comp_cls(cli, {}, "dedb", "_DEDB_COMPLETE").source())
+
+
 # --- the root group ------------------------------------------------
 
 
 # Cross-cutting commands, not tied to one backend. Listed before the
 # per-app groups in --help.
-CORE_COMMANDS = [list_downloads, run, download, import_target, rm, refreshmetadata]
+CORE_COMMANDS = [list_downloads, run, download, import_target, rm, refreshmetadata, completion]
 
 
 class AppGroupedGroup(click.Group):
