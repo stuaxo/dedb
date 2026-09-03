@@ -27,9 +27,7 @@ def parse_dosbox_conf(path: Path) -> tuple[dict, list[str]]:
         if parser.has_section("autoexec")
         else []
     )
-    sections = {
-        name: dict(parser.items(name)) for name in parser.sections() if name != "autoexec"
-    }
+    sections = {name: dict(parser.items(name)) for name in parser.sections() if name != "autoexec"}
     return sections, autoexec
 
 

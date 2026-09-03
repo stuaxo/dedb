@@ -29,7 +29,9 @@ def build(
     multiple -conf files) into (dosemu_config, userhook_lines). Same
     content convert() writes to disk, without writing anything.
     userhook_lines has shims already applied (see dedb.convert.autoexec)."""
-    return build_from_config(DosboxConfig.from_sections(*parse_dosbox_confs(input_files)), working_dir)
+    return build_from_config(
+        DosboxConfig.from_sections(*parse_dosbox_confs(input_files)), working_dir
+    )
 
 
 def write_outputs(

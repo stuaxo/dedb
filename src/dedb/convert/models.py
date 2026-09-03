@@ -42,6 +42,7 @@ class DosboxConfig(BaseModel):
     The data structure is flaat, validation_alias is used to
     pull data from the sections of the dosbox.conf.
     """
+
     model_config = ConfigDict(populate_by_name=True)
 
     fullscreen: bool = Field(default=False, validation_alias=AliasPath("sdl", "fullscreen"))
@@ -127,14 +128,17 @@ class DosemuConfig(BaseModel):
     See `model_dump_dosemurc` to see where `dosemu.conf`
     is written."""
 
-    X_fullscreen: bool = Field(serialization_alias="$_X_fullscreen", description="Enable fullscreen mode.")
+    X_fullscreen: bool = Field(
+        serialization_alias="$_X_fullscreen", description="Enable fullscreen mode."
+    )
 
-    cpuspeed: int = Field(serialization_alias="$_cpuspeed",
-                          description="CPU speed in MHz for TSC calibration; 0 = auto.")
+    cpuspeed: int = Field(
+        serialization_alias="$_cpuspeed",
+        description="CPU speed in MHz for TSC calibration; 0 = auto.",
+    )
 
     cpu_vm: str = Field(serialization_alias="$_cpu_vm")
-    dpmi: int = Field(serialization_alias="$_dpmi",
-                      description="DPMI pool size in Kb.")
+    dpmi: int = Field(serialization_alias="$_dpmi", description="DPMI pool size in Kb.")
 
     # Sound fields
     sound: bool = Field(serialization_alias="$_sound")
@@ -198,6 +202,7 @@ class DosemuConfigFromDosbox(BaseModel):
 
     validators are used to convert units and formats from DOSBox to DOSEMU2.
     """
+
     model_config = ConfigDict(populate_by_name=True)
 
     X_fullscreen: bool = Field(validation_alias="fullscreen")

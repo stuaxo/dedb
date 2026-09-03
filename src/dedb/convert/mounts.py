@@ -12,9 +12,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-# A plain ``MOUNT <drive> <path>`` line. Not ``IMGMOUNT`` (a different
-# command) and not ``MOUNT -u X`` (an unmount - the slot after MOUNT is a
-# flag, not a drive letter).
+# Match an autoexec line with a MOUNT command.
+# Ignores unmount, e.g.: ``MOUNT -u X``.
 _MOUNT_RE = re.compile(
     r'^\s*@?mount\s+(?P<drive>[a-zA-Z]):?\s+(?P<path>"[^"]*"|\S+)', re.IGNORECASE
 )
