@@ -32,8 +32,9 @@ Both run in CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 `completions/dedb.{bash,zsh,fish}` are installed by the Debian package
 (debian/python3-dedb.install). zsh and fish are click's own output; bash
 is a colon-aware variant (`dedb.completion`) so `gog:<id>` targets
-complete past the colon. `dedb.cli._complete_game` -> `complete_target`
-supplies the `gog:` / `archive:` candidates from local data only.
+complete past the colon. `dedb.core.complete_target` supplies the `gog:`
+/ `archive:` candidates from local data only (`_complete_game` for the
+GAME verbs, `complete_source` for the conf-or-game SOURCES commands).
 
 Regenerate the scripts after a click upgrade or a change to the root
 command name:

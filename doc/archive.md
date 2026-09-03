@@ -17,12 +17,11 @@ Programs and games on archive can be refered to by their identifier or URI:
 
 ## Configure dedb
 
-The download directory must be configured in `~/.config/dedb/dedb.conf`.
+The download directory must be configured in `~/.config/dedb/dedbconf.toml`.
 Archive downloads are saved to `<download_dir>/archive/`.
 
-```ini
+```toml
 download_dir = "/path/to/downloads"
-
 ```
 
 ### Set your username
@@ -30,10 +29,9 @@ download_dir = "/path/to/downloads"
 If `archive_user` is set in the config when you run `lsarchive --favorites` it will default to this users favorites.
 This allows you to setup your own list of items for testing within on Archive.org itself.
 
-```ini
+```toml
 [archive]
 archive_user = "your-archive-org-username"
-
 ```
 
 You will be prompted for this the first time you run `dedb lsarchive` without a `--user` parameter.
@@ -46,7 +44,9 @@ Use the following commands to manage games. Replace `<id>` with the game identif
 * **Download a game:** `dedb download archive://<id>`
 * **Run in DOSBox:** `dedb run archive://<id> --dosbox`
 * **Run in DOSEMU2:** `dedb run archive://<id> --dosemu`
-* **Import a game:** `dedb import archive://<id>`
+* **Print the emulator command (don't run):** `dedb run archive://<id> --dosbox --cmdline`
+* **Write the DOSEMU2 config:** `dedb import archive://<id>`
+* **Show the DOSEMU2 config:** `dedb dosemuconf archive://<id>`
 * **Remove a game:** `dedb rm archive://<id>`
 
 If you run a game that you have not downloaded, `dedb run` will automatically download and extract it first.

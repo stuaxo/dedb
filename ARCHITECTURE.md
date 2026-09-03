@@ -36,8 +36,9 @@ synthesises from its `emulator_start`. Both parse to the same
 `(section dict, autoexec lines)` pair.
 
 It lives in `dedb.convert` (`parser`, `cmdline`, `models`, `converter`,
-`autoexec`, `fieldmap`), a standalone library with no dependency on the
-rest of dedb. The apps import conversion only from there.
+`autoexec`, `issues`, `fieldmap`), a standalone library with no
+dependency on the rest of dedb. The apps import conversion only from
+there.
 
 
 ### Pydantic models represent formats and conversions

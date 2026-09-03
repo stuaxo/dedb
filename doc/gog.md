@@ -26,6 +26,7 @@ Name a game `gog:<gamename>`, then:
 $ dedb download gog:tyrian_2000
 $ dedb run gog:tyrian_2000 --dosbox            # the unaltered game - a baseline
 $ dedb run gog:tyrian_2000 --dosemu
+$ dedb run gog:tyrian_2000 --dosbox --cmdline  # print the emulator command, don't run it
 $ dedb run 'gog:warcraft_orcs_and_humans?profile=server' --dosbox
 $ dedb run tyrian_2000 -b gog --dosbox         # -b instead of the prefix
 $ dedb import gog:tyrian_2000
