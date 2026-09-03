@@ -10,8 +10,9 @@ dedb (0.0.13) unstable; urgency=medium
   * The DOSBox->DOSEMU2 conversion engine moved to a standalone
     `dedb.convert` library; `import` moved to a new `dedb.dosemu` app.
     If you have pinned `apps` in dedbconf.toml, add `"dedb.dosemu"`.
-  * `dedb run --dosbox|--dosemu --cmdline` prints the emulator command it
-    would run (a shell-pasteable line) and stops - no launch, no convert.
+  * `--cmdline` on `dedb run --dosbox|--dosemu` (and on `dosboxconf` /
+    `dosemuconf`) prints the emulator command that would run - a
+    shell-pasteable line - and stops, with no launch or conversion.
   * `dedb run --dosemu` no longer writes `userhook.bat` into the game
     directory - it is staged in a dedb-owned dir mounted as its own
     DOSEMU2 drive, keeping the downloaded game immutable.

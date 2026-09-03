@@ -6,6 +6,9 @@ an archive.org item has a synthetic -c autoexec). Staging userhook.bat
 for DOSEMU2 and the actual subprocess/verbose/"not installed" handling
 are the same for both, and live here. (Which DOSBox binary to run is
 `dedb.core.settings.DosboxSettings.binary`.)
+
+``dosemu_argv`` / ``render_cmdline`` also back the ``--cmdline`` flag of
+``run`` / ``dosboxconf`` / ``dosemuconf`` (see ``BackendBase.cmdline``).
 """
 
 import shlex
@@ -19,63 +22,22 @@ import click
 from .layout import LayoutPaths
 
 
-def launch(
-    cmd: Sequence[str],
-    *,
-    cwd: Path | None = None,
-    missing_hint: str,
-    verbose: bool = False,
-    dry_run: bool = False,
-) -> int:
-    """Run ``cmd`` (in ``cwd`` if given), echoing it first when ``verbose``
-    and turning a missing executable into a clean ``click.ClickException``
-    carrying ``missing_hint``. Returns the child's exit code.
-
-    ``dry_run`` prints the command (a bare, shell-pasteable line, no
-    ``$`` prefix) and returns 0 without running anything."""
-    if verbose or dry_run:
-        rendered = shlex.join(cmd)
-        if cwd is not None:
-            rendered = f"cd {shlex.quote(str(cwd))} && {rendered}"
-        click.echo(rendered if dry_run else f"$ {rendered}")
-
-    if dry_run:
-        return 0
-
-    try:
-        return subprocess.run(cmd, cwd=cwd).returncode
-    except FileNotFoundError:
-        raise click.ClickException(missing_hint) from None
+def render_cmdline(cmd: Sequence[str], cwd: Path | None = None) -> str:
+    """An emulator argv as one shell-pasteable line, prefixed with
+    ``cd <cwd> &&`` when it has to run from a particular directory."""
+    rendered = shlex.join(cmd)
+    if cwd is not None:
+        rendered = f"cd {shlex.quote(str(cwd))} && {rendered}"
+    return rendered
 
 
-def launch_dosemu(
-    layout: LayoutPaths,
-    *,
-    dosemu_conf: Path,
-    userhook_src: Path,
-    extra_args: Sequence[str] = (),
-    verbose: bool = False,
-    dry_run: bool = False,
-) -> int:
-    """Stage ``userhook_src`` into ``layout.userhook_dir`` and launch DOSEMU2
-    with C: mapped to the extracted game directory. ``dry_run`` skips the
-    staging and just prints the command (see ``launch``)."""
-    if not dry_run:
-        layout.dosemu_local.mkdir(parents=True, exist_ok=True)
-        layout.userhook_dir.mkdir(parents=True, exist_ok=True)
-
-        # DOSEMU2's boot chain (dosrc.d/4uhook.bat) only auto-runs
-        # %USERDRV%:\userhook.bat, and %USERDRV% is pinned to the drive-C
-        # letter - so rather than write into the game dir (C:), stage the
-        # active profile's userhook under a fixed name in a dedb-owned dir,
-        # mount that dir as its own drive with -K, and run it with -E.
-        shutil.copyfile(userhook_src, layout.userhook_dir / "userhook.bat")
-
-        # Drop the stray userhook.bat older dedb versions copied into the
-        # game dir, so an upgrade leaves the game files clean.
-        (layout.game / "userhook.bat").unlink(missing_ok=True)
-
-    cmd = [
+def dosemu_argv(
+    layout: LayoutPaths, dosemu_conf: Path, *, extra_args: Sequence[str] = ()
+) -> list[str]:
+    """The ``dosemu`` argv `run --dosemu` launches (the userhook staging in
+    ``launch_dosemu`` aside). C: is the game dir; ``userhook.bat`` is run
+    from its own ``-K`` drive so the game dir is never written to."""
+    return [
         "dosemu",
         "-f",
         str(dosemu_conf),
@@ -95,9 +57,53 @@ def launch_dosemu(
         "USERHOOK.BAT",
         *extra_args,
     ]
+
+
+def launch(
+    cmd: Sequence[str],
+    *,
+    cwd: Path | None = None,
+    missing_hint: str,
+    verbose: bool = False,
+) -> int:
+    """Run ``cmd`` (in ``cwd`` if given), echoing it first when ``verbose``
+    and turning a missing executable into a clean ``click.ClickException``
+    carrying ``missing_hint``. Returns the child's exit code."""
+    if verbose:
+        click.echo(f"$ {render_cmdline(cmd, cwd)}")
+
+    try:
+        return subprocess.run(cmd, cwd=cwd).returncode
+    except FileNotFoundError:
+        raise click.ClickException(missing_hint) from None
+
+
+def launch_dosemu(
+    layout: LayoutPaths,
+    *,
+    dosemu_conf: Path,
+    userhook_src: Path,
+    extra_args: Sequence[str] = (),
+    verbose: bool = False,
+) -> int:
+    """Stage ``userhook_src`` into ``layout.userhook_dir`` and launch DOSEMU2
+    with C: mapped to the extracted game directory."""
+    layout.dosemu_local.mkdir(parents=True, exist_ok=True)
+    layout.userhook_dir.mkdir(parents=True, exist_ok=True)
+
+    # DOSEMU2's boot chain (dosrc.d/4uhook.bat) only auto-runs
+    # %USERDRV%:\userhook.bat, and %USERDRV% is pinned to the drive-C
+    # letter - so rather than write into the game dir (C:), stage the
+    # active profile's userhook under a fixed name in a dedb-owned dir,
+    # mount that dir as its own drive with -K, and run it with -E.
+    shutil.copyfile(userhook_src, layout.userhook_dir / "userhook.bat")
+
+    # Drop the stray userhook.bat older dedb versions copied into the
+    # game dir, so an upgrade leaves the game files clean.
+    (layout.game / "userhook.bat").unlink(missing_ok=True)
+
     return launch(
-        cmd,
+        dosemu_argv(layout, dosemu_conf, extra_args=extra_args),
         missing_hint="'dosemu' not found on PATH - install the dosemu2 package first",
         verbose=verbose,
-        dry_run=dry_run,
     )

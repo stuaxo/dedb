@@ -6,7 +6,15 @@ A flat click.Command; the root CLI registers it so it runs as
 
 import click
 
-from ..core import complete_source, existing_conf, get_backends, is_game_ref, resolve_game
+from ..core import (
+    complete_source,
+    existing_conf,
+    get_backends,
+    get_settings,
+    is_game_ref,
+    render_cmdline,
+    resolve_game,
+)
 from .inspector import inspect_command_line
 
 
@@ -45,6 +53,12 @@ from .inspector import inspect_command_line
     default=False,
     help="With --issues, also show each autoexec line and what it is rewritten to.",
 )
+@click.option(
+    "--cmdline",
+    is_flag=True,
+    default=False,
+    help="Print the `dosbox` command `dedb run --dosbox` would run, and stop.",
+)
 def dosboxconf(
     sources: tuple[str, ...],
     backend: str | None,
@@ -54,6 +68,7 @@ def dosboxconf(
     gus: bool,
     issues: bool,
     verbose: bool,
+    cmdline: bool,
 ) -> None:
     """Show aspects of a DOSBox config, from dosbox.conf(s) or a game's
     launch command line.
@@ -63,16 +78,24 @@ def dosboxconf(
     resolved DOSBox command line is shown - an archive.org item has no
     dosbox.conf, just the emularity command line. The game only needs to
     be downloaded, not imported. With none of -a/-s/-g given, those three
-    aspects are shown; --issues is always opt-in.
+    aspects are shown; --issues is always opt-in. --cmdline prints the
+    whole `dosbox` command instead.
     """
     if backend is not None or (len(sources) == 1 and is_game_ref(sources[0])):
         if len(sources) != 1:
             raise click.UsageError("Pass a single game when using a scheme or --backend.")
         game = resolve_game(sources[0], backend, profile=profile)
-        argv, working_dir = get_backends()[game.scheme].dosbox_command_line(game)
+        be = get_backends()[game.scheme]
+        if cmdline:
+            click.echo(render_cmdline(*be.cmdline(game, emulator="dosbox")))
+            return
+        argv, working_dir = be.dosbox_command_line(game)
     else:
         argv = [token for source in sources for token in ("-conf", str(existing_conf(source)))]
         working_dir = None
+        if cmdline:
+            click.echo(render_cmdline([get_settings().dosbox.get_dosbox_binary(), *argv]))
+            return
 
     click.echo(
         inspect_command_line(

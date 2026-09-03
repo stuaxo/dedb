@@ -17,6 +17,7 @@ from ..core import (
     existing_conf,
     get_backends,
     is_game_ref,
+    render_cmdline,
     resolve_game,
 )
 from .inspector import render
@@ -132,7 +133,13 @@ def import_target(sources, output_dir, profile, backend, force, refreshconf):
     default=False,
     help="With --issues, also show each autoexec line and what it is rewritten to.",
 )
-def dosemuconf(sources, backend, profile, conf, userhook, issues, verbose):
+@click.option(
+    "--cmdline",
+    is_flag=True,
+    default=False,
+    help="Print the `dosemu` command `dedb run --dosemu` would run, and stop (game only).",
+)
+def dosemuconf(sources, backend, profile, conf, userhook, issues, verbose, cmdline):
     """Show the converted DOSEMU2 output, from dosbox.conf(s) or a game.
 
     SOURCES is one or more dosbox.conf paths, or a single downloaded game
@@ -140,8 +147,22 @@ def dosemuconf(sources, backend, profile, conf, userhook, issues, verbose):
     of --conf/--userhook/--issues given, dosemu.conf and userhook.bat are
     both shown. A multi-profile GOG game with no --profile shows one
     [label] block per profile; --issues then reflects the default profile.
+    --cmdline instead prints the whole `dosemu` command (needs a game).
     """
-    if backend is not None or any(is_game_ref(s) for s in sources):
+    game_ref = backend is not None or any(is_game_ref(s) for s in sources)
+
+    if cmdline:
+        if not game_ref:
+            raise click.UsageError(
+                "--cmdline needs a game reference (gog:/archive:), not dosbox.conf files."
+            )
+        if len(sources) != 1:
+            raise click.UsageError("Pass a single game when using a scheme or --backend.")
+        game = resolve_game(sources[0], backend, profile=profile)
+        click.echo(render_cmdline(*get_backends()[game.scheme].cmdline(game, emulator="dosemu")))
+        return
+
+    if game_ref:
         if len(sources) != 1:
             raise click.UsageError("Pass a single game when using a scheme or --backend.")
         game = resolve_game(sources[0], backend, profile=profile)

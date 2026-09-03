@@ -44,15 +44,13 @@ def test_launch_verbose_echoes_the_command_with_cwd(monkeypatch, tmp_path, capsy
     assert "'a b'" in out  # shlex-quoted argument
 
 
-def test_launch_dry_run_prints_a_bare_command_and_skips_subprocess(monkeypatch, tmp_path, capsys):
-    monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("must not run"))
-
-    rc = runner.launch(["dosbox", "-conf", "a b"], cwd=tmp_path, missing_hint="_", dry_run=True)
-
-    assert rc == 0
-    out = capsys.readouterr().out
-    assert not out.startswith("$ ")  # bare, shell-pasteable
-    assert out.strip() == f"cd {tmp_path} && dosbox -conf 'a b'"
+def test_render_cmdline_is_a_shell_pasteable_line(tmp_path):
+    # backs --cmdline on run / dosboxconf / dosemuconf
+    assert (
+        runner.render_cmdline(["dosbox", "-conf", "a b"], tmp_path)
+        == f"cd {tmp_path} && dosbox -conf 'a b'"
+    )
+    assert runner.render_cmdline(["dosemu", "-f", "x"]) == "dosemu -f x"  # no cd without a cwd
 
 
 class _Layout(LayoutPaths):
@@ -96,19 +94,14 @@ def test_launch_dosemu_stages_the_userhook_and_builds_the_argv(monkeypatch, tmp_
     assert cmd[k : k + 4] == ["-K", str(layout.userhook_dir), "-E", "USERHOOK.BAT"]
 
 
-def test_launch_dosemu_dry_run_does_not_stage_the_userhook(monkeypatch, tmp_path, capsys):
+def test_dosemu_argv_builds_the_launch_command_without_touching_disk(tmp_path):
     layout = _Layout(tmp_path / "item")
-    layout.game.mkdir(parents=True)
-    userhook_src = tmp_path / "userhook.bat"
-    userhook_src.write_text("echo hi\n")
-    monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("must not run"))
 
-    rc = runner.launch_dosemu(
-        layout, dosemu_conf=tmp_path / "dosemu.conf", userhook_src=userhook_src, dry_run=True
-    )
+    cmd = runner.dosemu_argv(layout, tmp_path / "d.conf", extra_args=["-fullscreen"])
 
-    assert rc == 0
-    assert not (layout.game / "userhook.bat").exists()
-    assert not layout.userhook_dir.exists()
-    assert not layout.dosemu_local.exists()
-    assert f"dosemu -f {tmp_path / 'dosemu.conf'}" in capsys.readouterr().out
+    assert cmd[:3] == ["dosemu", "-f", str(tmp_path / "d.conf")]
+    assert cmd[-1] == "-fullscreen"
+    assert f'$_lredir_paths = "{layout.dir}"' in cmd
+    k = cmd.index("-K")
+    assert cmd[k : k + 4] == ["-K", str(layout.userhook_dir), "-E", "USERHOOK.BAT"]
+    assert not layout.userhook_dir.exists()  # pure builder - no mkdir
