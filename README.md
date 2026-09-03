@@ -31,8 +31,8 @@ archive:msdos_Electro_Man_1992
 ```
 
 Filter by backend (repeatable, or comma-separated):
-`$ dedb ls --type=gog`
-`$ dedb ls --type=gog,archive`
+`$ dedb ls -b gog`
+`$ dedb ls -b gog,archive`
 
 
 For more ls options:

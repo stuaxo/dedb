@@ -346,9 +346,9 @@ DOWNLOAD_BACKENDS = tuple(get_backends())
 def _parse_backends(
     ctx: click.Context, param: click.Parameter, value: tuple[str, ...]
 ) -> list[str]:
-    """Resolve --type: repeatable and/or comma-separated (`--type=gog
-    --type=archive` or `--type=gog,archive`), de-duplicated, order
-    preserved. Defaults to every backend when not given."""
+    """Resolve `ls -b`: repeatable and/or comma-separated (`-b gog -b
+    archive` or `-b gog,archive`), de-duplicated, order preserved.
+    Defaults to every backend when not given."""
     selected: list[str] = []
     for chunk in value:
         for part in chunk.split(","):
@@ -390,13 +390,14 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
 
 @click.command("ls")
 @click.option(
-    "--type",
+    "--backend",
+    "-b",
     "backends",
-    metavar="BACKEND",
+    metavar="SCHEME",
     multiple=True,
     callback=_parse_backends,
     help=(
-        "Download backend(s) to list, repeatable or comma-separated. "
+        "Backend(s) to list, repeatable or comma-separated. "
         f"Default: all ({', '.join(DOWNLOAD_BACKENDS)})."
     ),
 )
