@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from dedb.core.local import GameDescription, LaunchProfile, LocalGame
 from dedb.core.metadata_file import CURRENT_SCHEMA, GameMetadataFile
 
 FIXTURES = Path(__file__).parent / "fixtures" / "metadata"
@@ -80,3 +81,47 @@ def test_read_raises_on_a_broken_file(tmp_path):
     broken.write_text("{not json")
     with pytest.raises(ValueError):
         GameMetadataFile.read(broken)
+
+
+# --- GameDescription <-> LocalGame --------------------------------------
+
+
+def test_envelope_and_local_game_share_the_description_fields():
+    assert set(GameDescription.model_fields) <= set(GameMetadataFile.model_fields)
+    assert set(GameDescription.model_fields) <= set(LocalGame.model_fields)
+    # the envelope adds persistence, LocalGame adds a live filesystem fact
+    assert "source" in GameMetadataFile.model_fields
+    assert "converted" in LocalGame.model_fields
+
+
+def test_as_local_game_copies_the_shared_fields_and_adds_converted():
+    envelope = GameMetadataFile(
+        scheme="archive",
+        identifier="msdos_X",
+        title="X",
+        classification="dosbox",
+        launch_profiles=[LaunchProfile(name="default", is_default=True)],
+        source={"emulator": "dosbox"},
+    )
+
+    game = envelope.as_local_game(converted=True)
+
+    assert isinstance(game, LocalGame)
+    assert (game.scheme, game.identifier, game.title, game.classification) == (
+        "archive",
+        "msdos_X",
+        "X",
+        "dosbox",
+    )
+    assert game.converted is True
+    assert [p.name for p in game.launch_profiles] == ["default"]
+
+
+def test_as_local_game_override_replaces_re_derived_launch_profiles():
+    envelope = GameMetadataFile(scheme="gog", identifier="g")  # migrated file: no profiles
+
+    game = envelope.as_local_game(
+        converted=False, launch_profiles=[LaunchProfile(name="Play", is_default=True)]
+    )
+
+    assert [p.name for p in game.launch_profiles] == ["Play"]

@@ -1,10 +1,11 @@
 """The schema of ``<download_dir>/<scheme>/<id>/metadata.json`` - one
 versioned envelope shared by every backend.
 
-Common fields (identity, title, classification, launch profiles) sit at the
-top level so ``core`` can read them without touching a backend model; the
-backend's own metadata model is dumped verbatim into ``source`` and stays
-opaque here.
+The common fields (identity, title, classification, launch profiles) are
+:class:`dedb.core.local.GameDescription`, shared with the in-memory
+:class:`~dedb.core.local.LocalGame` - they sit at the top level so ``core``
+can read them without touching a backend model. The backend's own metadata
+model is dumped verbatim into ``source`` and stays opaque here.
 
 ``read()`` upgrades a pre-envelope (v1) file - ``{"gog": {...}}`` /
 ``{"archive": {...}}`` - on the way through, so old downloads keep working
@@ -13,28 +14,33 @@ with no re-download. The file is rewritten in the new shape on the next
 """
 
 import json
-from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import Field
 
-from .local import LaunchProfile
+from .local import GameDescription, LocalGame
 
 CURRENT_SCHEMA = 2
 
 
-class GameMetadataFile(BaseModel):
+class GameMetadataFile(GameDescription):
+    """The persisted form of :class:`GameDescription` - the shared fields
+    plus a schema version and the backend's own opaque metadata blob."""
+
     schema_version: int = CURRENT_SCHEMA
-    scheme: str
-    identifier: str
-    title: str | None = None
-    year: str | None = None
-    classification: str | None = None
-    downloaded_at: datetime | None = None
-    launch_profiles: list[LaunchProfile] = []
     # The backend's own metadata model, dumped with model_dump(mode="json").
     # Opaque to core; each backend validates it back into its own model.
-    source: dict = {}
+    source: dict = Field(default_factory=dict)
+
+    def as_local_game(self, *, converted: bool, launch_profiles: "list | None" = None) -> LocalGame:
+        """The :class:`LocalGame` view of this envelope: the shared fields
+        as-is, ``converted`` from the layout (whether a ``dosemu.conf`` has
+        been generated), and (for a migrated file whose profiles the
+        backend re-derived) an optional ``launch_profiles`` override."""
+        data = {name: getattr(self, name) for name in GameDescription.model_fields}
+        if launch_profiles is not None:
+            data["launch_profiles"] = launch_profiles
+        return LocalGame(**data, converted=converted)
 
     @classmethod
     def read(cls, path: Path) -> "GameMetadataFile":
