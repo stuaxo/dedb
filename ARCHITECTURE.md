@@ -115,22 +115,22 @@ rewrites the lines it recognises, with a `Severity`:
 | `UNSUPPORTED` | no equivalent; commented out with `REM` so it does not error - `IMGMOUNT`, overlay mounts |
 
 
-## apps
+## Packages
 
-dedb is split into "apps":
+| Package        | What                                                              |
+|----------------|------------------------------------------------------------------|
+| `dedb.cli`     | the root group + the cross-cutting commands (ls / run / download / import / rm / refreshmetadata) |
+| `dedb.core`    | the framework the apps plug into                                 |
+| `dedb.dosbox`  | the conversion above, plus the `importdosbox` / `dosboxconf` commands |
+| `dedb.shims`   | autoexec shims (used by the conversion)                          |
+| `dedb.gog`     | GOG: `downloadgog` / `lsgog`, backend, importer                  |
+| `dedb.archive` | archive.org: `lsarchive`, backend, importer                      |
+| `dedb.testing` | test helpers                                                     |
 
-| Name    | Function                                    |
-|---------|---------------------------------------------|
-| `core`    | Shared functionality                        |
-| `dedb`    | Core CLI                                    |
-| `dosbox`  | DOSBox-specific, e.g. convert dosbox.conf   |
-| `shims`   | DOSBox-specific shims                       |
-| `gog`     | List and download games from GOG            |
-| `archive` | List and download programs from Archive.org |
-| `testing` | Test support                                |
-
-
-When you run `dedb --help` the command lines are grouped by the app that provides them:
+`dosbox` / `gog` / `archive` are "apps": listed in `Settings.apps`, each
+exposing a `cli.commands` list that `dedb.cli` registers. `dedb --help`
+groups their commands under `[dosbox]` / `[gog]` / `[archive]`; the
+cross-cutting commands come first, ungrouped:
 
 ```sh
 $ dedb --help
@@ -141,7 +141,7 @@ Usage: dedb [OPTIONS] COMMAND [ARGS]...
 Options:
   --help  Show this message and exit.
 
-[dedb]:
+Commands:
   ls               List downloaded games.
   run              Run a game in DOSBox or DOSEMU2.
   download         Download and extract one or more games.

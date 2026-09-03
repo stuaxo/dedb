@@ -15,9 +15,10 @@ from ._registry import _REGISTRY
 
 
 def get_apps() -> dict[str, list]:
-    """Resolve the installed apps into each one's contributed click commands,
-    keyed by short app name (`dedb.dosbox` -> `dosbox`). `dedb.dedb` first,
-    then Settings.apps in order."""
+    """Resolve the source apps into each one's contributed click commands,
+    keyed by short app name (`dedb.dosbox` -> `dosbox`), in Settings.apps
+    order. The cross-cutting commands aren't here - dedb.cli registers
+    those directly."""
     return {
         path.split(".")[-1]: import_module(f"{path}.cli").commands
         for path in settings.get_settings().app_paths()

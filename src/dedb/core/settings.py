@@ -89,18 +89,13 @@ class ArchiveSettings(BaseModel):
     favorites_user: str | None = None
 
 
-# Loaded ahead of the configured `apps`: the cross-cutting commands
-# (run/download/import/rm/ls) every install needs. Not listed in the
-# default `apps` because it is never optional - see Settings.app_paths.
-_BUILTIN_APPS = ("dedb.dedb",)
-
-
 class Settings(BaseModel):
-    # dotted module paths, each expected to expose a `cli.commands` list -
-    # mirrors Django's INSTALLED_APPS. `dedb.dedb` is prepended by
-    # app_paths(), so it isn't listed here. This is the "every app dedb
-    # ships" default; dedbconf.default.toml leaves `apps` commented so a
-    # fresh config picks it up. Keep the two in sync.
+    # Source apps: dotted module paths, each exposing a `cli.commands`
+    # list - mirrors Django's INSTALLED_APPS. The cross-cutting commands
+    # (ls/run/download/...) aren't apps; they're registered directly by
+    # dedb.cli. This is the "every app dedb ships" default;
+    # dedbconf.default.toml leaves `apps` commented so a fresh config
+    # picks it up. Keep the two in sync.
     apps: list[str] = [
         "dedb.dosbox",
         "dedb.gog",
@@ -124,12 +119,8 @@ class Settings(BaseModel):
         return value
 
     def app_paths(self) -> list[str]:
-        """Dotted app-module paths to load: the builtins first, then the
-        configured `apps` in order, de-duplicated."""
-        seen = dict.fromkeys(_BUILTIN_APPS)
-        for dotted_path in self.apps:
-            seen.setdefault(dotted_path)
-        return list(seen)
+        """The configured `apps`, in order, de-duplicated."""
+        return list(dict.fromkeys(self.apps))
 
     def download_dir_for(self, scheme: str) -> Path | None:
         """``<download_dir>/<scheme>`` - the app's namespaced downloads

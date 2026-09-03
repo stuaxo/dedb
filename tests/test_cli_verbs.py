@@ -8,7 +8,7 @@ tested in test_backends.
 Seam: patch the backend *class* method (instances are frozen dataclasses),
 patch `dedb.core.settings.get_settings` at its origin, and patch helpers
 the verb imports by name where the verb imports them
-(`dedb.dedb.verbs.remove_downloads`).
+(`dedb.cli.remove_downloads`).
 """
 
 from pathlib import Path
@@ -174,7 +174,7 @@ def test_import_output_dir_rejects_multiple_games(download_dir):
 def test_rm_dispatches(download_dir, monkeypatch):
     seen = {}
     monkeypatch.setattr(
-        "dedb.dedb.verbs.remove_downloads",
+        "dedb.cli.remove_downloads",
         lambda layouts, *, assume_yes: seen.update(
             names=[lo.dir.name for lo in layouts], assume_yes=assume_yes
         ),
@@ -191,7 +191,7 @@ def test_rm_expands_a_wildcard_and_dedups(tmp_path, monkeypatch):
     monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
     seen = {}
     monkeypatch.setattr(
-        "dedb.dedb.verbs.remove_downloads",
+        "dedb.cli.remove_downloads",
         lambda layouts, *, assume_yes: seen.update(
             targets={(lo.dir.parent.name, lo.dir.name) for lo in layouts}
         ),
