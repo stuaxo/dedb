@@ -27,13 +27,14 @@ from .registry import get_backends
 class BackendBase:
     """Behaviour shared by every backend. Subclasses are frozen dataclasses
     that set the ``scheme`` / ``supports_profile`` fields, point ``layout_cls``
-    / ``runner_module`` / ``_downloader()`` at their own code, and fill the
-    ``_import`` / ``build`` hooks. The rest have working defaults."""
+    / ``runner_module`` / ``downloader_module`` at their own code, and fill
+    the ``_import`` / ``build`` hooks. The rest have working defaults."""
 
     scheme: str
     supports_profile: bool = False
     layout_cls: type  # the backend's LayoutPaths subclass
     runner_module: str  # dotted path to the backend's runner (run_dosbox/run_dosemu)
+    downloader_module: str  # dotted path to the backend's downloader (exposes make_downloader)
 
     # --- URL recognition -------------------------------------------------
 
@@ -74,17 +75,13 @@ class BackendBase:
 
     # --- actions -------------------------------------------------------
 
-    def _downloader(self):
-        """The backend's `dedb.core.downloader.Downloader` subclass, ready to use."""
-        raise NotImplementedError
-
     def ensure_downloaded(
         self, identifier: str, *, keep: bool, refresh_metadata: bool, redownload: bool
     ):
         """Download + extract ``identifier`` if needed; return its layout."""
         layout = self.layout_cls(downloads.ensure_download_dir(self.scheme), identifier)
-        self._downloader().ensure(
-            layout, keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
+        import_module(self.downloader_module).make_downloader(layout).run(
+            keep=keep, refresh_metadata=refresh_metadata, redownload=redownload
         )
         return layout
 

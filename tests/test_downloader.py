@@ -12,29 +12,31 @@ from dedb.gog.layout import GogLayout
 class FakeDownloader(Downloader):
     fetch_result = True
 
-    def __init__(self):
+    def __init__(self, layout):
+        super().__init__(layout)
         self.calls = []
+        self._ctx = None
 
-    def _prepare(self, layout, *, refresh):
+    def _prepare(self, *, refresh):
         self.calls.append(("prepare", refresh))
-        return "CTX"
+        self._ctx = "CTX"
 
-    def _fetch(self, layout, ctx):
-        self.calls.append(("fetch", ctx))
-        layout.staging.mkdir(parents=True, exist_ok=True)
-        (layout.staging / "pkg").write_text("x")
+    def _fetch(self):
+        self.calls.append(("fetch", self._ctx))
+        self.layout.staging.mkdir(parents=True, exist_ok=True)
+        (self.layout.staging / "pkg").write_text("x")
         return self.fetch_result
 
-    def _extract(self, layout, ctx):
-        self.calls.append(("extract", ctx))
-        (layout.game / "GAME.EXE").write_text("MZ")  # -> is_downloaded()
+    def _extract(self):
+        self.calls.append(("extract", self._ctx))
+        (self.layout.game / "GAME.EXE").write_text("MZ")  # -> is_downloaded()
 
-    def _post_extract(self, layout):
+    def _post_extract(self):
         self.calls.append("post_extract")
 
-    def _write_metadata(self, layout, ctx, *, refresh):
+    def _write_metadata(self, *, refresh):
         self.calls.append(("write_metadata", refresh))
-        layout.metadata_json.write_text("{}")
+        self.layout.metadata_json.write_text("{}")
 
 
 @pytest.fixture
@@ -50,8 +52,8 @@ def _mark_downloaded(layout, *, metadata=True):
 
 
 def test_fresh_download_runs_the_whole_pipeline(layout):
-    dl = FakeDownloader()
-    dl.ensure(layout, keep=False, refresh_metadata=False, redownload=False)
+    dl = FakeDownloader(layout)
+    dl.run(keep=False, refresh_metadata=False, redownload=False)
 
     assert dl.calls == [
         ("prepare", False),
@@ -66,15 +68,15 @@ def test_fresh_download_runs_the_whole_pipeline(layout):
 
 
 def test_keep_leaves_the_staging_dir(layout):
-    dl = FakeDownloader()
-    dl.ensure(layout, keep=True, refresh_metadata=False, redownload=False)
+    dl = FakeDownloader(layout)
+    dl.run(keep=True, refresh_metadata=False, redownload=False)
     assert layout.staging.is_dir()
 
 
 def test_a_fetch_that_returns_false_aborts_before_extract(layout):
-    dl = FakeDownloader()
+    dl = FakeDownloader(layout)
     dl.fetch_result = False
-    dl.ensure(layout, keep=False, refresh_metadata=False, redownload=False)
+    dl.run(keep=False, refresh_metadata=False, redownload=False)
 
     assert dl.calls == [("prepare", False), ("fetch", "CTX")]
     assert not layout.is_downloaded()
@@ -82,8 +84,8 @@ def test_a_fetch_that_returns_false_aborts_before_extract(layout):
 
 def test_already_downloaded_and_no_flags_runs_no_hooks(layout, capsys):
     _mark_downloaded(layout)
-    dl = FakeDownloader()
-    dl.ensure(layout, keep=False, refresh_metadata=False, redownload=False)
+    dl = FakeDownloader(layout)
+    dl.run(keep=False, refresh_metadata=False, redownload=False)
 
     assert dl.calls == []
     assert "Skipping: x (already downloaded)" in capsys.readouterr().out
@@ -91,8 +93,8 @@ def test_already_downloaded_and_no_flags_runs_no_hooks(layout, capsys):
 
 def test_refresh_metadata_rewrites_metadata_without_re_fetching(layout):
     _mark_downloaded(layout)
-    dl = FakeDownloader()
-    dl.ensure(layout, keep=False, refresh_metadata=True, redownload=False)
+    dl = FakeDownloader(layout)
+    dl.run(keep=False, refresh_metadata=True, redownload=False)
 
     assert dl.calls == [("prepare", True), ("write_metadata", True), "post_extract"]
     assert layout.metadata_json.is_file()
@@ -100,8 +102,8 @@ def test_refresh_metadata_rewrites_metadata_without_re_fetching(layout):
 
 def test_missing_metadata_is_written_even_without_refresh(layout):
     _mark_downloaded(layout, metadata=False)  # game present, metadata.json absent
-    dl = FakeDownloader()
-    dl.ensure(layout, keep=False, refresh_metadata=False, redownload=False)
+    dl = FakeDownloader(layout)
+    dl.run(keep=False, refresh_metadata=False, redownload=False)
 
     assert dl.calls == [("prepare", False), ("write_metadata", False), "post_extract"]
 
@@ -110,9 +112,9 @@ def test_redownload_clears_the_old_copy_then_re_runs_the_pipeline(layout):
     _mark_downloaded(layout)
     layout.dosemu.mkdir(parents=True)
     layout.dosemu_conf.write_text("stale")
-    dl = FakeDownloader()
+    dl = FakeDownloader(layout)
 
-    dl.ensure(layout, keep=False, refresh_metadata=False, redownload=True)
+    dl.run(keep=False, refresh_metadata=False, redownload=True)
 
     assert dl.calls == [
         ("prepare", False),

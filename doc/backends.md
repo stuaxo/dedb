@@ -29,8 +29,10 @@ profile).
 1. Create `src/dedb/<app>/layout.py` - a frozen dataclass mixing in
    `dedb.core.LayoutPaths` (see `dedb.archive.layout`), and
    `src/dedb/<app>/downloader.py` - a `dedb.core.Downloader` subclass filling
-   `_prepare` / `_fetch` / `_extract` / `_write_metadata` / `_rm_staging`
-   (and `_post_extract` if needed).
+   `_prepare` / `_fetch` / `_extract` / `_write_metadata` (and `_post_extract`
+   if needed), plus a module-level `make_downloader(layout)` factory. The
+   `Downloader` is bound to one `layout` at construction; hooks read
+   `self.layout` and `_prepare` stashes anything the later hooks need on `self`.
 
 2. Create `src/dedb/<app>/backend.py`:
 
@@ -46,8 +48,9 @@ profile).
        scheme: str = "myscheme"
        supports_profile: bool = False
        layout_cls = GameLayout
+       runner_module = "dedb.myscheme.runner"
+       downloader_module = "dedb.myscheme.downloader"  # exposes make_downloader(layout)
 
-       def _downloader(self): ...  # your Downloader subclass
        def run(self, target: Target, layout, *, emulator, extra_args, verbose) -> int: ...
        def convert(self, target: Target, *, output_dir=None, force=False): ...
        def build(self, target: Target): ...  # [(label, dosemu_conf_text, userhook_lines)]
@@ -55,7 +58,8 @@ profile).
    ```
 
    `BackendBase` provides `layout`, `is_downloaded`, `local_names`, `remove`,
-   `ensure_downloaded` (which drives your `Downloader`) and `iter_local_games`.
+   `run`, `convert`, `ensure_downloaded` (which resolves `downloader_module`
+   and drives your `Downloader`) and `iter_local_games`.
    Override `identifier_from_url` if the backend has its own URL form, and
    `dosbox_sources` if its games ship a `dosbox.conf`.
 
@@ -68,8 +72,9 @@ profile).
 3. Add `"dedb.<app>"` to `Settings.apps`. `get_backends()` imports
    `dedb.<app>.backend`; `dedb ls` and `DOWNLOAD_BACKENDS` pick it up.
 
-4. Keep `backend.py` cheap to import - put `runner` / `importer` imports inside
-   the methods.
+4. Keep `backend.py` cheap to import - `runner_module` / `downloader_module` are
+   dotted strings resolved lazily, and `importer` imports go inside the methods,
+   so registering a scheme doesn't pull in innoextract / the conversion engine.
 
 ## Downloading
 
