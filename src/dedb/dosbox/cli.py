@@ -6,6 +6,7 @@ not `dedb dosbox importdosbox ...`.
 """
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 import click
 
@@ -82,9 +83,16 @@ def _existing_conf(source: str) -> Path:
     if not path.is_file():
         raise click.BadParameter(
             f"{source!r} is not an existing dosbox.conf. For a downloaded game, pass "
-            f"'gog://<id>' (or a bare id with --backend)."
+            f"'gog:<id>' / 'archive:<id>' (or a bare id with --backend)."
         )
     return path
+
+
+def _is_game_ref(source: str) -> bool:
+    """A `<scheme>:<id>` (any number of slashes) or an archive.org item
+    URL - i.e. something `resolve_game` handles, not a file path."""
+    scheme = urlparse(source).scheme  # "" for a bare path, "gog" for gog:x or gog://x
+    return scheme in get_backends() or scheme in ("http", "https")
 
 
 @click.command("dosboxconf")
@@ -136,12 +144,13 @@ def dosboxconf(
     launch command line.
 
     SOURCES is one or more dosbox.conf paths, or a single downloaded game
-    ('gog://<id>' / 'archive://<id>', or a bare id with --backend) whose
+    ('gog:<id>' / 'archive:<id>', or a bare id with --backend) whose
     resolved DOSBox command line is shown - an archive.org item has no
-    dosbox.conf, just the emularity command line. With none of -a/-s/-g
-    given, those three aspects are shown; --issues is always opt-in.
+    dosbox.conf, just the emularity command line. The game only needs to
+    be downloaded, not imported. With none of -a/-s/-g given, those three
+    aspects are shown; --issues is always opt-in.
     """
-    if backend is not None or (len(sources) == 1 and "://" in sources[0]):
+    if backend is not None or (len(sources) == 1 and _is_game_ref(sources[0])):
         if len(sources) != 1:
             raise click.UsageError("Pass a single game when using a scheme or --backend.")
         game = resolve_game(sources[0], backend, profile=profile)

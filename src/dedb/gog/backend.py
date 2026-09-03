@@ -62,7 +62,9 @@ class GogBackend(BackendBase):
     def dosbox_command_line(self, target: Target):
         from .profiles import get_conf_files, get_working_dir
 
-        game = self.layout(target.identifier).game
+        layout = self.layout(target.identifier)
+        layout.require_downloaded("gog")
+        game = layout.game
         conf_files = get_conf_files(game, target.profile)
         argv = [token for conf in conf_files for token in ("-conf", str(conf))]
         return argv, get_working_dir(game, target.profile)
