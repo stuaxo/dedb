@@ -48,12 +48,12 @@ download_dir = "/path/to/downloads"
 `dedb run archive://<id> --dosbox` uses the same `[dosbox]` binary selection as
 GOG - see `doc/gog.md`.
 
-`[archive]` holds one archive-specific setting, `favorites_user` - the
+`[archive]` holds one archive-specific setting, `archive_user` - the
 archive.org screen name `dedb lsarchive` lists favorites for:
 
 ```toml
 [archive]
-favorites_user = "your-archive-org-username"
+archive_user = "your-archive-org-username"
 ```
 
 When it's unset, `lsarchive` prompts for the name and offers to save it here.
@@ -79,7 +79,7 @@ happened yet.
 ### List a user's favorites
 
 ```
-$ dedb lsarchive                       # the configured favorites_user, MS-DOS items only
+$ dedb lsarchive                       # the configured archive_user, MS-DOS items only
 $ dedb lsarchive --user someone        # a different archive.org user
 $ dedb lsarchive --all                 # include non-DOS favorites
 $ dedb lsarchive -1                    # bare `archive:<id>` lines

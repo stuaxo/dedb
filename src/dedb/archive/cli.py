@@ -9,11 +9,11 @@ from ..core import settings
 
 def _resolve_user(user: str | None) -> str:
     """The screen name to list: ``--user``, else the configured
-    ``favorites_user``, else prompt (and offer to save)."""
+    ``archive_user``, else prompt (and offer to save)."""
     if user:
         return user
 
-    configured = settings.get_settings().archive.favorites_user
+    configured = settings.get_settings().archive.archive_user
     if configured:
         return configured
 
@@ -21,9 +21,9 @@ def _resolve_user(user: str | None) -> str:
     if not user:
         raise click.ClickException("No username given.")
 
-    if click.confirm(f"Save this as favorites_user in {settings.SETTINGS_PATH}?", default=True):
+    if click.confirm(f"Save this as archive_user in {settings.SETTINGS_PATH}?", default=True):
         try:
-            settings.save_archive_favorites_user(user)
+            settings.save_archive_user(user)
         except OSError as exc:
             click.echo(f"Could not save to {settings.SETTINGS_PATH}: {exc}", err=True)
         else:
@@ -44,7 +44,7 @@ def _resolve_user(user: str | None) -> str:
     "user",
     metavar="NAME",
     default=None,
-    help="archive.org screen name to list, overriding the configured [archive] favorites_user.",
+    help="archive.org screen name to list, overriding the configured [archive] archive_user.",
 )
 @click.option(
     "--dos/--all",
@@ -62,7 +62,7 @@ def _resolve_user(user: str | None) -> str:
 def lsarchive(list_mode: str, user: str | None, dos_only: bool, names_only: bool) -> None:
     """List an archive.org user's favorites as `archive:<id>` targets.
 
-    The user comes from the `favorites_user` setting, or a prompt.
+    The user comes from the `archive_user` setting, or a prompt.
     MS-DOS items only, unless --all.
     """
     from .client import FETCH_ERRORS, ArchiveClient

@@ -13,7 +13,7 @@ from dedb.core.settings import (
     DosboxSettings,
     Settings,
     load_settings,
-    save_archive_favorites_user,
+    save_archive_user,
 )
 
 
@@ -136,23 +136,23 @@ def test_a_valid_file_is_respected(tmp_path):
     assert result.dosbox.dosbox == "dosbox_x"
 
 
-def test_archive_favorites_user_defaults_to_none_and_is_read_when_set():
-    assert load_settings().archive.favorites_user is None
+def test_archive_user_defaults_to_none_and_is_read_when_set():
+    assert load_settings().archive.archive_user is None
 
-    settings.SETTINGS_PATH.write_text('[archive]\nfavorites_user = "someone"\n')
-    assert load_settings().archive.favorites_user == "someone"
+    settings.SETTINGS_PATH.write_text('[archive]\narchive_user = "someone"\n')
+    assert load_settings().archive.archive_user == "someone"
 
 
-def test_save_archive_favorites_user_is_idempotent_and_preserves_comments():
+def test_save_archive_user_is_idempotent_and_preserves_comments():
     load_settings()  # write the packaged default, comments and all
-    save_archive_favorites_user("first")
-    save_archive_favorites_user("second")
+    save_archive_user("first")
+    save_archive_user("second")
 
     text = settings.SETTINGS_PATH.read_text()
-    written = [ln for ln in text.splitlines() if ln.strip().startswith("favorites_user")]
-    assert written == ['favorites_user = "second"']  # replaced, not appended
+    written = [ln for ln in text.splitlines() if ln.strip().startswith("archive_user")]
+    assert written == ['archive_user = "second"']  # replaced, not appended
     assert "# dedb configuration." in text  # packaged comments survived
-    assert load_settings().archive.favorites_user == "second"
+    assert load_settings().archive.archive_user == "second"
 
 
 def test_download_dir_expands_a_leading_tilde(monkeypatch, tmp_path):
