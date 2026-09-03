@@ -111,7 +111,7 @@ def test_config_set_for_a_key_not_in_the_model_is_still_folded_but_flagged():
 
 
 def test_conf_file_is_merged_then_overridden_by_argv(write_conf, base_profile_conf):
-    conf = write_conf(base_profile_conf)  # memsize=16, cycles=auto, [autoexec] MOUNT C GAME / game.exe
+    conf = write_conf(base_profile_conf)  # memsize=16, cycles=auto, autoexec MOUNT C GAME
 
     config, autoexec = parse_dosbox_argv(
         ["-conf", str(conf), "-c", "config -set cpu cycles=max", "-c", "extra.exe"]
