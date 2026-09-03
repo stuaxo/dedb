@@ -18,11 +18,8 @@ def _format_issues(issues: Sequence[AutoexecIssue], *, verbose: bool = False) ->
         yield "(none)"
         return
 
-    # Severity is an IntEnum numbered most-severe first, so this sorts the
-    # bands worst-to-best, then by workaround name within each band.
-    ordered = sorted(issues, key=attrgetter("severity", "workaround"))
-
-    for severity, band in groupby(ordered, key=attrgetter("severity")):
+    issues_by_severity = sorted(issues, key=attrgetter("severity", "workaround"))
+    for severity, band in groupby(issues_by_severity, key=attrgetter("severity")):
         label = severity.name.lower().replace("_", " ")
 
         if not verbose:

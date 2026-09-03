@@ -7,7 +7,7 @@ files, a few flags, and a trailing program. This module turns that argv
 into the *same* ``(nested_section_dict, autoexec_lines)`` pair
 ``dedb.convert.parser`` produces from a .conf, so it flows through the
 existing ``DosboxConfig.model_validate`` -> ``dosbox_to_dosemu`` ->
-``convert_autoexec`` pipeline unchanged.
+``autoexec_as_userhook`` pipeline unchanged.
 
 Two kinds of thing arrive on a DOSBox command line:
 

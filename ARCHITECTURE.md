@@ -26,7 +26,7 @@ downloads - feeds it or manages its inputs.
  dosbox*.conf ──┐
                 ├─parse─▶ raw dict ─validate─▶ DosboxConfig ─dosbox_to_dosemu─▶ DosemuConfig ─render─▶ dosemu.conf
  dosbox argv ───┘   │
-              [autoexec] lines ──────────── convert_autoexec (SHIMS routing table) ────────────────▶ userhook.bat
+              [autoexec] lines ──────────── autoexec_as_userhook (SHIMS routing table) ────────────▶ userhook.bat
 ```
 
 The input is `dosbox.conf` file(s) - `dedb.convert.parser` - or a `dosbox`
@@ -115,9 +115,9 @@ equivalents don't yet exist. The converted lines are saved to
 `userhook.bat`.
 
 `dedb.convert.autoexec` is a declarative routing table, `SHIMS`: a list of
-`(regex, handler, name)`. `check_autoexec_line` matches one line against
+`(regex, handler, name)`. `autoexec_line_to_userhook_line` matches one line against
 it, first hit wins; the handler returns the rewritten line, a `Severity`,
-and a one-line summary. `convert_autoexec` runs the whole autoexec for
+and a one-line summary. `autoexec_as_userhook` runs the whole autoexec for
 `userhook.bat`; `diagnose_autoexec` runs the same pass to report what
 changed (the shim is its own detector, so the report can't drift from the
 file).

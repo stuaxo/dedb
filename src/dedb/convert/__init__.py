@@ -14,7 +14,7 @@ never reach into the submodules.
     tokens      split_command (tokenise a DOS command string)
     models      DosboxConfig / DosemuConfig / dosbox_to_dosemu / TRANSLATIONS
     mounts      resolve_mounts / MountPoint (the MOUNT targets in an autoexec)
-    autoexec    the shims + convert_autoexec / diagnose_autoexec
+    autoexec    the shims + autoexec_as_userhook / diagnose_autoexec
     converter   build / build_from_parsed / build_from_argv / write_outputs / convert
     issues      render_issues (the `--issues` text block)
     fieldmap    the ARCHITECTURE.md field-map generator (python -m dedb.convert.fieldmap)
@@ -24,8 +24,8 @@ from .autoexec import (
     SHIMS,
     AutoexecIssue,
     Severity,
-    check_autoexec_line,
-    convert_autoexec,
+    autoexec_as_userhook,
+    autoexec_line_to_userhook_line,
     diagnose_autoexec,
 )
 from .cmdline import (
@@ -59,12 +59,12 @@ __all__ = [
     "MountPoint",
     "Severity",
     "Translation",
+    "autoexec_as_userhook",
+    "autoexec_line_to_userhook_line",
     "build",
     "build_from_argv",
     "build_from_parsed",
-    "check_autoexec_line",
     "convert",
-    "convert_autoexec",
     "diagnose_autoexec",
     "dosbox_to_dosemu",
     "parse_dosbox_argv",

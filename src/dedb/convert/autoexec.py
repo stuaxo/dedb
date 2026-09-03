@@ -2,10 +2,11 @@
 ``userhook.bat``. Real DOSBox runs the autoexec straight from ``-conf``
 and never sees these rewrites.
 
-``SHIMS`` is a list of ``(regex, handler, name)``. ``check_autoexec_line``
-applies the first handler whose regex matches a line; ``convert_autoexec``
-runs a whole autoexec through it, and ``diagnose_autoexec`` reports what
-changed, for ``dedb dosboxconf --issues``.
+``SHIMS`` is a list of ``(regex, handler, name)``.
+``autoexec_line_to_userhook_line`` applies the first handler whose regex
+matches a line; ``autoexec_as_userhook`` runs a whole autoexec through it,
+and ``diagnose_autoexec`` reports what changed, for
+``dedb dosboxconf --issues``.
 """
 
 import re
@@ -101,7 +102,7 @@ def get_shims() -> list[tuple[re.Pattern[str], Handler, str]]:
     return [(re.compile(pattern, re.IGNORECASE), handler, name) for pattern, handler, name in SHIMS]
 
 
-def check_autoexec_line(
+def autoexec_line_to_userhook_line(
     line: str, conf: Any | None = None, working_dir: Path | None = None
 ) -> tuple[str, tuple[str, Severity, str] | None]:
     """Match one autoexec line against ``SHIMS``.
@@ -129,14 +130,14 @@ def check_autoexec_line(
     return line, None
 
 
-def convert_autoexec(
+def autoexec_as_userhook(
     autoexec: list[str], conf: Any | None = None, working_dir: Path | None = None
 ) -> list[str]:
     """Every autoexec line rewritten for ``userhook.bat`` - each line
     unchanged unless a shim recognised it. ``working_dir`` (default: the
     current directory) is where a relative ``MOUNT`` path is resolved
     from, when the shim rewrites it to ``LREDIR``."""
-    return [check_autoexec_line(line, conf, working_dir)[0] for line in autoexec]
+    return [autoexec_line_to_userhook_line(line, conf, working_dir)[0] for line in autoexec]
 
 
 def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> list[AutoexecIssue]:
@@ -145,6 +146,6 @@ def diagnose_autoexec(autoexec: list[str], working_dir: Path | None = None) -> l
     return [
         AutoexecIssue(*hit, line, rewritten)
         for line in autoexec
-        for rewritten, hit in [check_autoexec_line(line, working_dir=working_dir)]
+        for rewritten, hit in [autoexec_line_to_userhook_line(line, working_dir=working_dir)]
         if hit is not None
     ]

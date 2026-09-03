@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from .autoexec import convert_autoexec
+from .autoexec import autoexec_as_userhook
 from .models import DosboxConfig, DosemuConfig, dosbox_to_dosemu
 from .parser import parse_dosbox_confs
 
@@ -21,7 +21,7 @@ def build_from_parsed(
     LREDIR calls; it defaults to the current directory."""
     dosbox = DosboxConfig.model_validate({**raw_dict, "autoexec": list(autoexec_commands)})
     target = dosbox_to_dosemu(dosbox)
-    return target, convert_autoexec(dosbox.autoexec, conf=dosbox, working_dir=working_dir)
+    return target, autoexec_as_userhook(dosbox.autoexec, conf=dosbox, working_dir=working_dir)
 
 
 def build(
