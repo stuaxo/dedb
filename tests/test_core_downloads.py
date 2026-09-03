@@ -11,7 +11,7 @@ from pathlib import Path
 import click
 import pytest
 
-from dedb.core import ensure_download_dir, remove_download
+from dedb.core import ensure_download_dir, remove_download, remove_downloads
 from dedb.core.settings import Settings
 from dedb.gog.layout import GogLayout
 
@@ -52,6 +52,35 @@ def test_removes_a_stray_file_child(gog_root: Path):
     (gog_root / "notes.txt").write_text("x")
     remove_download(GogLayout(gog_root, "notes.txt"), assume_yes=True)
     assert not (gog_root / "notes.txt").exists()
+
+
+# --- remove_downloads (batch) --------------------------------------------
+
+
+def test_batch_removes_the_present_ones_and_reports_the_rest(gog_root: Path, capsys):
+    (gog_root / "quake").mkdir()
+    remove_downloads([GogLayout(gog_root, n) for n in ("doom", "quake", "ghost")], assume_yes=True)
+    assert not (gog_root / "doom").exists()
+    assert not (gog_root / "quake").exists()
+    assert "Nothing to remove for 'ghost'" in capsys.readouterr().out
+
+
+def test_batch_confirms_once_for_the_whole_set(gog_root: Path, monkeypatch):
+    (gog_root / "quake").mkdir()
+    prompts = []
+    monkeypatch.setattr("click.confirm", lambda msg, **kw: prompts.append(msg) or True)
+    remove_downloads([GogLayout(gog_root, n) for n in ("doom", "quake")], assume_yes=False)
+
+    assert len(prompts) == 1
+    assert not (gog_root / "doom").exists() and not (gog_root / "quake").exists()
+
+
+def test_batch_abort_removes_nothing(gog_root: Path, monkeypatch):
+    (gog_root / "quake").mkdir()
+    monkeypatch.setattr("click.confirm", lambda *a, **k: (_ for _ in ()).throw(click.Abort()))
+    with pytest.raises(click.Abort):
+        remove_downloads([GogLayout(gog_root, n) for n in ("doom", "quake")], assume_yes=False)
+    assert (gog_root / "doom").exists()
 
 
 # --- ensure_download_dir --------------------------------------------------

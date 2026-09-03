@@ -38,8 +38,8 @@ For more ls options:
 
 ### Naming a game
 
-`dedb run`, `download`, `import` and `rm` take one GAME argument
-(`refreshmetadata` takes any number, or none for every downloaded game):
+`dedb run` takes one GAME; `download`, `import` and `rm` take any number
+(`refreshmetadata` too, or none for every downloaded game):
 
 | GAME                                 | Is                                            |
 |--------------------------------------|-----------------------------------------------|
@@ -48,6 +48,7 @@ For more ls options:
 | `archive:<identifier>`               | an archive.org item                           |
 | `https://archive.org/details/<name>` | an archive.org item, by URL                   |
 | `<name>`                             | a downloaded game by name                     |
+| `<pattern>` (`rm` only)              | a `*`/`?`/`[]` wildcard over downloaded names (optionally `gog:<pattern>`) |
 
 Examples:
 
@@ -55,9 +56,10 @@ Examples:
 $ dedb run gog:tyrian_2000 --dosbox
 $ dedb run archive:msdos_Electro_Man_1992 --dosemu
 $ dedb run 'gog:warcraft_orcs_and_humans?profile=server' --dosbox -- -fullscreen
-$ dedb download gog:tyrian_2000
+$ dedb download gog:tyrian_2000 gog:warcraft_orcs_and_humans
 $ dedb rm gog:tyrian_2000
-$ dedb refreshmetadata          # re-fetch metadata.json for every downloaded game
+$ dedb rm 'gog:tyrian*' doom          # wildcards + names; one confirmation for the set
+$ dedb refreshmetadata               # re-fetch metadata.json for every downloaded game
 ```
 
 

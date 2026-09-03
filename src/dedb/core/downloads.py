@@ -67,6 +67,33 @@ def remove_download(layout: LayoutPaths, *, assume_yes: bool) -> None:
         return
     if not assume_yes:
         click.confirm(f"Remove '{layout.dir.name}' and everything under {layout.dir}?", abort=True)
+    _rm_confirmed(layout)
+
+
+def remove_downloads(layouts: "list[LayoutPaths]", *, assume_yes: bool) -> None:
+    """`dedb rm` for one or more downloads: report the ones that don't
+    exist, confirm the rest *once* for the whole set (unless
+    ``assume_yes``), then delete each."""
+    present = [lo for lo in layouts if lo.dir.exists()]
+    for lo in layouts:
+        if not lo.dir.exists():
+            click.echo(f"Nothing to remove for '{lo.dir.name}' ({lo.dir} doesn't exist)")
+    if not present:
+        return
+    if not assume_yes:
+        if len(present) == 1:
+            lo = present[0]
+            click.confirm(f"Remove '{lo.dir.name}' and everything under {lo.dir}?", abort=True)
+        else:
+            click.echo(f"About to remove {len(present)} downloads:")
+            for lo in present:
+                click.echo(f"  {lo.dir.name}  ({lo.dir})")
+            click.confirm("Proceed?", abort=True)
+    for lo in present:
+        _rm_confirmed(lo)
+
+
+def _rm_confirmed(layout: LayoutPaths) -> None:
     try:
         layout.rm()
     except OSError as exc:

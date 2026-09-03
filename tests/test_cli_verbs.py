@@ -6,8 +6,9 @@ codes. Target *resolution* (schemes, bare names, "did you mean") is
 tested in test_backends.
 
 Seam: patch the backend *class* method (instances are frozen dataclasses),
-and patch core helpers at their origin module -
-`dedb.core.settings.get_settings`, `dedb.core.downloads.remove_download`.
+patch `dedb.core.settings.get_settings` at its origin, and patch helpers
+the verb imports by name where the verb imports them
+(`dedb.dedb.verbs.remove_downloads`).
 """
 
 from pathlib import Path
@@ -141,16 +142,88 @@ def test_import_refreshconf_reconverts_a_downloaded_archive_item(download_dir, m
     assert seen == {"id": "x", "force": True}
 
 
+def test_download_dispatches_every_game_before_the_first_fetch(download_dir, monkeypatch):
+    ids = []
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.ensure_downloaded",
+        lambda self, identifier, **kw: ids.append(identifier),
+    )
+    result = CliRunner().invoke(cli, ["download", "gog://a", "gog://b"])
+
+    assert result.exit_code == 0, result.output
+    assert ids == ["a", "b"]
+    assert "Downloaded 'a'" in result.output and "Downloaded 'b'" in result.output
+
+
+def test_download_bad_ref_aborts_before_any_fetch(download_dir, monkeypatch):
+    monkeypatch.setattr(
+        "dedb.gog.backend.GogBackend.ensure_downloaded",
+        lambda *a, **k: pytest.fail("must not fetch when a later arg is bad"),
+    )
+    result = CliRunner().invoke(cli, ["download", "gog://a", "bogus://b"])
+    assert result.exit_code != 0
+    assert "Unknown scheme 'bogus://'" in result.output
+
+
+def test_import_output_dir_rejects_multiple_games(download_dir):
+    result = CliRunner().invoke(cli, ["import", "gog://a", "gog://b", "-o", "/tmp/out"])
+    assert result.exit_code == 2
+    assert "--output-dir takes a single GAME" in result.output
+
+
 def test_rm_dispatches(download_dir, monkeypatch):
     seen = {}
     monkeypatch.setattr(
-        "dedb.core.downloads.remove_download",
-        lambda layout, *, assume_yes: seen.update(dir=layout.dir, assume_yes=assume_yes),
+        "dedb.dedb.verbs.remove_downloads",
+        lambda layouts, *, assume_yes: seen.update(
+            names=[lo.dir.name for lo in layouts], assume_yes=assume_yes
+        ),
     )
     result = CliRunner().invoke(cli, ["rm", "gog://x", "-y"])
 
     assert result.exit_code == 0
-    assert seen == {"dir": download_dir / "gog" / "x", "assume_yes": True}
+    assert seen == {"names": ["x"], "assume_yes": True}
+
+
+def test_rm_expands_a_wildcard_and_dedups(tmp_path, monkeypatch):
+    for rel in ("gog/tyrian_2000", "gog/tyrian_2k", "gog/doom", "archive/tyrian_x"):
+        (tmp_path / rel).mkdir(parents=True)
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+    seen = {}
+    monkeypatch.setattr(
+        "dedb.dedb.verbs.remove_downloads",
+        lambda layouts, *, assume_yes: seen.update(
+            targets={(lo.dir.parent.name, lo.dir.name) for lo in layouts}
+        ),
+    )
+
+    result = CliRunner().invoke(cli, ["rm", "gog:tyrian*", "gog://doom", "doom", "-y"])
+
+    assert result.exit_code == 0, result.output
+    assert seen["targets"] == {("gog", "tyrian_2000"), ("gog", "tyrian_2k"), ("gog", "doom")}
+
+
+def test_rm_wildcard_matching_nothing_is_reported(tmp_path, monkeypatch):
+    (tmp_path / "gog" / "doom").mkdir(parents=True)
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+
+    result = CliRunner().invoke(cli, ["rm", "zzz*", "-y"])
+    assert result.exit_code == 0
+    assert "No downloads match 'zzz*'" in result.output
+
+
+def test_rm_confirms_once_for_the_whole_set(tmp_path, monkeypatch):
+    for name in ("doom", "quake"):
+        (tmp_path / "gog" / name / "game").mkdir(parents=True)
+        (tmp_path / "gog" / name / "game" / "f").write_text("x")
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+
+    result = CliRunner().invoke(cli, ["rm", "gog:*"], input="y\n")
+
+    assert result.exit_code == 0, result.output
+    assert "About to remove 2 downloads" in result.output
+    assert not (tmp_path / "gog" / "doom").exists()
+    assert not (tmp_path / "gog" / "quake").exists()
 
 
 # --- -b/--backend component form ----------------------------------
