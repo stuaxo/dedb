@@ -1,3 +1,16 @@
+dedb (0.1.0) unstable; urgency=medium
+
+  * `run`, `download`, `import` and `refreshmetadata` now accept a
+    shell wildcard as GAME, matched against downloaded names, the same
+    as `ls`/`rm` already did, e.g. `dedb run 'gog:tyrian*' --dosbox`.
+    Zero or more than one match is an error instead of resolving.
+  * The Debian package is renamed from `python3-dedb` to `dedb`: dedb
+    is a command-line tool, not an importable library, so the
+    `python3-` prefix doesn't apply per Debian Python Policy. Installing
+    `dedb` supersedes an existing `python3-dedb` install automatically.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Fri, 04 Sep 2026 21:42:00 +0100
+
 dedb (0.0.20) unstable; urgency=medium
 
   * A bare `<scheme>:` pattern (e.g. `dedb ls 'gog:'`) now matches
@@ -209,9 +222,3 @@ dedb (0.0.3) unstable; urgency=medium
   * Bump softprops/action-gh-release to v2.
 
  -- Stuart Axon <stu.axon@gmail.com>  Sun, 30 Aug 2026 14:47:17 +0100
-
-dedb (0.1.0) unstable; urgency=medium
-
-  * Initial release
-
- -- Author <author@example.com>  Thu, 1 Jan 2024 00:00:00 +0000
