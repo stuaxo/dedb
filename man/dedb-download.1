@@ -1,4 +1,4 @@
-.TH "DEDB DOWNLOAD" "1" "2026-01-01" "0.0.15" "dedb download Manual"
+.TH "DEDB DOWNLOAD" "1" "2026-01-01" "0.0.16" "dedb download Manual"
 .SH NAME
 dedb\-download \- Download and extract one or more games.
 .SH SYNOPSIS
@@ -7,9 +7,8 @@ dedb\-download \- Download and extract one or more games.
 .SH DESCRIPTION
 Download and extract one or more games.
 .PP
-Each GAME needs a scheme (gog:<id>, archive:<id>, or an archive.org
-URL), or -b <scheme> with a bare id. A bare name works only for a
-game already downloaded.
+GAME are specified as <scheme>:<id> or -b <scheme> <identifier>,
+or just <identifier> for downloaded games.
 .PP
 .SH OPTIONS
 .TP
