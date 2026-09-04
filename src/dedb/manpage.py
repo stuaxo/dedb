@@ -21,8 +21,18 @@ SHORT_HELP_LIMIT = 80
 
 def render_man_pages(cli, version: str) -> dict[str, str]:
     """Map ``<name>.1`` -> roff text for ``cli`` and every visible subcommand."""
+    import inspect
+
     import click
     import click_man.core as core
+
+    # click-man reads ``command.help`` raw, but click itself renders it
+    # through ``inspect.cleandoc``. Python 3.13+ dedents docstrings at
+    # compile time and older ones do not, so without this the generated
+    # pages differ by interpreter version. Clean the text ourselves.
+    for command in _walk_commands(cli):
+        if command.help:
+            command.help = inspect.cleandoc(command.help)
 
     _short_help = core.get_short_help_str
     core.get_short_help_str = lambda command, limit=SHORT_HELP_LIMIT: _short_help(command, limit)
@@ -42,3 +52,10 @@ def render_man_pages(cli, version: str) -> dict[str, str]:
         return pages
     finally:
         core.get_short_help_str = _short_help
+
+
+def _walk_commands(command):
+    """Yield ``command`` and every nested subcommand, hidden ones included."""
+    yield command
+    for sub in getattr(command, "commands", {}).values():
+        yield from _walk_commands(sub)
