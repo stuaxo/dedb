@@ -28,3 +28,26 @@ jobs:
 
       - name: Tests
         run: uv run pytest
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Build wheel and sdist
+        run: uv build
+
+      - name: Wheel installs and runs
+        run: |
+          python3 -m venv /tmp/wheel-env
+          /tmp/wheel-env/bin/pip install dist/*.whl
+          /tmp/wheel-env/bin/dedb --version
+
+      - name: Sdist installs and runs
+        run: |
+          python3 -m venv /tmp/sdist-env
+          /tmp/sdist-env/bin/pip install dist/*.tar.gz
+          /tmp/sdist-env/bin/dedb --version
