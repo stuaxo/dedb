@@ -1,6 +1,6 @@
 """Tests for the committed man pages under man/.
 
-The Debian package installs them (debian/python3-dedb.manpages); they are
+The Debian package installs them (debian/dedb.manpages); they are
 click-man's output, one page per command (see dedb.manpage). These fail
 if the committed files drift - regenerate with `python man/_generate.py`.
 """
