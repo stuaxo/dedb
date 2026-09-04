@@ -1,3 +1,4 @@
-completions/dedb.bash usr/share/bash-completion/completions/dedb
-completions/dedb.zsh  usr/share/zsh/vendor-completions/_dedb
-completions/dedb.fish usr/share/fish/vendor_completions.d/dedb.fish
+#!/usr/bin/dh-exec
+completions/dedb.bash => usr/share/bash-completion/completions/dedb
+completions/dedb.zsh => usr/share/zsh/vendor-completions/_dedb
+completions/dedb.fish => usr/share/fish/vendor_completions.d/dedb.fish
