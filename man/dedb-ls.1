@@ -3,9 +3,13 @@
 dedb\-ls \- List downloaded games.
 .SH SYNOPSIS
 .B dedb ls
-[OPTIONS]
+[OPTIONS] [PATTERNS]...
 .SH DESCRIPTION
 List downloaded games.
+.PP
+With no PATTERNS, lists every download. Each PATTERN is a shell
+wildcard (*, ?, [...]), optionally <scheme>:-qualified, matched
+against the downloaded names - e.g. `dedb ls 'gog:*jazz*'`.
 .SH OPTIONS
 .TP
 \fB\-b,\fP \-\-backend SCHEME

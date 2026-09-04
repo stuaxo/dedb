@@ -10,6 +10,7 @@ and never reach into a sibling app or ``settings.json`` directly.
     registry        get_apps() / get_backends() - discovery from settings
     backends        BackendBase + resolve() / resolve_game() / complete_target() + GameRefError
     cliargs         is_game_ref / existing_conf / complete_source SOURCES helpers + cli_command
+    match           has_wildcard / match_downloads - shell-wildcard game selection
     downloads       the <download_dir> resolve/create ops + delete_download
     layout          LayoutPaths + NotDownloadedError / UnsafePathError
     local           GameDescription / LocalGame / LaunchProfile - the downloaded-program model
@@ -26,6 +27,7 @@ from .downloader import Downloader, DownloadError
 from .downloads import delete_download, ensure_download_dir, require_download_dir
 from .layout import LayoutPaths, NotDownloadedError, UnsafePathError
 from .local import LaunchProfile, LocalGame
+from .match import has_wildcard, match_downloads
 from .metadata_cache import MetadataCache, OfflineError
 from .metadata_file import GameMetadataFile
 from .refs import Target, long_target, short_target
@@ -71,11 +73,13 @@ __all__ = [
     "get_apps",
     "get_backends",
     "get_settings",
+    "has_wildcard",
     "is_game_ref",
     "launch",
     "launch_dosemu",
     "load_settings",
     "long_target",
+    "match_downloads",
     "register_backend",
     "render_cmdline",
     "require_download_dir",

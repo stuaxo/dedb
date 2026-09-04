@@ -140,3 +140,44 @@ def test_ls_href_with_url_links_the_url_text(downloads):
     esc, st = "\033]8;;", "\033\\"
     url = "https://archive.org/details/msdos_Zzt"
     assert result.output.strip() == f"{esc}{url}{st}{url}{esc}{st}"
+
+
+# --- PATTERNS filtering ------------------------------------------------
+
+
+def test_ls_filters_by_a_wildcard(downloads):
+    result = CliRunner().invoke(cli, ["ls", "*_game"])
+
+    assert result.exit_code == 0
+    assert result.output.splitlines() == ["alpha_game", "beta_game"]
+
+
+def test_ls_filters_by_a_scheme_qualified_wildcard(downloads):
+    (downloads / "archive" / "alpha_game").mkdir()  # now under gog *and* archive
+
+    result = CliRunner().invoke(cli, ["ls", "archive:*"])
+
+    assert result.output.splitlines() == ["alpha_game", "msdos_Zzt"]
+
+
+def test_ls_pattern_is_intersected_with_the_backend_filter(downloads):
+    # msdos_Zzt matches, but it is an archive download and -b excludes it.
+    result = CliRunner().invoke(cli, ["ls", "-b", "gog", "*Zzt"])
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    assert "No downloads match '*Zzt'" in result.stderr
+
+
+def test_ls_pattern_matching_nothing_is_reported_on_stderr(downloads):
+    result = CliRunner().invoke(cli, ["ls", "zzz*"])
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    assert "No downloads match 'zzz*'" in result.stderr
+
+
+def test_ls_multiple_patterns_union(downloads):
+    result = CliRunner().invoke(cli, ["ls", "alpha*", "*Zzt"])
+
+    assert result.output.splitlines() == ["alpha_game", "msdos_Zzt"]
