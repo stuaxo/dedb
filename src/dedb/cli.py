@@ -25,6 +25,55 @@ from .core import (
     short_target,
 )
 
+# Reusable help fragments, kept consistent across the commands below. These
+# are passed as help= to @click.command rather than used as docstrings: an
+# f-string is not a docstring, so Click would see no help text at all.
+GAME_URI_SCHEME = "<scheme>:<id>"
+GAME_SCHEME_AND_ID = "-b <scheme> <identifier>"
+GAME_SPECIFICATION = (
+    f"GAME is specified as {GAME_URI_SCHEME} or {GAME_SCHEME_AND_ID},\n"
+    "or just <identifier> for downloaded games."
+)
+GAMES_SPECIFICATION = (
+    f"GAME are specified as {GAME_URI_SCHEME} or {GAME_SCHEME_AND_ID},\n"
+    "or just <identifier> for downloaded games."
+)
+
+RUN_HELP = f"""Run a game in DOSBox or DOSEMU2.
+
+{GAME_SPECIFICATION}
+
+An emulator must be specified with --dosbox or --dosemu.
+
+Arguments after `--` go straight to the emulator.
+
+--cmdline shows the emulator commandline instead of running it.
+"""
+
+DOWNLOAD_HELP = f"""Download and extract one or more games.
+
+{GAMES_SPECIFICATION}
+"""
+
+RM_HELP = f"""Delete one or more downloaded games' directory trees.
+
+{GAMES_SPECIFICATION}
+
+Shell wildcards (*, ?, [...]) can be matched against downloaded games, e.g. 'gog:tyrian*'.
+
+The user will be prompted for confirmation unless -y is passed.
+"""
+
+REFRESHMETADATA_HELP = f"""Re-fetch backend metadata for games and rewriting each metadata.json.
+
+{GAMES_SPECIFICATION}
+
+If no games are specified, defaults to all downloaded games.
+
+Games that have not been downloaded are skipped.
+Games that don't exist (can't be resolved) are an error.
+"""
+
 # --- shared options / helpers ---------------------------------------------
 
 
@@ -82,7 +131,7 @@ def _require_one_emulator(use_dosbox: bool, use_dosemu: bool) -> str:
 # --- run / download ----------------------------------------------------
 
 
-@click.command("run")
+@click.command("run", help=RUN_HELP)
 @click.argument("game", shell_complete=_complete_game)
 @click.argument("emulator_args", nargs=-1, type=click.UNPROCESSED)
 @click.option("--dosbox", "use_dosbox", is_flag=True, help="Run in DOSBox.")
@@ -115,17 +164,6 @@ def run(
     verbose,
     cmdline,
 ):
-    """Run a game in DOSBox or DOSEMU2.
-
-    GAME is specified as <scheme>:<identifier> or -b <scheme> <identifier>,
-    or just <identifier> for downloaded games.
-
-    An emulator must be specified with --dosbox or --dosemu.
-
-    Arguments after `--` go straight to the emulator.
-
-    --cmdline shows the emulator commandline instead of running it.
-    """
     emulator = _require_one_emulator(use_dosbox, use_dosemu)
     resolved = resolve_game(game, backend, profile=profile)
     be = get_backends()[resolved.scheme]
@@ -144,18 +182,12 @@ def run(
         sys.exit(exit_code)
 
 
-@click.command("download")
+@click.command("download", help=DOWNLOAD_HELP)
 @click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
 @_download_options
 @cli_command
 def download(games, backend, keep, refresh_metadata, redownload):
-    """Download and extract one or more games.
-
-    Each GAME needs a scheme (gog:<id>, archive:<id>, or an archive.org
-    URL), or -b <scheme> with a bare id. A bare name works only for a
-    game already downloaded.
-    """
     registry = get_backends()
     resolved = [resolve_game(g, backend) for g in games]  # resolve all before fetching any
     for target in resolved:
@@ -193,19 +225,12 @@ def _rm_glob_hits(pattern: str, backend: "str | None", registry) -> list:
     return hits
 
 
-@click.command("rm")
+@click.command("rm", help=RM_HELP)
 @click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
 @click.option("--yes", "-y", is_flag=True, help="Remove without prompting.")
 @cli_command
 def rm(games, backend, yes):
-    """Delete one or more downloaded games' directory trees.
-
-    Each GAME is a <scheme>://<id> URL, a bare downloaded name, or a
-    shell wildcard (*, ?, [...]) matched against downloaded names -
-    optionally scheme-qualified, e.g. 'gog:tyrian*'. One confirmation
-    covers the whole set (skip it with -y).
-    """
     registry = get_backends()
 
     pairs: list = []
@@ -234,8 +259,10 @@ def _remove_downloads(layouts: list, *, assume_yes: bool) -> None:
     for lo in layouts:
         if not lo.dir.exists():
             click.echo(f"Nothing to remove for '{lo.dir.name}' ({lo.dir} doesn't exist)")
+
     if not present:
         return
+
     if not assume_yes:
         if len(present) == 1:
             lo = present[0]
@@ -245,6 +272,7 @@ def _remove_downloads(layouts: list, *, assume_yes: bool) -> None:
             for lo in present:
                 click.echo(f"  {lo.dir.name}  ({lo.dir})")
             click.confirm("Proceed?", abort=True)
+
     for lo in present:
         delete_download(lo)
         click.echo(f"Removed '{lo.dir.name}' ({lo.dir})")
@@ -253,20 +281,11 @@ def _remove_downloads(layouts: list, *, assume_yes: bool) -> None:
 # --- refreshmetadata --------------------------------------------------
 
 
-@click.command("refreshmetadata")
+@click.command("refreshmetadata", help=REFRESHMETADATA_HELP)
 @click.argument("games", nargs=-1, shell_complete=_complete_game)
 @_backend_option
 @cli_command
 def refreshmetadata(games, backend):
-    """Re-fetch backend metadata for games and rewriting each metadata.json.
-
-    If no games are specified, defaults to all downloaded games.
-
-    Games are specified with <scheme>:<id> or -b <scheme> <id>
-
-    Games that have not been downloaded are skipped.
-    Games that don't exist (can't be resolved) are an error.
-    """
     registry = get_backends()
 
     if games:
@@ -330,7 +349,7 @@ def _parse_backends(
 
 
 def _local_games(backends: list[str]) -> "list[LocalGame]":
-    """Every downloaded game under the given backends, in backend order
+    """Every downloaded game under the given backends, in backend
     then name order. `iter_local_games()` builds on the same `local_names()`
     view that `dedb run`'s bare-name resolution uses."""
     registry = get_backends()
