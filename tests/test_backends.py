@@ -278,6 +278,54 @@ def test_bare_name_miss_suggests_closest(local_downloads, typed, suggestion):
         assert "Did you mean" not in message
 
 
+# --- resolve(): wildcards --------------------------------------------
+
+
+def test_bare_wildcard_resolves_when_it_hits_exactly_one(local_downloads):
+    assert resolve("jazz*") == Target("gog", "jazz_jackrabbit_collection", None, "jazz*")
+
+
+def test_scheme_qualified_wildcard_pins_the_backend(local_downloads):
+    (local_downloads / "archive" / "tyrian_x").mkdir(parents=True)
+    assert resolve("gog:tyrian*") == Target("gog", "tyrian_2000", None, "gog:tyrian*")
+
+
+def test_single_char_wildcard_resolves(local_downloads):
+    assert resolve("tyrian_200?") == Target("gog", "tyrian_2000", None, "tyrian_200?")
+
+
+def test_bare_scheme_colon_resolves_when_it_hits_exactly_one(tmp_path, monkeypatch):
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+    (tmp_path / "gog" / "tyrian_2000").mkdir(parents=True)
+    assert resolve("gog:") == Target("gog", "tyrian_2000", None, "gog:")
+
+
+def test_backend_flag_with_a_wildcard_pins_the_backend(local_downloads):
+    target = resolve_game("tyrian*", "gog")
+    assert (target.scheme, target.identifier) == ("gog", "tyrian_2000")
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        ("zzz*", "doesn't match any downloaded game"),
+        ("tyrian*", "matches multiple downloaded games"),
+    ],
+)
+def test_wildcard_errors(local_downloads, value, match):
+    (local_downloads / "archive" / "tyrian_x").mkdir(parents=True)
+    with pytest.raises(GameRefError, match=match):
+        resolve(value)
+
+
+def test_wildcard_does_not_swallow_a_real_profile_query():
+    # '?' is also a single-char wildcard - a real "?profile=..." query
+    # (see test_resolve_urls) must still resolve as a profile, not be
+    # mistaken for one, whether or not the identifier is downloaded.
+    target = resolve("gog://x?profile=host")
+    assert (target.identifier, target.profile) == ("x", "host")
+
+
 # --- shell completion --------------------------------------------------
 
 
