@@ -8,8 +8,8 @@ Homepage: https://github.com/dosemu2/dedb
 
 Package: python3-dedb
 Architecture: all
-Depends: ${misc:Depends}, ${python3:Depends}, python3-click, python3-pydantic, python3-tomli,
- python3-internetarchive, python3-requests
+Depends: ${misc:Depends}, ${python3:Depends}, python3-click (>= 8.1), python3-pydantic (>= 2.0),
+ python3-tomli (>= 2.0), python3-internetarchive (>= 5.0), python3-requests
 Recommends: bash-completion
 Description: DOSEMU2 configuration tooling
  DOSEMU2-DOSBOX importer and run games packaged for DOSBOX in DOSEMU2.
