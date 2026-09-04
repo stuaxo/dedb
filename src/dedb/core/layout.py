@@ -100,9 +100,7 @@ class LayoutPaths:
         item = self.dir.resolve()
         resolved = target.resolve()
         if len(root.parts) < _MIN_SAFE_ROOT_PARTS:
-            raise UnsafePathError(
-                f"Refusing to touch '{root}' - download_dir looks misconfigured."
-            )
+            raise UnsafePathError(f"Refusing to touch '{root}' - download_dir looks misconfigured.")
         if item.parent != root:
             raise UnsafePathError(
                 f"Refusing to remove under '{self.dir}' - not a single item below {root}."

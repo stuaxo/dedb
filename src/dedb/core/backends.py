@@ -166,9 +166,7 @@ class BackendBase:
         `dedb dosboxconf`. A GOG game's is ``-conf`` files; an archive.org
         item's is the emularity-style ``-c`` command line. Backends that
         can't produce one raise."""
-        raise NotImplementedError(
-            f"Can't inspect a {self.scheme}:// game's DOSBox command line."
-        )
+        raise NotImplementedError(f"Can't inspect a {self.scheme}:// game's DOSBox command line.")
 
 
 def _closest_name(value: str, names: "list[str]") -> "str | None":
@@ -191,9 +189,7 @@ def _closest_name(value: str, names: "list[str]") -> "str | None":
 
 def _finish(backend: BackendBase, identifier: str, profile: "str | None", raw: str) -> Target:
     if profile is not None and not backend.supports_profile:
-        raise GameRefError(
-            f"{backend.scheme}:// games have no launch profiles (drop --profile)."
-        )
+        raise GameRefError(f"{backend.scheme}:// games have no launch profiles (drop --profile).")
     return Target(backend.scheme, identifier, profile, raw)
 
 
