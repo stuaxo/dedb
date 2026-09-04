@@ -36,9 +36,7 @@ BUILDS_URL = "https://content-system.gog.com/products/{product_id}/os/windows/bu
 # after "game/" is GOG's gamename (the same id lgogdownloader reports); an
 # optional two-letter language segment ("/en/") sits in front of "game/".
 STORE_URL = "https://www.gog.com/game/{gamename}"
-_STORE_URL_RE = re.compile(
-    r"^https?://(?:www\.)?gog\.com/(?:[a-z]{2}/)?game/([^/?#]+)"
-)
+_STORE_URL_RE = re.compile(r"^https?://(?:www\.)?gog\.com/(?:[a-z]{2}/)?game/([^/?#]+)")
 
 # Errors fetch_dependencies() can raise: network failure, no gen-2 build,
 # corrupt zlib payload, or malformed JSON. Shared so callers that need to
