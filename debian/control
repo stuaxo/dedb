@@ -2,7 +2,7 @@ Source: dedb
 Section: python
 Priority: optional
 Maintainer: Author <author@example.com>
-Build-Depends: debhelper-compat (= 13), dh-python, pybuild-plugin-pyproject, python3-all, python3-hatchling
+Build-Depends: debhelper-compat (= 13), dh-exec, dh-python, pybuild-plugin-pyproject, python3-all, python3-hatchling
 Standards-Version: 4.6.2
 Homepage: https://github.com/dosemu2/dedb
 

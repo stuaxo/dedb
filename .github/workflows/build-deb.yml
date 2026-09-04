@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential devscripts debhelper dh-python python3-all python3-hatchling python3-click python3-pydantic python3-tomli pybuild-plugin-pyproject fakeroot
+          sudo apt-get install -y build-essential devscripts debhelper dh-exec dh-python python3-all python3-hatchling python3-click python3-pydantic python3-tomli pybuild-plugin-pyproject fakeroot
 
       - name: Build package
         run: |
@@ -35,10 +35,20 @@ jobs:
           mv ../*.deb ../*.buildinfo ../*.changes ../*.dsc ../*.tar.* dist/ 2>/dev/null || true
           ls -l dist/
 
-      - name: Package installs and runs
+      # debian/control's version floors (pydantic 2, internetarchive 5) mean
+      # apt refuses this package on the runner's own Ubuntu release - verify
+      # against Debian trixie, the oldest release that meets them, instead.
+      - name: Package installs and runs (Debian 13/trixie - the version floor)
         run: |
-          sudo apt-get install -y ./dist/python3-dedb_*_all.deb
-          dedb --version
+          docker run --rm -v "$PWD/dist:/dist:ro" debian:trixie bash -c '
+            set -e
+            apt-get update -qq
+            apt-get install -y -qq /dist/python3-dedb_*_all.deb
+            dedb --version
+            test -f /usr/share/bash-completion/completions/dedb
+            test -f /usr/share/zsh/vendor-completions/_dedb
+            test -f /usr/share/fish/vendor_completions.d/dedb.fish
+          '
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
