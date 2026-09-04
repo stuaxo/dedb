@@ -43,7 +43,7 @@ jobs:
           docker run --rm -v "$PWD/dist:/dist:ro" debian:trixie bash -c '
             set -e
             apt-get update -qq
-            apt-get install -y -qq /dist/python3-dedb_*_all.deb
+            apt-get install -y -qq /dist/dedb_*_all.deb
             dedb --version
             test -f /usr/share/bash-completion/completions/dedb
             test -f /usr/share/zsh/vendor-completions/_dedb

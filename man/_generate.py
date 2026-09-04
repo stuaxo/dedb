@@ -3,7 +3,7 @@
     python man/_generate.py
 
 The pages are click-man's output (see dedb.manpage), one per command.
-The Debian package installs them (debian/python3-dedb.manpages);
+The Debian package installs them (debian/dedb.manpages);
 tests/test_manpage.py fails if the committed files drift.
 """
 
