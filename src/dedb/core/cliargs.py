@@ -2,8 +2,8 @@
 
 Handling for a ``SOURCES`` argument that is *either* one or more
 dosbox.conf paths *or* a single downloaded game reference
-(``gog:<id>`` / ``archive:<id>``, an archive.org URL, or a bare id with
-``-b``), used by ``dedb dosboxconf``, ``dedb dosemuconf`` and ``dedb
+(``gog:<id>`` / ``archive:<id>``, a GOG or archive.org page URL, or a
+bare id with ``-b``), used by ``dedb dosboxconf``, ``dedb dosemuconf`` and ``dedb
 import``; plus ``cli_command``, which turns the domain layer's
 user-facing exceptions into a one-line click error.
 """
@@ -65,8 +65,8 @@ def cli_command(func):
 
 def is_game_ref(source: str) -> bool:
     """True if ``source`` is a ``<scheme>:<id>`` (any number of slashes) or
-    an archive.org item URL - something ``resolve_game`` handles, not a
-    file path."""
+    an http(s) game URL (a GOG or archive.org page) - something
+    ``resolve_game`` handles, not a file path."""
     scheme = urlparse(source).scheme  # "" for a bare path, "gog" for gog:x or gog://x
     return scheme in get_backends() or scheme in ("http", "https")
 

@@ -56,6 +56,7 @@ For more ls options:
 |--------------------------------------|-----------------------------------------------|
 | `gog:<gamename>`                     | a GOG game (the lgogdownloader gamename slug) |
 | `gog:<gamename>?profile=<slug>`      | a GOG launch profile                          |
+| `https://www.gog.com/game/<name>`    | a GOG game, by store-page URL                 |
 | `archive:<identifier>`               | an archive.org item                           |
 | `https://archive.org/details/<name>` | an archive.org item, by URL                   |
 | `<name>`                             | a downloaded game by name                     |
