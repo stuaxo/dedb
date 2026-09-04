@@ -1,13 +1,24 @@
-## Downloads
+## Installation
 
-| File | What it is | Install |
-| --- | --- | --- |
-| `dedb-<version>-py3-none-any.whl` | Python wheel, all platforms | `pipx install <url>` / `uv tool install <url>` / `pip install <url>` |
-| `dedb-<version>.tar.gz` | Python source distribution (sdist) | same as the wheel; builds from source |
-| `python3-dedb_<version>_all.deb` | Debian / Ubuntu package | `sudo apt install ./python3-dedb_<version>_all.deb` |
+### pipx / uv
 
-`<url>` is the download link for the file listed under **Assets** below.
+```
+pipx install https://github.com/stuaxo/dedb/releases/download/@REF@/dedb-@VERSION@-py3-none-any.whl
+```
 
-Install without downloading first (any tag, branch, or commit):
+`uv tool install` takes the same URL. Use `pip install` for an install into
+an existing virtual environment.
 
-    pipx install "git+https://github.com/stuaxo/dedb.git@<tag>"
+### Debian / Ubuntu
+
+```
+sudo apt install ./python3-dedb_@VERSION@_all.deb
+```
+
+## Assets
+
+| File | Description |
+| --- | --- |
+| `dedb-@VERSION@-py3-none-any.whl` | Python wheel |
+| `dedb-@VERSION@.tar.gz` | Python source distribution |
+| `python3-dedb_@VERSION@_all.deb` | Debian package |
