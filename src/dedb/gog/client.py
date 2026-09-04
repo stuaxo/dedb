@@ -7,6 +7,7 @@ game's runtime without downloading it.
 """
 
 import json
+import re
 import subprocess
 import sys
 import urllib.error
@@ -30,6 +31,13 @@ __all__ = [
 ]
 
 BUILDS_URL = "https://content-system.gog.com/products/{product_id}/os/windows/builds?generation=2"
+
+# A GOG store page, e.g. https://www.gog.com/en/game/bio_menace. The slug
+# after "game/" is GOG's gamename (the same id lgogdownloader reports); an
+# optional two-letter language segment ("/en/") sits in front of "game/".
+_STORE_URL_RE = re.compile(
+    r"^https?://(?:www\.)?gog\.com/(?:[a-z]{2}/)?game/([^/?#]+)"
+)
 
 # Errors fetch_dependencies() can raise: network failure, no gen-2 build,
 # corrupt zlib payload, or malformed JSON. Shared so callers that need to

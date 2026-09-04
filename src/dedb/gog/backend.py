@@ -1,4 +1,5 @@
-"""GOG backend: `gog://<gamename>` targets.
+"""GOG backend: `gog://<gamename>` targets (and GOG store page URLs via
+`identifier_from_url`).
 
 Registered into the dedb.core registry; imported by dedb.core.get_backends().
 ``runner_module`` / ``downloader_module`` are dotted strings, and the
@@ -21,6 +22,12 @@ class GogBackend(BackendBase):
     layout_cls = GogLayout
     runner_module = "dedb.gog.runner"
     downloader_module = "dedb.gog.downloader"
+
+    def identifier_from_url(self, url: str):
+        from .client import _STORE_URL_RE
+
+        match = _STORE_URL_RE.match(url)
+        return match.group(1) if match else None
 
     def local_game(self, identifier: str):
         from ..core import GameMetadataFile, LaunchProfile, LocalGame

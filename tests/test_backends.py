@@ -27,6 +27,7 @@ from dedb.gog.backend import GogBackend
 from dedb.gog.models import GOGGame
 
 ARCHIVE_URL = "https://archive.org/details/msdos_Electro_Man_1992"
+GOG_URL = "https://www.gog.com/en/game/bio_menace"
 
 
 # --- target reference formatting ----------------------------------------
@@ -151,7 +152,12 @@ def test_convert_writes_via_the_import_hook_and_returns_the_dir(monkeypatch, tmp
         (ArchiveBackend(), "https://archive.org/download/msdos_X", "msdos_X"),
         (ArchiveBackend(), "http://www.archive.org/metadata/msdos_X", "msdos_X"),
         (ArchiveBackend(), "https://example.com/msdos_X", None),
-        (GogBackend(), ARCHIVE_URL, None),  # GOG owns no URL shape
+        (GogBackend(), ARCHIVE_URL, None),  # each backend owns only its own URL shape
+        (GogBackend(), GOG_URL, "bio_menace"),
+        (GogBackend(), "https://www.gog.com/game/bio_menace", "bio_menace"),  # no lang
+        (GogBackend(), "http://gog.com/de/game/bio_menace", "bio_menace"),  # no www, de
+        (GogBackend(), "https://www.gog.com/en/games?genres=strategy", None),  # not /game/
+        (ArchiveBackend(), GOG_URL, None),
     ],
 )
 def test_identifier_from_url(backend, url, expected):
@@ -172,6 +178,8 @@ def test_identifier_from_url(backend, url, expected):
         ("gog://x?profile=host", {"profile": "cli"}, ("gog", "x", "cli")),  # flag wins
         ("archive://msdos_Foo", {}, ("archive", "msdos_Foo", None)),  # case kept
         (ARCHIVE_URL, {}, ("archive", "msdos_Electro_Man_1992", None)),  # pasted URL
+        (GOG_URL, {}, ("gog", "bio_menace", None)),  # pasted GOG store URL
+        (GOG_URL, {"profile": "cli"}, ("gog", "bio_menace", "cli")),  # flag still applies
     ],
 )
 def test_resolve_urls(value, kwargs, expected):
