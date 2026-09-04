@@ -50,6 +50,19 @@ def spy_run(monkeypatch):
     return calls
 
 
+# --- version --------------------------------------------------------------
+
+
+@pytest.mark.parametrize("flag", ["--version", "-V"])
+def test_version_flag_prints_version_and_exits(flag):
+    from dedb import __version__
+
+    result = CliRunner().invoke(cli, [flag])
+
+    assert result.exit_code == 0
+    assert result.output.strip() == f"dedb, version {__version__}"
+
+
 # --- run --------------------------------------------------------------
 
 
