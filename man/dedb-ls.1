@@ -9,7 +9,8 @@ List downloaded games.
 .PP
 With no PATTERNS, lists every download. Each PATTERN is a shell
 wildcard (*, ?, [...]), optionally <scheme>:-qualified, matched
-against the downloaded names - e.g. `dedb ls 'gog:*jazz*'`.
+against the downloaded names - e.g. `dedb ls 'gog:*jazz*'`. A bare
+`gog:` matches every download under that backend, same as `gog:*`.
 .SH OPTIONS
 .TP
 \fB\-b,\fP \-\-backend SCHEME

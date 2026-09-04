@@ -61,6 +61,7 @@ RM_HELP = f"""Delete one or more downloaded games' directory trees.
 {GAMES_SPECIFICATION}
 
 Shell wildcards (*, ?, [...]) can be matched against downloaded games, e.g. 'gog:tyrian*'.
+A bare 'gog:' matches every download under that backend, same as 'gog:*'.
 
 The user will be prompted for confirmation unless -y is passed.
 """
@@ -214,7 +215,7 @@ def rm(games, backend, yes):
 
     pairs: list = []
     for game in games:
-        if has_wildcard(game):
+        if has_wildcard(game, registry=registry):
             hits = match_downloads(game, backend=backend, registry=registry)
             if not hits:
                 click.echo(f"No downloads match '{game}'")
@@ -447,7 +448,8 @@ def list_downloads(
 
     With no PATTERNS, lists every download. Each PATTERN is a shell
     wildcard (*, ?, [...]), optionally <scheme>:-qualified, matched
-    against the downloaded names - e.g. `dedb ls 'gog:*jazz*'`.
+    against the downloaded names - e.g. `dedb ls 'gog:*jazz*'`. A bare
+    `gog:` matches every download under that backend, same as `gog:*`.
     """
     if sum([short, names_only, qualified, verbose, urls]) > 1:
         raise click.UsageError("Choose at most one of -s / -1 / -l / -u / -v.")

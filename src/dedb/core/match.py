@@ -6,7 +6,9 @@ wildcards - ``*``, ``?``, ``[...]`` - e.g. ``gog:tyrian*`` or ``doom?``.
 
 A token may carry a ``<scheme>:`` prefix (``gog:tyrian*``) to pin the
 search to one backend; otherwise it is matched under every backend, or
-under the one named by an explicit ``--backend``.
+under the one named by an explicit ``--backend``. A bare ``<scheme>:``
+- nothing after the colon - is short for ``<scheme>:*``, every download
+under that backend.
 """
 
 import fnmatch
@@ -17,9 +19,13 @@ from .registry import get_backends
 _WILDCARD = re.compile(r"[*?\[]")
 
 
-def has_wildcard(token: str) -> bool:
-    """True if ``token`` contains a shell wildcard metacharacter."""
-    return _WILDCARD.search(token) is not None
+def has_wildcard(token: str, *, registry=None) -> bool:
+    """True if ``token`` contains a shell wildcard metacharacter, or is a
+    bare ``<scheme>:`` prefix (short for ``<scheme>:*``)."""
+    if _WILDCARD.search(token):
+        return True
+    scheme, sep, bare = token.partition(":")
+    return bool(sep) and not bare.lstrip("/") and scheme in (registry or get_backends())
 
 
 def match_downloads(pattern: str, *, backend: "str | None" = None, registry=None) -> list:
@@ -28,14 +34,15 @@ def match_downloads(pattern: str, *, backend: "str | None" = None, registry=None
 
     Backends searched: just ``backend`` when given; the one named by a
     ``<scheme>:`` prefix on ``pattern``; otherwise all of them. A literal
-    ``pattern`` (no metacharacters) simply matches that exact name.
+    ``pattern`` (no metacharacters) simply matches that exact name; a
+    bare ``<scheme>:`` matches every download under that backend.
     """
     registry = registry or get_backends()
     scheme, sep, bare = pattern.partition(":")
     if backend is not None:
         candidates = {backend: pattern}
     elif sep and scheme in registry:
-        candidates = {scheme: bare.lstrip("/")}
+        candidates = {scheme: bare.lstrip("/") or "*"}
     else:
         candidates = {name: pattern for name in registry}
 

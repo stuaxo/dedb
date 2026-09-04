@@ -238,6 +238,24 @@ def test_rm_expands_a_wildcard_and_dedups(tmp_path, monkeypatch):
     assert seen["targets"] == {("gog", "tyrian_2000"), ("gog", "tyrian_2k"), ("gog", "doom")}
 
 
+def test_rm_bare_scheme_colon_removes_everything_under_that_backend(tmp_path, monkeypatch):
+    for rel in ("gog/tyrian_2000", "gog/doom", "archive/tyrian_x"):
+        (tmp_path / rel).mkdir(parents=True)
+    monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
+    seen = {}
+    monkeypatch.setattr(
+        "dedb.cli._remove_downloads",
+        lambda layouts, *, assume_yes: seen.update(
+            targets={(lo.dir.parent.name, lo.dir.name) for lo in layouts}
+        ),
+    )
+
+    result = CliRunner().invoke(cli, ["rm", "gog:", "-y"])
+
+    assert result.exit_code == 0, result.output
+    assert seen["targets"] == {("gog", "tyrian_2000"), ("gog", "doom")}
+
+
 def test_rm_wildcard_matching_nothing_is_reported(tmp_path, monkeypatch):
     (tmp_path / "gog" / "doom").mkdir(parents=True)
     monkeypatch.setattr("dedb.core.settings.get_settings", lambda: Settings(download_dir=tmp_path))
