@@ -13,6 +13,7 @@ returns the registry.
 """
 
 import difflib
+import re
 from collections.abc import Sequence
 from importlib import import_module
 from urllib.parse import parse_qs, urlparse
@@ -21,6 +22,7 @@ from click.shell_completion import CompletionItem
 
 from . import downloads, settings
 from .local import LocalGame
+from .match import has_wildcard, match_downloads
 from .refs import Target, long_target, short_target
 from .registry import get_backends
 from .runner import dosemu_argv
@@ -187,10 +189,32 @@ def _closest_name(value: str, names: "list[str]") -> "str | None":
     return close[0] if close else None
 
 
+# Splits a value at a trailing "?profile=..." query, for telling a real
+# profile query apart from a single-char '?' wildcard before matching one.
+_PROFILE_QUERY = re.compile(r"\?profile=")
+
+
 def _finish(backend: BackendBase, identifier: str, profile: "str | None", raw: str) -> Target:
     if profile is not None and not backend.supports_profile:
         raise GameRefError(f"{backend.scheme}:// games have no launch profiles (drop --profile).")
     return Target(backend.scheme, identifier, profile, raw)
+
+
+def _resolve_wildcard(pattern: str, profile: "str | None", registry) -> Target:
+    """`resolve()`'s wildcard case: `pattern` must hit exactly one
+    downloaded game (across every backend, or the one it's `<scheme>:`-
+    qualified for - see `dedb.core.match.match_downloads`)."""
+    hits = match_downloads(pattern, registry=registry)
+    if len(hits) == 1:
+        backend, identifier = hits[0]
+        return _finish(backend, identifier, profile, pattern)
+    if not hits:
+        raise GameRefError(f"'{pattern}' doesn't match any downloaded game.")
+    found = sorted(short_target(backend.scheme, identifier) for backend, identifier in hits)
+    raise GameRefError(
+        f"'{pattern}' matches multiple downloaded games ({', '.join(found)}).\n"
+        f"Narrow the pattern, or use `dedb ls '{pattern}'` to see them all."
+    )
 
 
 def resolve(value: str, *, profile: "str | None" = None) -> Target:
@@ -199,10 +223,12 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
     Accepts ``<scheme>:<id>`` with any number of slashes after the colon
     (``gog:x``, ``gog://x``, ``gog:///x`` are equivalent - the id isn't a
     host), optionally ``?profile=<slug>``; an ``https://archive.org/...``
-    item URL or an ``https://www.gog.com/game/...`` store URL; or a bare
-    name that matches a local download under exactly
-    one backend. ``profile`` (the --profile flag) overrides any
-    ``?profile=`` in the URL. Raises ``GameRefError`` if nothing resolves.
+    item URL or an ``https://www.gog.com/game/...`` store URL; a shell
+    wildcard (``*``, ``?``, ``[...]``, optionally ``<scheme>:``-qualified)
+    matched against downloaded names, resolving if it hits exactly one; or
+    a bare name that matches a local download under exactly one backend.
+    ``profile`` (the --profile flag) overrides any ``?profile=`` in the
+    URL. Raises ``GameRefError`` if nothing resolves.
     """
     registry = get_backends()
     parsed = urlparse(value)
@@ -216,6 +242,17 @@ def resolve(value: str, *, profile: "str | None" = None) -> Target:
         raise GameRefError(
             f"Don't know how to handle URL: {value}\nUse a scheme instead, e.g. archive://<id>."
         )
+
+    # A wildcard - bare, or qualified by a real scheme - resolves against
+    # downloaded names instead of naming one game directly. Check against
+    # `value` with any "?profile=..." query stripped first, since '?' is
+    # also a single-char wildcard - a real profile query must not be
+    # mistaken for one. An unknown scheme with wildcard characters (a
+    # typo'd "bogus:foo*") falls through to the "Unknown scheme" error
+    # below instead, same as a literal reference would get.
+    wildcard_candidate = _PROFILE_QUERY.split(value, maxsplit=1)[0]
+    if has_wildcard(wildcard_candidate, registry=registry) and (not scheme or scheme in registry):
+        return _resolve_wildcard(wildcard_candidate, profile, registry)
 
     if scheme in registry:
         backend = registry[scheme]

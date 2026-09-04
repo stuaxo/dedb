@@ -548,7 +548,7 @@ wheels = [
 
 [[package]]
 name = "dedb"
-version = "0.0.19"
+version = "0.0.20"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
