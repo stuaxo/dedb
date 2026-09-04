@@ -11,4 +11,7 @@ Follow these steps to release a new version of dedb:
 5. Create a Git tag starting with `v` (e.g., `v1.0.0`).
 6. Push the Git tag to trigger the GitHub Actions workflow, which
    builds the Debian packages, the Python wheel and sdist, and attaches
-   them all to a GitHub Release.
+   them all to a GitHub Release. The release notes are GitHub's
+   auto-generated commit list followed by the download table in
+   `.github/release-body.md`; edit that file to change how the assets
+   are described.
