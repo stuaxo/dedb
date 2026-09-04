@@ -22,3 +22,9 @@ Every entry as a full `<scheme>:<id>` target (pasteable into `dedb run`).
 .TP
 \fB\-v,\fP \-\-verbose
 Columns: target, title, classification, converted?, launch profiles.
+.TP
+\fB\-u,\fP \-\-url
+The game's page on its origin site (archive.org item, GOG store page); falls back to `<scheme>:<id>` for a backend with no web page.
+.TP
+\fB\-\-href\fP
+Wrap each entry in an ANSI (OSC 8) hyperlink to its origin-site page.

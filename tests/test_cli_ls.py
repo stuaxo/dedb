@@ -102,3 +102,41 @@ def test_ls_verbose_conflicts_with_other_modes(downloads):
 
     assert result.exit_code == 2
     assert "at most one" in result.output
+
+
+def test_ls_url_prints_origin_site_pages(downloads):
+    result = CliRunner().invoke(cli, ["ls", "-u"])
+
+    assert result.exit_code == 0
+    assert result.output.splitlines() == [
+        "https://www.gog.com/game/alpha_game",
+        "https://www.gog.com/game/beta_game",
+        "https://archive.org/details/msdos_Zzt",
+    ]
+
+
+def test_ls_url_conflicts_with_other_modes(downloads):
+    result = CliRunner().invoke(cli, ["ls", "-u", "-l"])
+
+    assert result.exit_code == 2
+    assert "at most one" in result.output
+
+
+def test_ls_href_wraps_entries_in_osc8_hyperlinks(downloads):
+    result = CliRunner().invoke(cli, ["ls", "--href"])
+
+    assert result.exit_code == 0
+    esc, st = "\033]8;;", "\033\\"
+    assert result.output.splitlines() == [
+        f"{esc}https://www.gog.com/game/alpha_game{st}alpha_game{esc}{st}",
+        f"{esc}https://www.gog.com/game/beta_game{st}beta_game{esc}{st}",
+        f"{esc}https://archive.org/details/msdos_Zzt{st}msdos_Zzt{esc}{st}",
+    ]
+
+
+def test_ls_href_with_url_links_the_url_text(downloads):
+    result = CliRunner().invoke(cli, ["ls", "-u", "--href", "-b", "archive"])
+
+    esc, st = "\033]8;;", "\033\\"
+    url = "https://archive.org/details/msdos_Zzt"
+    assert result.output.strip() == f"{esc}{url}{st}{url}{esc}{st}"

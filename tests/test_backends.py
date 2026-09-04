@@ -164,6 +164,19 @@ def test_identifier_from_url(backend, url, expected):
     assert backend.identifier_from_url(url) == expected
 
 
+@pytest.mark.parametrize(
+    ("backend", "identifier", "expected"),
+    [
+        (ArchiveBackend(), "msdos_X", "https://archive.org/details/msdos_X"),
+        (GogBackend(), "bio_menace", "https://www.gog.com/game/bio_menace"),
+    ],
+)
+def test_native_url_round_trips_identifier_from_url(backend, identifier, expected):
+    url = backend.native_url(identifier)
+    assert url == expected
+    assert backend.identifier_from_url(url) == identifier
+
+
 # --- resolve(): URLs -------------------------------------------------
 
 

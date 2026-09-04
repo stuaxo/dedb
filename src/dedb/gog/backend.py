@@ -29,6 +29,11 @@ class GogBackend(BackendBase):
         match = _STORE_URL_RE.match(url)
         return match.group(1) if match else None
 
+    def native_url(self, identifier: str) -> str:
+        from .client import STORE_URL
+
+        return STORE_URL.format(gamename=identifier)
+
     def local_game(self, identifier: str):
         from ..core import GameMetadataFile, LaunchProfile, LocalGame
         from .profiles import launch_profiles
