@@ -24,6 +24,11 @@ class ArchiveBackend(BackendBase):
         match = _ITEM_URL_RE.match(url)
         return match.group(1) if match else None
 
+    def native_url(self, identifier: str) -> str:
+        from .client import DETAILS_URL
+
+        return DETAILS_URL.format(identifier=identifier)
+
     def completion_ids(self):
         from .metadata import CACHE_PATH  # local: .metadata pulls in internetarchive
 

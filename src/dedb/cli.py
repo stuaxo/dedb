@@ -369,6 +369,13 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     return owners
 
 
+def _osc8(url: str, text: str) -> str:
+    """`text` as an OSC 8 terminal hyperlink to `url` - clickable in most
+    modern terminals, plain text everywhere else."""
+    esc, st = "\033]8;;", "\033\\"
+    return f"{esc}{url}{st}{text}{esc}{st}"
+
+
 @click.command("ls")
 @click.option(
     "--backend",
@@ -409,22 +416,54 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     is_flag=True,
     help="Columns: target, title, classification, converted?, launch profiles.",
 )
+@click.option(
+    "-u",
+    "--url",
+    "urls",
+    is_flag=True,
+    help=(
+        "The game's page on its origin site (archive.org item, GOG store "
+        "page); falls back to `<scheme>:<id>` for a backend with no web page."
+    ),
+)
+@click.option(
+    "--href",
+    "href",
+    is_flag=True,
+    help="Wrap each entry in an ANSI (OSC 8) hyperlink to its origin-site page.",
+)
 @cli_command
 def list_downloads(
-    backends: list[str], short: bool, names_only: bool, qualified: bool, verbose: bool
+    backends: list[str],
+    short: bool,
+    names_only: bool,
+    qualified: bool,
+    verbose: bool,
+    urls: bool,
+    href: bool,
 ) -> None:
     """List downloaded games."""
-    if sum([short, names_only, qualified, verbose]) > 1:
-        raise click.UsageError("Choose at most one of -s / -1 / -l / -v.")
+    if sum([short, names_only, qualified, verbose, urls]) > 1:
+        raise click.UsageError("Choose at most one of -s / -1 / -l / -u / -v.")
 
     games = _local_games(backends)
     owners = _owners(games)
+    registry = get_backends()
+
+    def linked(text: str, scheme: str, identifier: str) -> str:
+        """`text`, hyperlinked to the game's origin-site page when --href
+        is set and the backend has one."""
+        if not href:
+            return text
+        url = registry[scheme].native_url(identifier)
+        return _osc8(url, text) if url else text
 
     if verbose:
         for game in sorted(games, key=lambda g: (g.identifier.lower(), g.scheme)):
             n = len(game.launch_profiles)
+            target = linked(f"{game.target:<48}", game.scheme, game.identifier)
             click.echo(
-                f"{game.target:<48} {(game.title or ''):<28} "
+                f"{target} {(game.title or ''):<28} "
                 f"{(game.classification or '-'):<9} "
                 f"{'converted' if game.converted else '-':<9} "
                 f"{n} profile{'' if n == 1 else 's'}"
@@ -435,9 +474,13 @@ def list_downloads(
         if names_only:
             click.echo(name)
             continue
-        qualify = qualified or len(owners[name]) > 1
+        qualify = qualified or urls or len(owners[name]) > 1
         for scheme in owners[name]:
-            click.echo(short_target(scheme, name) if qualify else name)
+            if urls:
+                token = registry[scheme].native_url(name) or short_target(scheme, name)
+            else:
+                token = short_target(scheme, name) if qualify else name
+            click.echo(linked(token, scheme, name))
 
 
 # --- shell completion ---------------------------------------------

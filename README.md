@@ -38,6 +38,19 @@ archive:MajorStryker
 archive:msdos_Electro_Man_1992
 ```
 
+List the origin-site page for each program (an archive.org item, a GOG
+store page):
+
+```
+$ dedb ls -u
+https://www.gog.com/game/bio_menace
+https://archive.org/details/msdos_Electro_Man_1992
+```
+
+`--href` wraps each entry in a terminal hyperlink to that page instead,
+so `dedb ls` output stays readable but clicks through:
+`$ dedb ls --href`
+
 Filter by backend (repeatable, or comma-separated):
 `$ dedb ls -b gog`
 `$ dedb ls -b gog,archive`

@@ -52,6 +52,12 @@ class BackendBase:
         an archive.org item page), return the bare identifier, else None."""
         return None
 
+    def native_url(self, identifier: str) -> "str | None":
+        """The game's page on its origin website (an archive.org item
+        page, a GOG store page), or None if the backend has no web
+        presence. The inverse of ``identifier_from_url``."""
+        return None
+
     # --- filesystem state ----------------------------------------------
 
     def layout(self, identifier: str):

@@ -19,6 +19,7 @@ from ..core.client import BaseClient
 from .models import ArchiveFavorite, ArchiveItemInfo
 
 DOWNLOAD_URL = "https://archive.org/download/{identifier}/{filename}"
+DETAILS_URL = "https://archive.org/details/{identifier}"  # the item's web page
 
 # archive.org DOS software collections; a favorited DOS game is in both
 # "fav-<user>" and one of these, which is how get_list() filters.
