@@ -12,6 +12,7 @@ import sys
 
 import click
 
+from . import __version__
 from . import completion as _completion
 from .core import (
     LocalGame,
@@ -534,6 +535,7 @@ class AppGroupedGroup(click.Group):
 
 
 @click.group(cls=AppGroupedGroup)
+@click.version_option(__version__, "-V", "--version", prog_name="dedb")
 def cli() -> None:
     """dedb: DOSEMU2 configuration tooling."""
 
