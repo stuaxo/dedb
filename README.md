@@ -27,7 +27,7 @@ List downloaded program URIs:
 `$ dedb ls -l`
 
 Each program has a URI based on where it was downloaded from and an id,
-this is an example listing containing some owned GoG games and some games that
+this is an example listing containing some owned GOG games and some games that
 have been licensed freely and then downloaded from archive.org:
 
 ```
@@ -73,7 +73,7 @@ For more ls options:
 | `archive:<identifier>`               | an archive.org item                           |
 | `https://archive.org/details/<name>` | an archive.org item, by URL                   |
 | `<name>`                             | a downloaded game by name                     |
-| `<pattern>` (`rm` only)              | a `*`/`?`/`[]` wildcard over downloaded names (optionally `gog:<pattern>`) |
+| `<pattern>` (`rm` / `ls` only)       | a `*`/`?`/`[]` wildcard over downloaded names (optionally `gog:<pattern>`) |
 | `path/to/dosbox.conf` (`import` / `dosboxconf` / `dosemuconf` only) | a dosbox.conf on disk - several are merged; `import` writes the result to `-o`, the `*conf` commands print it |
 
 Examples:
@@ -219,14 +219,14 @@ A pip install gets no man pages; use `dedb --help` / `dedb <command>
 The dedb config file is `~/.config/dedb/dedbconf.toml`.
 
 The main two things to configure are the `download_dir` and `dosbox`,
-most programs work better in a patched `doxbox` rather than the default, e.g.
+most programs work better in a patched `dosbox` rather than the default, e.g.
 `dosbox-staging` or `dosbox-x` (note only dosbox-staging has been tested so far)
 
 Example config:
 
 ```toml
 # Directory to download programs and games.
-# Backends get subdirectories off this e.g. 
+# Backends get subdirectories off this e.g.
 # <download_dir>/gog/, <download_dir>/archive/, ...
 download_dir = "~/dos/download_dir"
 
@@ -287,15 +287,21 @@ GOG games are specified using a URI scheme with `gog:` at the front, e.g.
 
 Download tyrian_2000:
 
-```$ dedb download gog:tyrian_2000```
+```
+$ dedb download gog:tyrian_2000
+```
 
 Run tyrian_2000 in dosemu:
 
-```$ dedb run gog:tyrian_2000 --dosemu``` 
+```
+$ dedb run gog:tyrian_2000 --dosemu
+```
 
 Run tyrian_2000 in dosbox:
 
-```$ dedb run gog:tyrian_2000 --dosbox``` 
+```
+$ dedb run gog:tyrian_2000 --dosbox
+```
 
 
 ### Downloading in bulk
@@ -311,18 +317,22 @@ See [doc/gog.md](doc/gog.md) for more on managing GOG games.
 
 ## Archive.org
 
-Games in archive.orgs DOS collection can be downloaded and run.
+Games in archive.org's DOS collection can be downloaded and run.
 
 You can use their URL directly:
 
-```$ dedb run https://archive.org/details/msdos_Electro_Man_1992```
+```
+$ dedb run https://archive.org/details/msdos_Electro_Man_1992 --dosbox
+```
 
-These have a URI scheme that looks like ```archive:<id>```
+These have a URI scheme that looks like `archive:<id>`.
 
 
 You can also use:
 
-```$ dedb run archive:msdos_Electro_Man_1992```
+```
+$ dedb run archive:msdos_Electro_Man_1992 --dosbox
+```
 
 ### List a user's favorites
 
