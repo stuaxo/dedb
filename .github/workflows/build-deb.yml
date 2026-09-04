@@ -76,5 +76,8 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
+          body_path: .github/release-body.md
+          append_body: true
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
