@@ -1,3 +1,22 @@
+dedb (0.0.19) unstable; urgency=medium
+
+  * `dedb ls` accepts shell-wildcard PATTERNS to filter the listing,
+    e.g. `dedb ls 'gog:*jazz*'` - the same matching `dedb rm` already
+    had.
+  * Also released as a Python wheel and sdist, installable with pip /
+    uv / pipx directly from the GitHub release, on any OS with
+    Python 3.10+.
+  * Fixed: the bash/zsh/fish completions this package installs were
+    written to the wrong path and were never loaded by any shell.
+  * This package now requires pydantic 2 and internetarchive 5.0
+    (Debian 13 / Ubuntu 26.04 LTS or later). It previously had no
+    version floor, so apt would install an incompatible pydantic 1.x
+    on every earlier release and dedb would crash on startup; apt now
+    refuses the install instead. Use the Python package on an older
+    release or another distro.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Fri, 04 Sep 2026 16:00:00 +0100
+
 dedb (0.0.18) unstable; urgency=medium
 
   * `dedb -V` / `dedb --version` prints the installed version.
