@@ -6,8 +6,6 @@ it.
 The output is somewhat modelled on Djangos apps.
 """
 
-import fnmatch
-import re
 import sys
 
 import click
@@ -21,6 +19,8 @@ from .core import (
     delete_download,
     get_apps,
     get_backends,
+    has_wildcard,
+    match_downloads,
     render_cmdline,
     resolve_game,
     short_target,
@@ -204,28 +204,6 @@ def download(games, backend, keep, refresh_metadata, redownload):
 # --- rm ----------------------------------------------------------------
 
 
-_GLOB_CHARS = re.compile(r"[*?\[]")
-
-
-def _rm_glob_hits(pattern: str, backend: "str | None", registry) -> list:
-    """(backend, name) pairs whose downloaded name matches a shell
-    wildcard - forced to one backend with -b, scheme-qualified
-    (``gog:foo*``), or matched across every backend."""
-    prefix, sep, bare = pattern.partition(":")
-    if backend is not None:
-        candidates = {backend: pattern}
-    elif sep and prefix in registry:
-        candidates = {prefix: bare.lstrip("/")}
-    else:
-        candidates = {scheme: pattern for scheme in registry}
-
-    hits = []
-    for scheme, pat in candidates.items():
-        for name in fnmatch.filter(registry[scheme].local_names(), pat):
-            hits.append((registry[scheme], name))
-    return hits
-
-
 @click.command("rm", help=RM_HELP)
 @click.argument("games", nargs=-1, required=True, shell_complete=_complete_game)
 @_backend_option
@@ -236,8 +214,8 @@ def rm(games, backend, yes):
 
     pairs: list = []
     for game in games:
-        if _GLOB_CHARS.search(game):
-            hits = _rm_glob_hits(game, backend, registry)
+        if has_wildcard(game):
+            hits = match_downloads(game, backend=backend, registry=registry)
             if not hits:
                 click.echo(f"No downloads match '{game}'")
             pairs += hits
@@ -370,6 +348,26 @@ def _owners(games: "list[LocalGame]") -> "dict[str, list[str]]":
     return owners
 
 
+def _filter_games(
+    games: "list[LocalGame]", patterns: "tuple[str, ...]", *, backends: list[str], registry
+) -> "list[LocalGame]":
+    """The subset of `games` matched by any of the shell-wildcard
+    `patterns` (see `dedb.core.match`), restricted to `backends`. A
+    pattern that hits nothing is reported on stderr."""
+    selected = set(backends)
+    keep: set[tuple[str, str]] = set()
+    for pattern in patterns:
+        hits = [
+            (be.scheme, identifier)
+            for be, identifier in match_downloads(pattern, registry=registry)
+            if be.scheme in selected
+        ]
+        if not hits:
+            click.echo(f"No downloads match '{pattern}'", err=True)
+        keep.update(hits)
+    return [g for g in games if (g.scheme, g.identifier) in keep]
+
+
 def _osc8(url: str, text: str) -> str:
     """`text` as an OSC 8 terminal hyperlink to `url` - clickable in most
     modern terminals, plain text everywhere else."""
@@ -378,6 +376,7 @@ def _osc8(url: str, text: str) -> str:
 
 
 @click.command("ls")
+@click.argument("patterns", nargs=-1, shell_complete=_complete_game)
 @click.option(
     "--backend",
     "-b",
@@ -435,6 +434,7 @@ def _osc8(url: str, text: str) -> str:
 )
 @cli_command
 def list_downloads(
+    patterns: tuple[str, ...],
     backends: list[str],
     short: bool,
     names_only: bool,
@@ -443,13 +443,20 @@ def list_downloads(
     urls: bool,
     href: bool,
 ) -> None:
-    """List downloaded games."""
+    """List downloaded games.
+
+    With no PATTERNS, lists every download. Each PATTERN is a shell
+    wildcard (*, ?, [...]), optionally <scheme>:-qualified, matched
+    against the downloaded names - e.g. `dedb ls 'gog:*jazz*'`.
+    """
     if sum([short, names_only, qualified, verbose, urls]) > 1:
         raise click.UsageError("Choose at most one of -s / -1 / -l / -u / -v.")
 
-    games = _local_games(backends)
-    owners = _owners(games)
     registry = get_backends()
+    games = _local_games(backends)
+    if patterns:
+        games = _filter_games(games, patterns, backends=backends, registry=registry)
+    owners = _owners(games)
 
     def linked(text: str, scheme: str, identifier: str) -> str:
         """`text`, hyperlinked to the game's origin-site page when --href
