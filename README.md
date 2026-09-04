@@ -73,7 +73,7 @@ For more ls options:
 | `archive:<identifier>`               | an archive.org item                           |
 | `https://archive.org/details/<name>` | an archive.org item, by URL                   |
 | `<name>`                             | a downloaded game by name                     |
-| `<pattern>` (`rm` / `ls` only)       | a `*`/`?`/`[]` wildcard over downloaded names (optionally `gog:<pattern>`) |
+| `<pattern>` (`rm` / `ls` only)       | a `*`/`?`/`[]` wildcard over downloaded names (optionally `gog:<pattern>`; a bare `gog:` means `gog:*`) |
 | `path/to/dosbox.conf` (`import` / `dosboxconf` / `dosemuconf` only) | a dosbox.conf on disk - several are merged; `import` writes the result to `-o`, the `*conf` commands print it |
 
 Examples:

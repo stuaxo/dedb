@@ -22,7 +22,16 @@ def downloads(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize(
     ("token", "expected"),
-    [("tyrian*", True), ("doom?", True), ("game[12]", True), ("gog:doom", False), ("plain", False)],
+    [
+        ("tyrian*", True),
+        ("doom?", True),
+        ("game[12]", True),
+        ("gog:doom", False),
+        ("plain", False),
+        ("gog:", True),  # bare <scheme>: - short for <scheme>:*
+        ("gog://", True),  # slashes after the colon are ignored, same as elsewhere
+        ("bogus:", False),  # not a known scheme, so not a bare-scheme shorthand
+    ],
 )
 def test_has_wildcard(token, expected):
     assert has_wildcard(token) is expected
@@ -60,3 +69,16 @@ def test_literal_token_matches_one_exact_name(downloads):
 
 def test_no_match_is_an_empty_list(downloads):
     assert match_downloads("zzz*") == []
+
+
+def test_bare_scheme_colon_matches_everything_under_that_backend(downloads):
+    assert _targets(match_downloads("gog:")) == _targets(match_downloads("gog:*"))
+    assert _targets(match_downloads("gog:")) == [
+        ("gog", "doom"),
+        ("gog", "tyrian_2000"),
+        ("gog", "tyrian_2k"),
+    ]
+
+
+def test_bare_scheme_colon_with_slashes_matches_everything_under_that_backend(downloads):
+    assert _targets(match_downloads("gog://")) == _targets(match_downloads("gog:*"))

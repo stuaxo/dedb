@@ -160,6 +160,13 @@ def test_ls_filters_by_a_scheme_qualified_wildcard(downloads):
     assert result.output.splitlines() == ["alpha_game", "msdos_Zzt"]
 
 
+def test_ls_bare_scheme_colon_lists_everything_under_that_backend(downloads):
+    result = CliRunner().invoke(cli, ["ls", "gog:"])
+
+    assert result.exit_code == 0
+    assert result.output.splitlines() == ["alpha_game", "beta_game"]
+
+
 def test_ls_pattern_is_intersected_with_the_backend_filter(downloads):
     # msdos_Zzt matches, but it is an archive download and -b excludes it.
     result = CliRunner().invoke(cli, ["ls", "-b", "gog", "*Zzt"])
