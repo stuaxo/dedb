@@ -7,18 +7,11 @@ pipx install https://github.com/stuaxo/dedb/releases/download/@REF@/dedb-@VERSIO
 ```
 
 `uv tool install` takes the same URL. Use `pip install` for an install into
-an existing virtual environment.
+an existing virtual environment. The `.tar.gz` source distribution installs
+the same way as the wheel.
 
 ### Debian / Ubuntu
 
 ```
 sudo apt install ./python3-dedb_@VERSION@_all.deb
 ```
-
-## Assets
-
-| File | Description |
-| --- | --- |
-| `dedb-@VERSION@-py3-none-any.whl` | Python wheel |
-| `dedb-@VERSION@.tar.gz` | Python source distribution |
-| `python3-dedb_@VERSION@_all.deb` | Debian package |
