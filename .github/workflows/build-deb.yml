@@ -35,6 +35,11 @@ jobs:
           mv ../*.deb ../*.buildinfo ../*.changes ../*.dsc ../*.tar.* dist/ 2>/dev/null || true
           ls -l dist/
 
+      - name: Package installs and runs
+        run: |
+          sudo apt-get install -y ./dist/python3-dedb_*_all.deb
+          dedb --version
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
