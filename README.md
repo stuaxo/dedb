@@ -131,15 +131,19 @@ $ dedb run gog:tyrian_2000 --dosbox -- -fullscreen
 
 ## Converting a game
 
-The conversion turns a game's `dosbox.conf` + `[autoexec]` - or, for an
-archive.org item, its launch command line - into a DOSEMU2 `dosemu.conf`
-+ `userhook.bat`. See [ARCHITECTURE.md](ARCHITECTURE.md) for how it
-works.
+Internally, every game is treated as a `dosbox.conf` + `[autoexec]` -
+DOSBox's config file and its equivalent of `autoexec.bat`. A GOG game
+has those as real files; an archive.org item doesn't, so dedb reads the
+same settings off its emularity launch command line instead. Either
+way, that DOSBox-shaped model is what gets converted into a DOSEMU2
+`dosemu.conf` + `userhook.bat`. See [ARCHITECTURE.md](ARCHITECTURE.md)
+for how it works.
 
 `dedb dosboxconf` inspects the DOSBox side before converting:
 
 ```
 $ dedb dosboxconf gog:tyrian_2000            # [autoexec], Sound Blaster, Gravis
+$ dedb dosboxconf gog:tyrian_2000 -a         # just [autoexec] - DOSBox's autoexec.bat
 $ dedb dosboxconf gog:tyrian_2000 --issues   # what DOSEMU2 can't run as-is, by severity
 $ dedb dosboxconf gog:tyrian_2000 --cmdline  # the dosbox command `run --dosbox` would use
 ```
@@ -153,7 +157,7 @@ and its rewrite. SOURCES can be `dosbox.conf` paths instead of a game.
 ```
 $ dedb dosemuconf gog:tyrian_2000            # dosemu.conf + userhook.bat
 $ dedb dosemuconf gog:tyrian_2000 --conf     # just dosemu.conf
-$ dedb dosemuconf gog:tyrian_2000 --userhook # just userhook.bat
+$ dedb dosemuconf gog:tyrian_2000 --userhook # just userhook.bat - DOSEMU2's autoexec.bat
 $ dedb dosemuconf gog:tyrian_2000 --issues   # the same block as `dosboxconf --issues`
 $ dedb dosemuconf gog:tyrian_2000 --cmdline  # the dosemu command `run --dosemu` would use
 ```
