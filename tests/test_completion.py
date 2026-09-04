@@ -1,7 +1,7 @@
 """Tests for `dedb completion` and the committed completion scripts.
 
 The scripts under completions/ are installed by the Debian package
-(debian/python3-dedb.install). zsh/fish are click's output; bash is a
+(debian/dedb.install). zsh/fish are click's output; bash is a
 colon-aware variant (dedb.completion). These tests fail if the files
 drift - regenerate with `python completions/_generate.py`.
 """

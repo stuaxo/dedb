@@ -21,5 +21,5 @@ for earlier versions.
 On earlier versions use the python package.
 
 ```
-sudo apt install ./python3-dedb_@VERSION@_all.deb
+sudo apt install ./dedb_@VERSION@_all.deb
 ```

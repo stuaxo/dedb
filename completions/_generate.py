@@ -4,7 +4,7 @@
 
 zsh and fish are click's own output; bash is a colon-aware variant (see
 dedb.completion). The Debian package installs all three (see
-debian/python3-dedb.install); `dedb completion <shell>` prints the same
+debian/dedb.install); `dedb completion <shell>` prints the same
 thing at runtime. tests/test_completion.py fails if the committed files
 drift from `dedb.completion.completion_script`.
 """

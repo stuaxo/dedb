@@ -1,7 +1,7 @@
 """Man pages for the ``dedb`` command, generated from the click CLI.
 
 The pages under ``man/`` are installed by the Debian package
-(debian/python3-dedb.manpages). ``man/_generate.py`` rewrites them from
+(debian/dedb.manpages). ``man/_generate.py`` rewrites them from
 this module and ``tests/test_manpage.py`` fails if the committed files
 drift.
 
