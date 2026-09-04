@@ -1,3 +1,10 @@
+dedb (0.0.20) unstable; urgency=medium
+
+  * A bare `<scheme>:` pattern (e.g. `dedb ls 'gog:'`) now matches
+    everything under that scheme, the same as `<scheme>:*`.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Fri, 04 Sep 2026 17:00:00 +0100
+
 dedb (0.0.19) unstable; urgency=medium
 
   * `dedb ls` accepts shell-wildcard PATTERNS to filter the listing,
