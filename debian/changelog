@@ -1,3 +1,16 @@
+dedb (0.0.17) unstable; urgency=medium
+
+  * `dedb ls -u` prints each program's page on its origin site (an
+    archive.org item, a GOG store page), falling back to `<scheme>:<id>`
+    for a backend with no web page. `dedb ls --href` wraps each entry in
+    a terminal hyperlink to that page instead, and composes with the
+    other listing modes.
+  * The GOG backend now accepts a GOG store-page URL
+    (`https://www.gog.com/game/<slug>`) wherever a game reference is
+    expected.
+
+ -- Stuart Axon <stu.axon@gmail.com>  Fri, 04 Sep 2026 12:00:00 +0100
+
 dedb (0.0.16) unstable; urgency=medium
 
   * run, download, rm and refreshmetadata now describe how to name a
