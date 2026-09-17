@@ -141,4 +141,4 @@ def classify_dependencies(deps: list[str] | None) -> str:
         return "dosbox"
     if any("scummvm" in d for d in lowered):
         return "scummvm"
-    return "other (" + ", ".join(deps) + ")"
+    return f"other ({', '.join(deps)})"
